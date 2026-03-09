@@ -28,6 +28,30 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
 .layout{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 48px);}
 
+/* ── 모바일 반응형 ── */
+@media (max-width: 768px) {
+  .app-header{padding:10px 14px;}
+  .app-header h1{font-size:15px;}
+  .layout{display:flex;flex-direction:column;height:auto;min-height:100vh;}
+  .left{overflow:visible;border-right:none;border-bottom:2px solid var(--border);}
+  .right{overflow:visible;height:auto;}
+  .prod-section{overflow:visible;height:auto;padding:10px 12px;}
+  .ord-list{overflow:visible;height:auto;}
+  .prod-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;}
+  .prod-btn{padding:9px 6px;}
+  .pname{font-size:11px;}
+  .psize{font-size:10px;}
+  .pprice{font-size:11px;}
+  .cust-bar{padding:10px 12px;}
+  .cust-row1,.cust-row2{flex-direction:column;gap:6px;}
+  .fg{width:100%;}
+  .modal{width:94vw;max-height:90vh;overflow-y:auto;}
+  .actions{padding:10px 12px;}
+  .summary{padding:10px 12px;}
+  .ord-header{padding:8px 12px;}
+  .ord-item{padding:10px 12px;}
+}
+
 /* 왼쪽 */
 .left{display:flex;flex-direction:column;overflow:hidden;border-right:2px solid var(--border);}
 
