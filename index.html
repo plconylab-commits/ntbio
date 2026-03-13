@@ -767,6 +767,67 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 // ─── 미입금 서버 API (Google Apps Script 배포 URL) ───
 const INVOICE_API = 'https://script.google.com/macros/s/AKfycbxFaxtyi2GyDE-9nYM6Ld6FvN78S9O1xpX1q-H4sDiya3BczJ0bx0Q4Dyj2m25YkurHuA/exec';
 
+// ─── IndexedDB Storage ───
+const IDB_NAME='NTBioInvoices';
+const IDB_VER=1;
+const IDB_STORE='invoices';
+let _invoiceCache=null;
+
+function openIDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IDB_NAME,IDB_VER);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE))
+        db.createObjectStore(IDB_STORE,{keyPath:'_key'});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbRead(){
+  return openIDB().then(db=>{
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,'readonly');
+      const req=tx.objectStore(IDB_STORE).get('history');
+      req.onsuccess=()=>resolve(req.result?req.result.data:[]);
+      req.onerror=()=>reject(req.error);
+    });
+  });
+}
+function idbWrite(list){
+  return openIDB().then(db=>{
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put({_key:'history',data:list});
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+    });
+  });
+}
+function initInvoiceDB(){
+  return idbRead().then(data=>{
+    const lsRaw=localStorage.getItem('invoiceHistory');
+    if(lsRaw&&data.length===0){
+      try{
+        const lsData=JSON.parse(lsRaw);
+        if(Array.isArray(lsData)&&lsData.length>0){
+          _invoiceCache=lsData;
+          return idbWrite(lsData).then(()=>{
+            localStorage.removeItem('invoiceHistory');
+            console.log('localStorage → IndexedDB 마이그레이션 완료:',lsData.length+'건');
+          });
+        }
+      }catch(e){console.error('마이그레이션 실패:',e);}
+    }
+    _invoiceCache=data;
+  }).catch(e=>{
+    console.error('IndexedDB 로드 실패, localStorage 폴백:',e);
+    try{_invoiceCache=JSON.parse(localStorage.getItem('invoiceHistory')||'[]');}
+    catch(e2){_invoiceCache=[];}
+  });
+}
+
 // ─── 제품 데이터 ───────────────────────────
 const PRODS = [
   // ── 토양개량제 ──
@@ -858,11 +919,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('p-date').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
   buildGrid();
   syncPrint();
-  updateUnpaidBadge();
-  syncFromServer().then(()=>{
-    const cnt=getInvoiceHistory().length;
-    if(cnt>0) showToast('✓ 서버 연결됨 — '+cnt+'건 로드');
-    else showToast('⚠️ 서버에 저장된 거래 없음 (처음 사용 시 정상)',false);
+  initInvoiceDB().then(()=>{
+    updateUnpaidBadge();
+    syncFromServer().then(()=>{
+      const cnt=getInvoiceHistory().length;
+      if(cnt>0) showToast('✓ 서버 연결됨 — '+cnt+'건 로드');
+      else showToast('⚠️ 서버에 저장된 거래 없음 (처음 사용 시 정상)',false);
+    });
   });
 });
 
@@ -1455,11 +1518,11 @@ function customerKey(name,phone){
   return (name.trim()+'|'+phone.replace(/\D/g,'')).toLowerCase();
 }
 function getInvoiceHistory(){
-  try{return JSON.parse(localStorage.getItem('invoiceHistory')||'[]');}
-  catch(e){return[];}
+  return _invoiceCache||[];
 }
 function setInvoiceHistory(list){
-  localStorage.setItem('invoiceHistory',JSON.stringify(list));
+  _invoiceCache=list;
+  idbWrite(list).catch(e=>console.error('IDB 저장 실패:',e));
 }
 
 // ─── 서버 동기화 ─────────────────────────────
