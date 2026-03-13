@@ -445,6 +445,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .inv-pay-entry .pay-amount{font-weight:700;color:#2E7D32;}
 .inv-pay-cancel{background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;padding:0 4px;line-height:1;}
 .inv-pay-cancel:hover{color:var(--red);}
+.inv-pay-entry.cancelled{opacity:.5;}
+.inv-pay-entry.cancelled .pay-amount{text-decoration:line-through;color:var(--muted);}
+.inv-pay-entry.cancelled .pay-cancel-label{font-size:11px;color:#E65100;margin-left:2px;}
+.deleted-toggle{width:100%;padding:8px 12px;background:none;border:1.5px dashed #ccc;border-radius:7px;font-family:inherit;font-size:12px;color:#999;cursor:pointer;margin-top:10px;text-align:left;}
+.deleted-toggle:hover{border-color:#aaa;color:#666;}
+.inv-card.deleted{opacity:.55;border-color:#ddd;background:#fafafa;}
+.inv-card.deleted .inv-card-hdr{background:#f0f0f0;}
+.inv-card.deleted .inv-date,.inv-card.deleted .inv-status{color:#999;}
+.inv-del-date{font-size:11px;color:#E65100;margin-left:auto;}
 </style>
 </head>
 <body>
@@ -1586,8 +1595,11 @@ function removePayment(invId,payIdx){
   const history=getInvoiceHistory();
   const inv=history.find(h=>h.id===invId);
   if(!inv||!inv.payments[payIdx])return;
-  const removed=inv.payments.splice(payIdx,1)[0];
-  inv.paidAmount=Math.max(0,(inv.paidAmount||0)-removed.amount);
+  // 완전 삭제 대신 취소 표시로 기록 유지
+  inv.payments[payIdx].cancelled=true;
+  inv.payments[payIdx].cancelledAt=new Date().toISOString();
+  // 취소되지 않은 입금만 합산
+  inv.paidAmount=inv.payments.filter(p=>!p.cancelled).reduce((s,p)=>s+p.amount,0);
   if(inv.paidAmount<=0){inv.status='미입금';inv.paidAmount=0;}
   else if(inv.paidAmount<inv.totals.grandTotal){inv.status='일부입금';inv.paidAt=null;}
   inv.updatedAt=new Date().toISOString();
@@ -1597,10 +1609,15 @@ function removePayment(invId,payIdx){
 }
 
 function deleteInvoice(id){
-  const history=getInvoiceHistory().filter(h=>h.id!==id);
+  const history=getInvoiceHistory();
+  const inv=history.find(h=>h.id===id);
+  if(!inv)return;
+  // 완전 삭제 대신 '삭제됨' 상태로 기록 유지
+  inv.status='삭제됨';
+  inv.deletedAt=new Date().toISOString();
   setInvoiceHistory(history);
   updateUnpaidBadge();
-  pushToServer('delete',{id});
+  pushToServer('update',inv);
 }
 
 function updateUnpaidBadge(){
@@ -1615,7 +1632,7 @@ function updateUnpaidBadge(){
     return;
   }
   const key=customerKey(name,phone);
-  const unpaid=getInvoiceHistory().filter(h=>h.status!=='입금완료'&&customerKey(h.customer.name,h.customer.phone)===key);
+  const unpaid=getInvoiceHistory().filter(h=>h.status!=='입금완료'&&h.status!=='삭제됨'&&customerKey(h.customer.name,h.customer.phone)===key);
   if(unpaid.length>0){
     if(btn)btn.style.display='';
     if(badge){badge.textContent=unpaid.length;badge.classList.add('show');}
@@ -1642,48 +1659,66 @@ function openUnpaidForCurrent(){
 // ─── 미입금 모달 ─────────────────────────────
 function openUnpaidModal(filterName,filterPhone){
   function showModal(){
-    const history=getInvoiceHistory();
-    let invoices;
-    if(filterName&&filterPhone){
-      const key=customerKey(filterName,filterPhone);
-      invoices=history.filter(h=>h.status!=='입금완료'&&customerKey(h.customer.name,h.customer.phone)===key);
-      document.getElementById('unpaidTitle').textContent=`${filterName}님 미입금 내역`;
-    }else{
-      invoices=history.filter(h=>h.status!=='입금완료');
-      document.getElementById('unpaidTitle').textContent='전체 미입금 내역';
-    }
-    renderUnpaidList(invoices);
+    _renderUnpaidModalFromLocal(filterName,filterPhone);
     document.getElementById('unpaidOverlay').classList.add('on');
   }
   // 서버에서 최신 데이터 가져온 후 모달 표시 (실패 시 로컬 데이터로 표시)
   syncFromServer().then(showModal).catch(showModal);
 }
+// 서버 동기화 없이 로컬 데이터로 즉시 재렌더링 (입금 추가/취소/삭제 후 빠른 반영용)
+function _renderUnpaidModalFromLocal(filterName,filterPhone){
+  const history=getInvoiceHistory();
+  let invoices,deleted;
+  if(filterName&&filterPhone){
+    const key=customerKey(filterName,filterPhone);
+    invoices=history.filter(h=>h.status!=='입금완료'&&h.status!=='삭제됨'&&customerKey(h.customer.name,h.customer.phone)===key);
+    deleted=history.filter(h=>h.status==='삭제됨'&&customerKey(h.customer.name,h.customer.phone)===key);
+    document.getElementById('unpaidTitle').textContent=`${filterName}님 미입금 내역`;
+  }else{
+    invoices=history.filter(h=>h.status!=='입금완료'&&h.status!=='삭제됨');
+    deleted=history.filter(h=>h.status==='삭제됨');
+    document.getElementById('unpaidTitle').textContent='전체 미입금 내역';
+  }
+  renderUnpaidList(invoices,deleted);
+}
 function closeUnpaidModal(){document.getElementById('unpaidOverlay').classList.remove('on');}
 function closeUnpaidOut(e){if(e.target===document.getElementById('unpaidOverlay'))closeUnpaidModal();}
 
-function renderUnpaidList(invoices){
+function renderUnpaidList(invoices,deleted){
   const el=document.getElementById('unpaidList');
   const empty=document.getElementById('unpaidEmpty');
-  if(!invoices.length){el.innerHTML='';empty.style.display='block';return;}
-  empty.style.display='none';
-  invoices.sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  deleted=deleted||[];
 
-  el.innerHTML=invoices.map(inv=>{
+  function fmtDate(iso){
+    const d=new Date(iso);
+    return d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
+  }
+  function cardHtml(inv,isDeleted){
     const custDate=inv.customer.date||inv.savedAt.slice(0,10);
     const dateDisp=custDate.replace(/-/g,'.');
     const remain=inv.totals.grandTotal-(inv.paidAmount||0);
-    const statusCls=inv.status==='입금완료'?'paid':inv.status==='일부입금'?'partial':'unpaid';
+    const statusCls=isDeleted?'':''+( inv.status==='입금완료'?'paid':inv.status==='일부입금'?'partial':'unpaid');
     const itemsHtml=inv.items.map(it=>{
       if(it.gift)return`<div>[본사지원] ${it.name} ${it.size}</div>`;
       return`<div>${it.name} ${it.size} ×${it.qty} = ${won(it.sp*it.qty)}</div>`;
     }).join('');
-
-    const updDisp=inv.updatedAt?'수정: '+inv.updatedAt.slice(0,10).replace(/-/g,'.'):'';
-    return`<div class="inv-card">
+    const updDisp=inv.updatedAt?'수정: '+fmtDate(inv.updatedAt):'';
+    const delDisp=isDeleted&&inv.deletedAt?'삭제: '+fmtDate(inv.deletedAt):'';
+    const paymentsHtml=(inv.payments&&inv.payments.length)?
+      '<div class="inv-payments">'+inv.payments.map((p,pi)=>{
+        const pds=fmtDate(p.date);
+        if(p.cancelled){
+          const cds=p.cancelledAt?fmtDate(p.cancelledAt):'';
+          return`<div class="inv-pay-entry cancelled"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span><span class="pay-cancel-label">취소${cds?' '+cds:''}</span></div>`;
+        }
+        if(isDeleted) return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span></div>`;
+        return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span><button class="inv-pay-cancel" onclick="onRemovePayment('${inv.id}',${pi})" title="입금 취소">✕</button></div>`;
+      }).join('')+'</div>':'';
+    return`<div class="inv-card${isDeleted?' deleted':''}">
       <div class="inv-card-hdr">
         <span class="inv-date">${dateDisp}</span>
-        <span class="inv-status ${statusCls}">${inv.status}</span>
-        ${updDisp?`<span class="inv-upd">${updDisp}</span>`:''}
+        ${!isDeleted?`<span class="inv-status ${statusCls}">${inv.status}</span>`:'<span class="inv-status" style="background:#eee;color:#999;">삭제됨</span>'}
+        ${delDisp?`<span class="inv-del-date">${delDisp}</span>`:(updDisp?`<span class="inv-upd">${updDisp}</span>`:'')}
       </div>
       <div class="inv-items">${itemsHtml}</div>
       <div class="inv-amounts">
@@ -1691,21 +1726,34 @@ function renderUnpaidList(invoices){
         <span class="paid-amt">입금: ${won(inv.paidAmount||0)}</span>
         <span class="remain">잔액: ${won(remain)}</span>
       </div>
-      ${(inv.payments&&inv.payments.length)?'<div class="inv-payments">'+inv.payments.map((p,pi)=>{
-        const pd=new Date(p.date);
-        const pds=pd.getFullYear()+'.'+String(pd.getMonth()+1).padStart(2,'0')+'.'+String(pd.getDate()).padStart(2,'0');
-        return'<div class="inv-pay-entry"><span class="pay-date">'+pds+'</span><span class="pay-amount">+'+won(p.amount)+'</span><button class="inv-pay-cancel" onclick="onRemovePayment(\''+inv.id+'\','+pi+')" title="입금 취소">✕</button></div>';
-      }).join('')+'</div>':''}
-      <div class="inv-pay-row">
+      ${paymentsHtml}
+      ${!isDeleted?`<div class="inv-pay-row">
         <input type="number" class="inv-pay-input" id="pay_${inv.id}" placeholder="입금액 입력" min="0">
         <span style="font-size:12px;color:var(--muted);">원</span>
         <button class="inv-pay-btn" onclick="onAddPayment('${inv.id}')">입금</button>
       </div>
       <div class="inv-actions">
         <button class="inv-del-btn" onclick="onDeleteInvoice('${inv.id}')">삭제</button>
-      </div>
+      </div>`:''}
     </div>`;
-  }).join('');
+  }
+
+  if(!invoices.length&&!deleted.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  invoices.sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  deleted.sort((a,b)=>new Date(b.deletedAt||b.savedAt)-new Date(a.deletedAt||a.savedAt));
+
+  let html=invoices.map(inv=>cardHtml(inv,false)).join('');
+  if(deleted.length){
+    const delId='del-section-'+Date.now();
+    html+=`<button class="deleted-toggle" onclick="
+      const s=document.getElementById('${delId}');
+      s.style.display=s.style.display==='none'?'block':'none';
+      this.textContent=s.style.display==='none'?'🗑 삭제된 내역 ${deleted.length}건 보기':'🗑 삭제된 내역 ${deleted.length}건 숨기기';
+    ">🗑 삭제된 내역 ${deleted.length}건 보기</button>
+    <div id="${delId}" style="display:none;">${deleted.map(inv=>cardHtml(inv,true)).join('')}</div>`;
+  }
+  el.innerHTML=html;
 }
 
 function onAddPayment(id){
@@ -1713,11 +1761,7 @@ function onAddPayment(id){
   const amount=parseInt(input.value)||0;
   if(amount<=0){alert('입금액을 입력하세요.');return;}
   addPayment(id,amount);
-  // 모달 다시 렌더링
-  const name=document.getElementById('cName').value.trim();
-  const phone=document.getElementById('cPhone').value.trim();
-  if(name&&phone)openUnpaidModal(name,phone);
-  else openUnpaidModal();
+  _reloadUnpaidModal();
 }
 function showConfirm(msg,onOk,okLabel){
   document.getElementById('confirmMsg').textContent=msg;
@@ -1733,10 +1777,11 @@ function showConfirm(msg,onOk,okLabel){
   };
 }
 function _reloadUnpaidModal(){
+  // 서버 동기화 없이 로컬에서 즉시 재렌더링 (빠른 반영)
   const name=document.getElementById('cName').value.trim();
   const phone=document.getElementById('cPhone').value.trim();
-  if(name&&phone)openUnpaidModal(name,phone);
-  else openUnpaidModal();
+  _renderUnpaidModalFromLocal(name||undefined,phone||undefined);
+  updateUnpaidBadge();
 }
 function onRemovePayment(invId,payIdx){
   showConfirm('이 입금 기록을 취소하시겠습니까?',()=>{
