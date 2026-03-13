@@ -936,6 +936,27 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 });
 
+// ── 처방전에서 돌아온 경우 rxData→카트 연동 ──
+window.addEventListener('pageshow', () => {
+  const raw = localStorage.getItem('rxData');
+  if (!raw) return;
+  try {
+    const rx = JSON.parse(raw);
+    if (rx.cart && rx.cart.length > 0 && cart.length === 0) {
+      cart = rx.cart.map(c => ({
+        i: 'rx_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+        name: c.name, size: c.size, retail: c.retail||0,
+        disc: c.retail>0 ? Math.round((1 - c.sp / c.retail) * 100) : 0,
+        sp: c.sp||0, qty: c.qty||1, gift: false, custom: true
+      }));
+      if (rx.name) document.getElementById('cName').value = rx.name;
+      if (rx.region) document.getElementById('cRegion').value = rx.region;
+      render();
+      showToast('처방전에서 ' + cart.length + '개 제품 불러옴');
+    }
+  } catch(e) {}
+});
+
 // ─── 제품 그리드 ─────────────────────────
 function buildGrid(){
   const el=document.getElementById('prodGrid');

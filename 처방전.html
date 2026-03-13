@@ -421,12 +421,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
 
 <div class="app-header">
   <button class="back-btn" onclick="window.history.back()">← 거래명세표</button>
   <h1>📋 처방전 작성</h1>
+  <label class="back-btn" style="cursor:pointer;margin-left:auto;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
 </div>
 
 <!-- 모바일 하단 탭 바 -->
@@ -1803,6 +1806,24 @@ function generatePreview() {
     }
   });
 
+  // ── ##RX## 데이터 내장 (PDF 텍스트 레이어용) ──
+  try {
+    const rxEmbed = {
+      n: name, rg: region, ar: area, cr: crop, at: areaType,
+      cart: (rxData.cart||[]).map(c => [c.name, c.size, c.qty, c.retail, c.sp]),
+      st: stages.map(s => ({
+        m: s.month, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
+        ft: s.funcTags, fc: s.funcColor,
+        pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
+        a: s.area||0
+      })),
+      po: pageOrder, cv: costVisible,
+      po2: Object.keys(priceOverrides).length ? priceOverrides : undefined
+    };
+    const rxB64 = btoa(encodeURIComponent(JSON.stringify(rxEmbed)));
+    html += `<div style="position:absolute;overflow:hidden;height:1px;width:1px;opacity:0.01;font-size:0.5px;color:white;">##RX##${rxB64}##RX##</div>`;
+  } catch(e) { console.warn('RX embed error:', e); }
+
   const preview = document.getElementById('previewArea');
   preview.innerHTML = `<div class="print-pages" id="printPages" style="--rx-fs:${fs}px;--rx-th:${thfs}px;">${html}</div>`;
   setTimeout(updateTocThumbnails, 80);
@@ -1858,6 +1879,309 @@ window.addEventListener('resize', () => {
     if (pp) { pp.style.transform = ''; pp.style.marginBottom = ''; }
   }
 });
+
+// ══ 처방전 PDF 불러오기 ══════════════════════════
+
+function showRxToast(msg) {
+  let t = document.getElementById('rxToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'rxToast';
+    t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2A8A88;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+function extractRxPdfText(data) {
+  return pdfjsLib.getDocument({ data }).promise.then(pdf => {
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) pages.push(
+      pdf.getPage(i).then(p => p.getTextContent()).then(tc => tc.items.map(it => it.str).join(' '))
+    );
+    return Promise.all(pages).then(arr => arr.join('\n'));
+  });
+}
+
+async function onRxPdfSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  showRxToast('PDF 분석 중...');
+
+  try {
+    const data = new Uint8Array(await file.arrayBuffer());
+    const text = await extractRxPdfText(data);
+
+    // 1순위: ##RX## 인코딩 데이터
+    const compact = text.replace(/\s+/g, '');
+    const rxm = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
+    if (rxm) {
+      const d = JSON.parse(decodeURIComponent(atob(rxm[1])));
+      applyRxData(d);
+      showRxToast('처방전 불러오기 완료 ✓');
+      return;
+    }
+
+    // 2순위: 텍스트 파싱 (외부/이전 PDF)
+    const parsed = parseRxPdfText(text);
+    if (parsed.stages.length > 0) {
+      applyParsedRx(parsed);
+      showRxToast('처방전 파싱 완료 (' + parsed.stages.length + '단계)');
+    } else {
+      alert('처방전 데이터를 인식할 수 없습니다.');
+    }
+  } catch (e) {
+    console.error('RX PDF 오류:', e);
+    alert('PDF 처리 중 오류가 발생했습니다.');
+  }
+}
+
+// ── ##RX## 데이터 적용 ──
+function applyRxData(d) {
+  rxData = {
+    name: d.n||'', region: d.rg||'', area: d.ar||'', crop: d.cr||'', areaType: d.at||'농사',
+    cart: (d.cart||[]).map(c => ({ name:c[0], size:c[1], qty:c[2], retail:c[3]||0, sp:c[4]||0 }))
+  };
+
+  // 빌더 입력 채우기
+  document.getElementById('bName').value = d.n || '';
+  document.getElementById('bRegion').value = d.rg || '';
+  document.getElementById('bArea').value = d.ar || '';
+  if (d.cr) {
+    const sel = document.getElementById('bCrop');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === d.cr) { sel.selectedIndex = i; break; }
+    }
+  }
+  // areaType
+  const at = d.at || '농사';
+  const stdTypes = ['농사','하우스','노지'];
+  const atSel = document.getElementById('bAreaType');
+  if (stdTypes.includes(at)) {
+    atSel.value = at;
+    document.getElementById('bAreaTypeDirect').style.display = 'none';
+  } else {
+    atSel.value = '직접입력';
+    document.getElementById('bAreaTypeDirect').style.display = 'block';
+    document.getElementById('bAreaTypeDirect').value = at;
+  }
+
+  // stages 복원
+  stageIdCnt = 0;
+  stages = (d.st||[]).map(s => ({
+    id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
+    dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
+    products: (s.pr||[]).map(p => ({ key:p[0], qty:p[1]||0, unit:p[2]||'개', desc:p[3]||'', prodArea:p[4]||null })),
+    area: s.a||null
+  }));
+
+  pageOrder = d.po || [];
+  costVisible = d.cv || false;
+  if (d.po2) priceOverrides = d.po2;
+
+  // localStorage 업데이트 (거래명세표 연동)
+  localStorage.setItem('rxData', JSON.stringify(rxData));
+
+  renderStages();
+  renderInventory();
+  schedulePreview();
+}
+
+// ── 외부 PDF 텍스트 파싱 ──
+function parseRxPdfText(text) {
+  const result = { name:'', region:'', area:'', crop:'', areaType:'농사', stages:[], cart:[] };
+
+  // 표지 파싱 — 여러 패턴 시도
+  // "처방전:이름님" 또는 "처방전 : 이름님"
+  const rxNameM = text.match(/처방전\s*[:\uff1a]\s*([가-힣]+?)님?(?:\s|$)/);
+  if (rxNameM) result.name = rxNameM[1];
+  // "지역:이름님" (두 번째 시도)
+  if (!result.name) {
+    const altNameM = text.match(/[가-힣]+\s*[:\uff1a]\s*([가-힣]{2,})님/);
+    if (altNameM) result.name = altNameM[1];
+  }
+
+  // 지역 파싱: "전북:익산" "충북:청주" "천안" "제주" 등
+  const regionM = text.match(/(전북|전남|충북|충남|경북|경남|강원|제주|서울|경기|인천|대전|대구|광주|부산|울산|세종)\s*[:\uff1a]?\s*([가-힣()（）]*)/);
+  if (regionM) result.region = regionM[2] ? regionM[1] + ':' + regionM[2].replace(/[()（）]/g,'') : regionM[1];
+  // "천안:이름" 패턴 — 시군 단위
+  if (!result.region) {
+    const cityM = text.match(/(천안|익산|청주|진천|제주|서귀포|전주|군산|김제|남원|순천|여수|목포|안동|포항|구미|창원|김해|거제|춘천|원주|강릉|속초|평택|화성|용인|수원|성남|고양|파주)\s*[:\uff1a]?\s*([가-힣()（）]*)/);
+    if (cityM) result.region = cityM[2] ? cityM[1] + ':' + cityM[2].replace(/[()（）]/g,'') : cityM[1];
+  }
+
+  // 작물+면적: "메론(1000평)농사" "고추(400평)하우스" "수박 1000평 농사"
+  const cropList = '고추|감자|마늘|양파|배추|딸기|수박|참외|토마토|포도|사과|배|감귤|블루베리|인삼|메론|멜론|오이|호박|깻잎|상추|레드향|샤인|한라봉|천혜향|레몬|무|당근|시금치|부추|파|생강|고구마|옥수수';
+  const cropRe = new RegExp('(' + cropList + ')\\s*[\\(（]?\\s*(\\d+)\\s*평\\s*[\\)）]?\\s*(농사|하우스|노지)?');
+  const cropM = text.match(cropRe);
+  if (cropM) {
+    result.crop = cropM[1];
+    result.area = cropM[2];
+    if (cropM[3]) result.areaType = cropM[3];
+  } else {
+    // 면적 없이 작물만: "오이(농사)"
+    const cropOnly = text.match(new RegExp('(' + cropList + ')\\s*[\\(（]\\s*(농사|하우스|노지)\\s*[\\)）]'));
+    if (cropOnly) {
+      result.crop = cropOnly[1];
+      result.areaType = cropOnly[2];
+    }
+  }
+
+  // ── 단계+제품 파싱 (위치 기반) ──
+  // PDF 텍스트는 한 페이지가 한 줄일 수 있으므로 전체 텍스트에서 위치 기반 파싱
+  const fullText = text.replace(/\n/g, ' ');
+
+  // 1) 모든 단계 키워드 위치 찾기
+  const stageRe = /경운\s*[\u201c"\u201d"]*\s*전\s*[\u201c"\u201d"]*|경운\s*[\u201c"\u201d"]*\s*후\s*[\u201c"\u201d"]*|정식\s*[+＋]?\s*당일|정식\s*[\u201c"\u201d"]*\s*후\s*[\u201c"\u201d"]*\s*(?:\d+\s*일?)?|관주\s*[\(（]?\s*\d+\s*안?\s*[\)）]?|엽면\s*[\(（]?\s*\d+\s*안?\s*[\)）]?/g;
+  const stageHits = [];
+  let sm;
+  while ((sm = stageRe.exec(fullText)) !== null) {
+    const raw = sm[0].replace(/\s+/g,'');
+    let type = '';
+    if (/경운.*전/.test(raw)) type = '경운전';
+    else if (/경운.*후/.test(raw)) type = '경운후';
+    else if (/정식.*당일/.test(raw)) type = '정식당일';
+    else if (/정식.*후/.test(raw)) type = '정식후';
+    else if (/관주/.test(raw)) type = '관주';
+    else if (/엽면/.test(raw)) type = '엽면';
+    if (type) stageHits.push({ type, pos: sm.index, end: sm.index + sm[0].length });
+  }
+
+  // 2) 각 단계 영역에서 제품 추출
+  const productMap = {};
+  const prodReA = /([가-힣A-Za-z0-9+\-]{2,})\s*[\(（]\s*([가-힣A-Za-z0-9\-]{2,})\s*[\)）]\s+(?:\d+\s*평\s+)?(\d+(?:\.\d+)?)\s*(포|병|봉|개|팩|박스|통)/g;
+  const prodReB = /([가-힣A-Za-z0-9+\-]{2,})\s+(\d+(?:\.\d+)?)\s*(ml|cc|L|g|kg|리터)\s+(\d+(?:\.\d+)?)\s*(포|병|봉|개|팩|박스|통)/gi;
+  // 패턴C: 제품명(규격) 면적 없음 (수량 없는 제품)
+  const prodReC = /([가-힣A-Za-z0-9+\-]{2,})\s*[\(（]\s*([가-힣A-Za-z0-9\-]{2,})\s*[\)）]\s+\d+\s*평\s+없음/g;
+  const noiseNames = new Set(['발효계분','종합광물','휴믹산','풀빅산','부식산','미강','만나','유기물','물량','평수','합계','소계','총계']);
+
+  for (let si = 0; si < stageHits.length; si++) {
+    const sh = stageHits[si];
+    const nextPos = si + 1 < stageHits.length ? stageHits[si + 1].pos : fullText.length;
+    const section = fullText.slice(sh.end, nextPos);
+
+    // 같은 타입의 바로 이전 단계가 제품 0개이면 병합
+    const prev = result.stages[result.stages.length - 1];
+    let stage;
+    if (prev && prev.type === sh.type && prev.products.length === 0) {
+      stage = prev;
+    } else {
+      stage = { type: sh.type, products: [], purpose: '' };
+      result.stages.push(stage);
+    }
+
+    // 패턴A: 제품명(규격) [면적] 수량단위
+    prodReA.lastIndex = 0;
+    let pm;
+    while ((pm = prodReA.exec(section)) !== null) {
+      const name = pm[1], size = pm[2], qty = parseFloat(pm[3])||1, unit = pm[4];
+      if (/[%/]/.test(pm[2])) continue;
+      if (noiseNames.has(name) || noiseNames.has(size)) continue;
+      const key = name + '||' + size;
+      stage.products.push({ key, qty, unit, desc: '' });
+      if (!productMap[key]) productMap[key] = { name, size, qty: 0 };
+      productMap[key].qty += qty;
+    }
+
+    // 패턴B: 제품명 NL/g/kg N단위 (compound names: "엘쎄로닥터 CK-1 120g" → "엘쎄로닥터CK-1")
+    prodReB.lastIndex = 0;
+    while ((pm = prodReB.exec(section)) !== null) {
+      let name = pm[1], size = pm[2] + pm[3], qty = parseFloat(pm[4])||1, unit = pm[5];
+      if (/^(경운|정식|관주|엽면|첫물|두덕|살포)/.test(name)) continue;
+      if (noiseNames.has(name)) continue;
+      // compound name: look backwards for Korean prefix (e.g., "엘쎄로닥터" before "CK-1")
+      const beforeMatch = section.slice(0, pm.index).trimEnd();
+      const prevWordM = beforeMatch.match(/([가-힣+]{2,})$/);
+      if (prevWordM && /^[A-Za-z0-9\-]/.test(name)) name = prevWordM[1] + name;
+      const key = name + '||' + size;
+      if (!stage.products.find(p => p.key === key)) {
+        stage.products.push({ key, qty, unit, desc: '' });
+        if (!productMap[key]) productMap[key] = { name, size, qty: 0 };
+        productMap[key].qty += qty;
+      }
+    }
+
+    // 패턴C: 수량 "없음" 제품 (무상/서비스)
+    prodReC.lastIndex = 0;
+    while ((pm = prodReC.exec(section)) !== null) {
+      const name = pm[1], size = pm[2];
+      if (/[%/]/.test(pm[2])) continue;
+      if (noiseNames.has(name) || noiseNames.has(size)) continue;
+      const key = name + '||' + size;
+      if (!stage.products.find(p => p.key === key)) {
+        stage.products.push({ key, qty: 0, unit: '개', desc: '서비스' });
+        if (!productMap[key]) productMap[key] = { name, size, qty: 0 };
+      }
+    }
+  }
+
+  // cart 구성
+  result.cart = Object.values(productMap).map(p => ({
+    name: p.name, size: p.size, qty: p.qty, retail: 0, sp: 0
+  }));
+
+  return result;
+}
+
+// ── 파싱된 외부 PDF 데이터 적용 ──
+function applyParsedRx(parsed) {
+  rxData = {
+    name: parsed.name, region: parsed.region, area: parsed.area,
+    crop: parsed.crop, areaType: parsed.areaType,
+    cart: parsed.cart
+  };
+
+  document.getElementById('bName').value = parsed.name;
+  document.getElementById('bRegion').value = parsed.region;
+  document.getElementById('bArea').value = parsed.area;
+  if (parsed.crop) {
+    // 작물명 별칭 처리
+    const cropAlias = { '메론':'멜론', '한라봉':'레드향', '셀러리':'청경채' };
+    const cropVal = cropAlias[parsed.crop] || parsed.crop;
+    const sel = document.getElementById('bCrop');
+    let found = false;
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === cropVal) { sel.selectedIndex = i; found = true; break; }
+    }
+    if (!found) {
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === '기타') { sel.selectedIndex = i; break; }
+      }
+    }
+  }
+  const at = parsed.areaType || '농사';
+  const stdTypes = ['농사','하우스','노지'];
+  const atSel = document.getElementById('bAreaType');
+  if (stdTypes.includes(at)) {
+    atSel.value = at;
+  } else {
+    atSel.value = '직접입력';
+    document.getElementById('bAreaTypeDirect').style.display = 'block';
+    document.getElementById('bAreaTypeDirect').value = at;
+  }
+
+  // stages 복원
+  stageIdCnt = 0;
+  stages = parsed.stages.map(s => ({
+    id: ++stageIdCnt, month: 0, type: s.type, days: '',
+    dateRange: '', purpose: s.purpose||'', funcTags: [], funcColor: '#ffffff',
+    products: s.products||[], area: null
+  }));
+
+  pageOrder = [];
+  costVisible = false;
+  priceOverrides = {};
+
+  localStorage.setItem('rxData', JSON.stringify(rxData));
+
+  renderStages();
+  renderInventory();
+  schedulePreview();
+}
 </script>
 </body>
 </html>
