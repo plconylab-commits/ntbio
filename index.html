@@ -971,7 +971,7 @@ window.addEventListener('pageshow', () => {
         const disc = retail > 0 ? Math.round((1 - sp / retail) * 100) : 0;
         return {
           i: 'rx_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
-          name: c.name, size: c.size, retail, disc, sp, qty: c.qty||1, gift: false, custom: true
+          name: c.name, size: c.size, retail, disc, sp, qty: Math.ceil(c.qty)||1, gift: false, custom: true
         };
       });
       if (rx.name) document.getElementById('cName').value = rx.name;
