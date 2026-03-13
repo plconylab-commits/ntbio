@@ -1416,7 +1416,7 @@ function goToPrescription(){
     cart:cart
   };
   localStorage.setItem('rxData',JSON.stringify(data));
-  window.open('처방전.html','_blank');
+  window.location.href='처방전.html';
 }
 
 // ─── 입금 관리 (Payment Tracking) ────────────
