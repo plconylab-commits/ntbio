@@ -961,6 +961,7 @@ function _lookupRetailPrice(name) {
 window.addEventListener('pageshow', () => {
   const raw = localStorage.getItem('rxData');
   if (!raw) return;
+  localStorage.removeItem('rxData'); // 한 번만 소비 — 다음 fresh 로드에 영향 없도록
   try {
     const rx = JSON.parse(raw);
     if (rx.cart && rx.cart.length > 0 && cart.length === 0) {
