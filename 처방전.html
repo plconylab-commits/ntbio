@@ -143,6 +143,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border-radius:5px;font-family:inherit;font-size:12px;font-weight:500;
   background:#fff;outline:none;}
 .prod-desc-row input:focus{border-color:var(--teal);}
+.foliar-presets{display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap;}
+.foliar-presets button{font-size:10px;padding:3px 9px;border-radius:12px;
+  background:#e0f5f5;border:1.5px solid var(--teal);color:var(--teal-dark);
+  cursor:pointer;font-weight:700;font-family:inherit;line-height:1.4;}
+.foliar-presets button:hover{background:var(--teal);color:#fff;}
+.rx-bottom-note{margin-top:12px;padding:9px 13px;border-left:3px solid var(--teal);
+  background:#f0fbfb;font-size:12px;color:#2A5050;line-height:1.75;border-radius:4px;}
 .over-badge{background:#FFEBEE;color:var(--red);font-size:10px;font-weight:700;
   padding:2px 6px;border-radius:8px;margin-left:6px;}
 
@@ -952,6 +959,11 @@ function renderStages() {
           </div>
           <div class="prod-desc-row">
             <label>사용법 / 비고</label>
+            ${st.type === '엽면' ? `<div class="foliar-presets">
+              <button type="button" onclick="setFoliarDesc(${si},${pi},'물+10말 광합성제+잎+왁스층 잎+줄기+열매+뿌리+동시')">10말</button>
+              <button type="button" onclick="setFoliarDesc(${si},${pi},'물+15말 잎+왁스층+강화 잎+줄기+열매+뿌리+동시')">15말</button>
+              <button type="button" onclick="setFoliarDesc(${si},${pi},'물+15말+왁스층+강화 잎+줄기+열매+뿌리+동시')">15말+왁스</button>
+            </div>` : ''}
             <input value="${p.desc||''}" placeholder="예) 물25말+200평 관주"
               oninput="stages[${si}].products[${pi}].desc=this.value;schedulePreview();">
           </div>
@@ -1251,6 +1263,15 @@ function onDrop(e, si) {
   renderInventory();
 }
 
+// ── 제품 기본 설명 매핑 ───────────────────
+const PRODUCT_DEFAULT_DESCS = {
+  '옥토팜':    '발효계분(60%) 종합광물(15%) 미강(쌀겨15%) 만나(10%)',
+  '옥스팜':    '휴믹산/풀빅산/부식산 유기물을 토양에 골고루 뿌리고 경운',
+  '뉴천연팜':  '견운모/고령토/맥반석/일라이트/게르마늄/종합혼합광물 멀칭전 점적+호수 깔기전에',
+  '벨룸':      '선충방제 예방 효과 벨룸 150평 1봉',
+  '엘세로닥터':'관주+물25말+1000평 세균성+바이러스+예방 시들음병+뿌리썩음+예방',
+};
+
 // ── 제품 조작 ─────────────────────────────
 function addProdFromSelect(si) {
   const sel = document.getElementById(`prodSel_${si}`);
@@ -1261,11 +1282,20 @@ function addProdFromSelect(si) {
   if (existing) {
     existing.qty = (existing.qty || 0) + 1;
   } else {
-    stages[si].products.push({ key, qty: 1, desc: '', unit: '개' });
+    const prodName = key.split('||')[0];
+    const matchedKey = Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
+    const defaultDesc = matchedKey ? PRODUCT_DEFAULT_DESCS[matchedKey] : '';
+    stages[si].products.push({ key, qty: 1, desc: defaultDesc, unit: '개' });
   }
   checkOverStock(si, key);
   renderStages();
   renderInventory();
+}
+
+function setFoliarDesc(si, pi, text) {
+  stages[si].products[pi].desc = text;
+  renderStages();
+  schedulePreview();
 }
 
 function checkOverStock(si, key) {
@@ -1798,10 +1828,22 @@ function generatePreview() {
           </thead>
           <tbody>${rows}</tbody>
         </table>
+        ${showBottomNote && monthKey === lastGroupKey ? `<div class="rx-bottom-note">
+          ※ 세균성+바이러스 예방을 위하여 첫 물줄 때 <strong>엘쎄로닥터 CK-1</strong>을
+          50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
+          관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성
+        </div>` : ''}
         <div class="page-footer-bar"><img src="logo.png" style="height:22px;vertical-align:middle;margin-right:3px;position:relative;top:-1px;left:16px;"> 천연바이오:010-3704-5963 &nbsp;&nbsp; 담당자:010-3704-5963</div>
       </div></div>
     </div>`;
   }
+
+  // ── 정식+엘세로닥터 하단 안내문 감지 ──
+  const _has정식 = stages.some(st => st.type === '정식당일' || st.type === '정식후');
+  const _has엘세로닥터 = stages.some(st => (st.products||[]).some(p => p.key && p.key.includes('엘세로닥터')));
+  const showBottomNote = _has정식 && _has엘세로닥터;
+  const groupPageKeys = pageOrder.filter(k => k.startsWith('group_')).map(k => parseInt(k.replace('group_','')));
+  const lastGroupKey = groupPageKeys[groupPageKeys.length - 1];
 
   // ── 표지 HTML ──
   const ccText = rxData.coverCustomText || {};
