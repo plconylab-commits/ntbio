@@ -2096,23 +2096,62 @@ function _parsePdf(text){
 function parseProductRows(tableText,items){
   // 규격 패턴: 숫자+단위
   const sizeRe=/(\d+(?:\.\d+)?)\s*(ml|cc|L|g|kg)/i;
-  // 가격 패턴: 콤마 포함 숫자
-  const priceRe=/(\d{1,3}(?:,\d{3})+)/g;
+  // 규격 없는 비용 항목 (운송비, 지게차 등)
+  const costItemRe=/^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/;
 
   // 토큰화: 공백으로 분리하되 의미있는 그룹으로 나눔
   // 접근: 규격(ml/L/g/kg/cc)을 기준점으로 제품명과 수량/가격을 분리
   const tokens=tableText.split(/\s+/);
   let i=0;
   // 헤더 행 스킵 (품목, 규격, 수량 등)
-  while(i<tokens.length&&!sizeRe.test(tokens[i])&&!tokens[i].match(/증정용/)) i++;
+  while(i<tokens.length&&!sizeRe.test(tokens[i])&&!tokens[i].match(/증정용/)&&!costItemRe.test(tokens[i])) i++;
   // 첫 번째 제품명을 포함하도록 헤더 키워드 직후로 위치 조정
-  if(i>0&&sizeRe.test(tokens[i])){
+  if(i>0&&(sizeRe.test(tokens[i])||costItemRe.test(tokens[i]))){
     let back=i-1;
     while(back>=0&&!tokens[back].match(/^(월|일|품목|규격|수량|소비자|소비자가|공급가|합|계|합계|월\/일)$/)) back--;
     i=back+1;
   }
 
   while(i<tokens.length){
+    // 비용 항목 감지 (운송비, 지게차 등 — 규격 없이 이름 + "-" + 숫자들)
+    let costMatch=false;
+    for(let j=i;j<Math.min(i+4,tokens.length);j++){
+      if(costItemRe.test(tokens[j])){
+        let nameTokens2=[];
+        let itemDate2='';
+        for(let k=i;k<=j;k++){
+          if(tokens[k].match(/^\d{1,2}\/\d{1,2}$/)) itemDate2=tokens[k];
+          else if(!tokens[k].match(/^(월|일|품목|규격|수량|소비자|소비자가|공급가|합|계|합계)$/))
+            nameTokens2.push(tokens[k]);
+        }
+        const cName=nameTokens2.join(' ').trim();
+        // "-" 토큰 스킵
+        let afterStart=j+1;
+        if(afterStart<tokens.length&&tokens[afterStart]==='-') afterStart++;
+        let afterTokens2=[];
+        for(let k=afterStart;k<Math.min(afterStart+6,tokens.length);k++){
+          if(tokens[k].match(/^[가-힣]{2,}/)&&!tokens[k].match(/^[\d,]+$/)) break;
+          afterTokens2.push(tokens[k]);
+        }
+        const nums2=afterTokens2.filter(t=>t.match(/^[\d,]+$/));
+        let qty2=1,sp2=0;
+        if(nums2.length>=1) qty2=parseInt(nums2[0].replace(/,/g,''))||1;
+        if(nums2.length>=3) sp2=parseInt(nums2[2].replace(/,/g,''));
+        else if(nums2.length>=2) sp2=parseInt(nums2[1].replace(/,/g,''));
+        if(cName){
+          items.push({
+            i:'custom_'+Date.now()+'_'+items.length,
+            name:cName,size:'-',retail:sp2,disc:0,sp:sp2,qty:qty2,
+            gift:false,custom:true,date:itemDate2
+          });
+        }
+        i=afterStart+afterTokens2.length;
+        costMatch=true;
+        break;
+      }
+    }
+    if(costMatch) continue;
+
     // 현재 위치에서 규격 토큰 찾기
     let sizeIdx=-1;
     for(let j=i;j<Math.min(i+8,tokens.length);j++){
