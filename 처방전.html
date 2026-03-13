@@ -1283,7 +1283,8 @@ function addProdFromSelect(si) {
     existing.qty = (existing.qty || 0) + 1;
   } else {
     const prodName = key.split('||')[0];
-    const matchedKey = Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
+    const isYeopMyeon = stages[si].type === '엽면';
+    const matchedKey = !isYeopMyeon && Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
     const defaultDesc = matchedKey ? PRODUCT_DEFAULT_DESCS[matchedKey] : '';
     stages[si].products.push({ key, qty: 1, desc: defaultDesc, unit: '개' });
   }
@@ -2065,7 +2066,15 @@ function applyRxData(d) {
   stages = (d.st||[]).map(s => ({
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
-    products: (s.pr||[]).map(p => ({ key:p[0], qty:p[1]||0, unit:p[2]||'개', desc:p[3]||'', prodArea:p[4]||null })),
+    products: (s.pr||[]).map(p => {
+      let desc = p[3] || '';
+      if (!desc && s.t !== '엽면') {
+        const prodName = (p[0]||'').split('||')[0];
+        const mk = Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
+        if (mk) desc = PRODUCT_DEFAULT_DESCS[mk];
+      }
+      return { key:p[0], qty:p[1]||0, unit:p[2]||'개', desc, prodArea:p[4]||null };
+    }),
     area: s.a||null
   }));
 
@@ -2330,7 +2339,14 @@ function applyParsedRx(parsed) {
     purpose: s.purpose || '',
     funcTags: s.funcTags || [],
     funcColor: s.funcColor || '#ffffff',
-    products: s.products || [],
+    products: (s.products || []).map(p => {
+      if (!p.desc && s.type !== '엽면') {
+        const prodName = (p.key||'').split('||')[0];
+        const mk = Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
+        if (mk) p.desc = PRODUCT_DEFAULT_DESCS[mk];
+      }
+      return p;
+    }),
     area: s.area || null
   }));
 
