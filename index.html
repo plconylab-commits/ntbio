@@ -155,6 +155,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .disc-ctrl input{width:34px;border:none;background:transparent;font-family:inherit;
   font-size:12px;font-weight:700;color:var(--red);text-align:center;outline:none;}
 /* 지원가 직접입력 행 */
+.ord-retail-row{display:flex;align-items:center;gap:5px;margin:4px 0 2px;}
+.ord-retail-lbl{font-size:10px;font-weight:700;color:#E65100;flex-shrink:0;white-space:nowrap;}
+.ord-retail-input{flex:1;min-width:0;border:1.5px solid #FFCC80;border-radius:5px;
+  padding:4px 6px;font-family:inherit;font-size:12px;font-weight:700;color:#E65100;outline:none;text-align:right;}
+.ord-retail-input:focus{border-color:#E65100;}
+.ord-retail-unit{font-size:10px;color:#E65100;font-weight:700;flex-shrink:0;}
 .ord-supp-row{display:flex;align-items:center;gap:5px;margin:4px 0 6px;}
 .ord-supp-lbl{font-size:10px;font-weight:700;color:#1565C0;flex-shrink:0;white-space:nowrap;}
 .ord-supp-input{flex:1;min-width:0;border:1.5px solid #90CAF9;border-radius:5px;
@@ -1323,6 +1329,12 @@ function render(){
           <input type="number" value="${it.disc}" min="0" max="100"
             onchange="chgDisc(${i},this.value)"><span>%</span></div>
       </div>
+      <div class="ord-retail-row">
+        <span class="ord-retail-lbl">소비자가</span>
+        <input type="number" class="ord-retail-input" value="${it.retail}"
+          onchange="chgRetail(${i},this.value)" placeholder="소비자가">
+        <span class="ord-retail-unit">원${it.customRetail?' ✏️':''}</span>
+      </div>
       <div class="ord-supp-row">
         <span class="ord-supp-lbl">지원가</span>
         <input type="number" class="ord-supp-input" value="${it.sp}"
@@ -1384,6 +1396,16 @@ function chgDisc(i,v){
   const d=parseFloat(v)||0;
   cart[i].disc=d; cart[i].sp=Math.round(cart[i].retail*(1-d/100));
   cart[i].customSp=false; render();
+}
+function chgRetail(i,v){
+  const retail=parseInt(v)||0;
+  cart[i].retail=retail;
+  cart[i].customRetail=true;
+  // 지원가가 수동 수정 안됐으면 할인율 기준으로 재계산
+  if(!cart[i].customSp){
+    cart[i].sp=Math.round(retail*(1-cart[i].disc/100));
+  }
+  render();
 }
 function chgSp(i,v){
   const sp=parseInt(v)||0;
