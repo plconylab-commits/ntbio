@@ -1303,6 +1303,10 @@ function groupDrop(e, mk) {
     stages.forEach(st => { if ((st.month ?? 0) === gmk) newStages.push(st); });
   });
   stages = newStages;
+  // pageOrder의 group_ 키도 stageGroupOrder 순서에 맞춰 재정렬
+  const reorderedGroupKeys = stageGroupOrder.map(gmk => `group_${gmk}`).filter(k => pageOrder.includes(k));
+  let gi = 0;
+  pageOrder = pageOrder.map(k => k.startsWith('group_') ? reorderedGroupKeys[gi++] : k);
   _dragGroupMk = null;
   renderStages();
   schedulePreview();
