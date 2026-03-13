@@ -16,24 +16,16 @@
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);}
 
 /* ── 헤더 ── */
-.app-header{background:var(--teal-dark);padding:0;display:flex;flex-direction:column;
-  position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);}
-.app-header-top{display:flex;align-items:center;gap:12px;padding:10px 20px;}
-.app-header-brand{flex:1;display:flex;align-items:center;gap:10px;justify-content:center;}
-.app-header-brand img{height:52px;width:auto;}
-.app-header-brand-texts{display:flex;flex-direction:column;line-height:1.2;}
-.app-header-brand-sub{font-size:11px;color:rgba(255,255,255,.8);letter-spacing:2px;}
-.app-header-brand-name{font-size:22px;font-weight:900;color:#fff;letter-spacing:9px;}
-.app-header-bottom{padding:2px 20px 8px;text-align:center;}
-.app-header-pill{display:inline-block;border:1px solid rgba(255,255,255,.45);
-  border-radius:20px;padding:2px 18px;font-size:10px;color:rgba(255,255,255,.75);
-  letter-spacing:1px;}
+.app-header{background:var(--teal-dark);padding:12px 20px;display:flex;
+  align-items:center;gap:12px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.app-header h1{font-size:17px;font-weight:700;color:#fff;}
 .back-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;
   border-radius:6px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .back-btn:hover{background:rgba(255,255,255,.3);}
 
 /* ── 레이아웃 ── */
-.layout{display:grid;grid-template-columns:400px 1fr 170px;height:calc(100vh - 98px);}
+.layout{display:grid;grid-template-columns:400px 1fr 170px;height:calc(100vh - 48px);}
 .builder{overflow-y:auto;border-right:2px solid var(--border);background:#fff;
   display:flex;flex-direction:column;}
 .preview-area{overflow-y:auto;padding:20px;background:#e8e8e8;display:flex;
@@ -285,12 +277,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .cover-rx{font-weight:900;color:#fff;line-height:1.3;white-space:pre-wrap;word-break:break-word;}
 .cover-logo-area{display:flex;flex-direction:column;align-items:center;gap:10px;
   margin-top:24px;}
-.cover-logo-top{display:flex;align-items:center;gap:5px;}
-.leaf-icon{height:46px;width:auto;object-fit:contain;}
+.cover-logo-top{display:flex;align-items:center;gap:10px;}
+.leaf-icon{height:60px;width:auto;object-fit:contain;}
 .cover-logo-texts{display:flex;flex-direction:column;gap:0;line-height:1;}
 .cover-logo-sub{font-size:13px;color:rgba(255,255,255,.85);letter-spacing:2px;
-  line-height:1.3;margin-bottom:3px;}
-.cover-logo-name{font-size:30px;font-weight:900;color:#fff;letter-spacing:2px;
+  line-height:1.3;margin-bottom:4px;}
+.cover-logo-name{font-size:32px;font-weight:900;color:#fff;letter-spacing:9px;
   line-height:1;}
 .cover-tagline-bar{background:rgba(255,235,205,.85);border-radius:20px;
   padding:6px 28px;font-size:13px;letter-spacing:3px;color:#7a5a30;margin-top:8px;}
@@ -457,20 +449,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <body>
 
 <div class="app-header">
-  <div class="app-header-top">
-    <button class="back-btn" onclick="window.history.back()">← 거래명세표</button>
-    <div class="app-header-brand">
-      <img src="logo.png" alt="천연바이오">
-      <div class="app-header-brand-texts">
-        <span class="app-header-brand-sub">미래농업의 선두기업</span>
-        <span class="app-header-brand-name">천 연 바 이 오</span>
-      </div>
-    </div>
-    <label class="back-btn" style="cursor:pointer;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
-  </div>
-  <div class="app-header-bottom">
-    <span class="app-header-pill">Top-ranking company of agricultural future</span>
-  </div>
+  <button class="back-btn" onclick="window.history.back()">← 거래명세표</button>
+  <h1>📋 처방전 작성</h1>
+  <label class="back-btn" style="cursor:pointer;margin-left:auto;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
 </div>
 
 <!-- 모바일 하단 탭 바 -->
@@ -1851,7 +1832,7 @@ function generatePreview() {
           <img class="leaf-icon" src="logo.png" alt="천연바이오">
           <div class="cover-logo-texts">
             <span class="cover-logo-sub">미래농업의 선두기업</span>
-            <span class="cover-logo-name">천연바이오</span>
+            <span class="cover-logo-name">천 연 바 이 오</span>
           </div>
         </div>
         <div class="cover-tagline-bar">Top-ranking company of agricultural future</div>
