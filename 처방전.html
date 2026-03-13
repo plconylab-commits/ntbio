@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>천연비료 처방전 작성</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --teal:#3AACAA; --teal-dark:#2A8A88; --teal-light:#E0F5F5;
+  --g-dark:#1B5E20; --g-btn:#388E3C;
+  --orange:#E65100; --red:#C62828;
+  --border:#DCEDC8; --bg:#F4F6F4; --text:#1A1A1A; --muted:#666;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);}
+
+/* ── 헤더 ── */
+.app-header{background:var(--teal-dark);padding:12px 20px;display:flex;
+  align-items:center;gap:12px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.app-header h1{font-size:17px;font-weight:700;color:#fff;}
+.back-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;
+  border-radius:6px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.back-btn:hover{background:rgba(255,255,255,.3);}
+
+/* ── 레이아웃 ── */
+.layout{display:grid;grid-template-columns:400px 1fr 170px;height:calc(100vh - 48px);}
+.builder{overflow-y:auto;border-right:2px solid var(--border);background:#fff;
+  display:flex;flex-direction:column;}
+.preview-area{overflow-y:auto;padding:20px;background:#e8e8e8;display:flex;
+  flex-direction:column;gap:20px;align-items:center;}
+.toc-panel{overflow-y:auto;border-left:2px solid var(--border);background:#fafafa;
+  display:flex;flex-direction:column;position:relative;min-width:100px;max-width:400px;}
+.toc-resize-handle{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:col-resize;
+  background:transparent;z-index:10;}
+.toc-resize-handle:hover{background:rgba(26,138,136,.25);}
+.toc-head{padding:10px 12px 6px;font-size:11px;font-weight:700;color:var(--teal-dark);
+  letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #eee;}
+.toc-list{display:flex;flex-direction:column;padding:6px 8px;gap:6px;flex:1;}
+.toc-item{display:flex;flex-direction:column;gap:4px;padding:7px 8px;border-radius:6px;
+  background:#fff;border:1.5px solid #e0e0e0;cursor:grab;align-items:center;
+  color:#333;user-select:none;transition:border-color .15s;}
+.toc-item:hover{border-color:var(--teal);}
+.toc-item.toc-drag-over{border-color:var(--teal);background:#E0F5F5;}
+.toc-item-head{display:flex;align-items:center;gap:5px;width:100%;}
+.toc-drag{color:#bbb;font-size:14px;flex-shrink:0;}
+.toc-label{flex:1;line-height:1.3;font-size:12px;font-weight:700;}
+.toc-preview{border-top:1px solid #eee;margin-top:2px;padding-top:5px;
+  font-size:10px;color:#555;line-height:1.6;font-weight:500;}
+.toc-preview-row{display:flex;justify-content:space-between;gap:4px;
+  white-space:nowrap;overflow:hidden;}
+.toc-preview-stage{overflow:hidden;text-overflow:ellipsis;flex:1;}
+.toc-preview-cnt{color:var(--teal-dark);font-weight:700;flex-shrink:0;}
+.toc-cover{background:#F3F8FF;border-color:#90CAF9;}
+.toc-cost{background:#FFFDE7;border-color:#FFE082;}
+/* 비용 모달 */
+.cost-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;
+  display:none;align-items:center;justify-content:center;}
+.cost-modal-overlay.on{display:flex;}
+.cost-modal{background:#fff;border-radius:12px;width:600px;max-height:80vh;
+  overflow-y:auto;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+.cost-modal h2{margin:0 0 16px;font-size:16px;color:var(--teal-dark);}
+.cost-table{width:100%;border-collapse:collapse;font-size:12px;}
+.cost-table th{background:var(--teal);color:#fff;padding:7px 8px;text-align:center;border:1px solid rgba(255,255,255,.3);}
+.cost-table td{padding:6px 8px;border:1px solid #ddd;text-align:center;vertical-align:middle;}
+.cost-table input{width:80px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;text-align:right;font-size:12px;}
+.cost-total-row td{background:#E0F5F5;font-weight:700;}
+
+/* ── 빌더 섹션 ── */
+.b-section{border-bottom:1px solid #f0f0f0;padding:14px 16px;}
+.b-title{font-size:11px;font-weight:700;color:var(--teal-dark);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:10px;}
+
+/* ── 입력 공통 ── */
+.f-row{display:grid;gap:8px;margin-bottom:8px;}
+.f-row.col2{grid-template-columns:1fr 1fr;}
+.f-row.col3{grid-template-columns:1fr 70px 1fr;}
+.f-row.col4{grid-template-columns:1fr 70px 72px 1fr;}
+.fg label{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px;}
+.fg input,.fg select{width:100%;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;
+  font-family:inherit;font-size:13px;font-weight:500;background:#fafafa;outline:none;
+  transition:border-color .2s;}
+.fg input:focus,.fg select:focus{border-color:var(--teal);}
+.fg select{appearance:none;cursor:pointer;padding-right:26px;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;}
+
+/* ── 재고 현황 ── */
+.inv-list{display:flex;flex-direction:column;gap:5px;}
+.inv-item{display:flex;justify-content:space-between;align-items:center;
+  background:#f8f8f8;border-radius:6px;padding:6px 10px;font-size:12px;}
+.inv-name{font-weight:700;color:var(--text);}
+.inv-size{color:var(--muted);font-size:11px;}
+.inv-stock{display:flex;gap:6px;align-items:center;}
+.inv-total{color:var(--muted);font-size:11px;}
+.inv-remain{font-weight:700;font-size:12px;padding:2px 7px;border-radius:9px;}
+.inv-remain.ok{background:#E8F5E9;color:#2E7D32;}
+.inv-remain.warn{background:#FFF3E0;color:#E65100;}
+.inv-remain.over{background:#FFEBEE;color:#C62828;}
+.inv-empty{color:#bbb;font-size:12px;text-align:center;padding:8px 0;}
+
+/* ── 단계 카드 ── */
+.stages-list{display:flex;flex-direction:column;gap:10px;}
+.stage-card{border:1.5px solid #e0e0e0;border-radius:8px;overflow:hidden;}
+.stage-head{background:var(--teal);color:#fff;padding:8px 12px;
+  display:flex;align-items:center;justify-content:space-between;}
+.stage-head .slabel{font-size:13px;font-weight:700;}
+.stage-head .sdate{font-size:11px;opacity:.85;}
+.stage-del{background:rgba(255,255,255,.25);border:none;color:#fff;
+  width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;}
+.stage-del:hover{background:rgba(255,255,255,.4);}
+.stage-body{padding:8px 10px;}
+.prod-row{display:grid;grid-template-columns:1fr 50px 1fr 22px;gap:5px;
+  align-items:center;margin-bottom:5px;}
+/* ── 제품 행 ── */
+.prod-item{background:#f0f8f8;border:1.5px solid #c8e6e6;border-radius:8px;
+  padding:8px 10px;margin-bottom:6px;}
+.prod-item-head{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;}
+.prod-item-name{font-size:13px;font-weight:700;color:var(--teal-dark);}
+.prod-item-size{font-size:11px;color:var(--muted);margin-left:4px;}
+.prod-del-btn{border:1.5px solid #ddd;border-radius:4px;background:#fff;
+  cursor:pointer;color:#bbb;font-size:12px;padding:2px 6px;line-height:1;}
+.prod-del-btn:hover{border-color:var(--red);color:var(--red);}
+.prod-item-inputs{display:flex;flex-direction:column;gap:5px;}
+.prod-item-top-row{display:grid;grid-template-columns:80px 1fr;gap:6px;}
+.prod-item-inputs label{display:block;font-size:10px;font-weight:700;
+  color:var(--muted);margin-bottom:2px;}
+.prod-item-inputs input{width:100%;padding:5px 8px;border:1.5px solid #ddd;
+  border-radius:5px;font-family:inherit;font-size:13px;font-weight:700;
+  background:#fff;outline:none;}
+.prod-item-inputs input:focus{border-color:var(--teal);}
+.qty-input{text-align:center;font-size:15px;font-weight:900;color:var(--teal-dark);}
+.prod-area-select{width:100%;padding:4px 22px 4px 6px;border:1.5px solid var(--teal);
+  border-radius:5px;font-family:inherit;font-size:11px;font-weight:700;
+  background:#fff;outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 5px center;}
+.prod-desc-row{display:block;}
+.prod-desc-row input{width:100%;padding:5px 8px;border:1.5px solid #ddd;
+  border-radius:5px;font-family:inherit;font-size:12px;font-weight:500;
+  background:#fff;outline:none;}
+.prod-desc-row input:focus{border-color:var(--teal);}
+.over-badge{background:#FFEBEE;color:var(--red);font-size:10px;font-weight:700;
+  padding:2px 6px;border-radius:8px;margin-left:6px;}
+
+/* ── 제품 기능 태그 ── */
+.func-row{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;
+  background:#f5f0ff;border-radius:7px;padding:8px 10px;}
+.func-row > label{font-size:11px;font-weight:700;color:#5c3d9e;}
+.func-select{width:100%;padding:5px 24px 5px 8px;border:1.5px solid #8e68d8;
+  border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;
+  background:#fff;outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;}
+.func-tags-area{min-height:28px;border:1.5px dashed #b09ede;border-radius:6px;
+  padding:5px 6px;display:flex;flex-wrap:wrap;gap:4px;background:#faf7ff;}
+.func-tag{display:inline-flex;align-items:center;gap:3px;background:#7c5cbf;
+  color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;
+  cursor:grab;user-select:none;transition:opacity .15s;}
+.func-tag:hover{background:#6a4aad;}
+.func-tag.tag-dragging{opacity:.4;cursor:grabbing;}
+.func-tag-del{background:none;border:none;color:rgba(255,255,255,.75);
+  cursor:pointer;font-size:12px;padding:0 0 0 2px;line-height:1;font-family:inherit;}
+.func-tag-del:hover{color:#fff;}
+.func-empty-hint{color:#b9a8e0;font-size:10px;align-self:center;}
+.func-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:2px;}
+.func-reset-btn{font-size:10px;color:#999;background:none;border:1px solid #ddd;
+  border-radius:4px;padding:2px 8px;cursor:pointer;font-family:inherit;}
+.func-reset-btn:hover{color:#c62828;border-color:#c62828;}
+.color-palette{display:flex;gap:3px;align-items:center;}
+.c-swatch{width:16px;height:16px;border-radius:3px;border:2px solid transparent;
+  cursor:pointer;transition:border-color .1s;flex-shrink:0;}
+.c-swatch:hover{border-color:#555!important;}
+.c-swatch.active{border-color:#333!important;}
+
+/* ── 평수 선택 ── */
+.area-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;
+  background:#f0fbfb;border-radius:7px;padding:7px 10px;flex-wrap:wrap;}
+.area-label{font-size:11px;font-weight:700;color:var(--teal-dark);white-space:nowrap;}
+.area-select{flex:1;min-width:120px;padding:5px 24px 5px 8px;border:1.5px solid var(--teal);
+  border-radius:6px;font-family:inherit;font-size:12px;font-weight:700;
+  background:#fff;outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;}
+.area-custom{width:100px;padding:5px 8px;border:1.5px solid var(--teal);
+  border-radius:6px;font-family:inherit;font-size:13px;font-weight:700;
+  background:#fff;outline:none;}
+.area-custom:focus{border-color:var(--teal-dark);}
+.area-badge{background:var(--teal);color:#fff;font-size:11px;font-weight:700;
+  padding:3px 8px;border-radius:9px;white-space:nowrap;}
+
+/* ── 제품 추가 섹션 ── */
+.add-prod-section{margin-top:8px;border-top:1px dashed #ddd;padding-top:8px;}
+.add-prod-row{display:grid;grid-template-columns:1fr 52px;gap:6px;margin-bottom:6px;}
+.add-prod-select{width:100%;padding:7px 24px 7px 8px;border:1.5px solid var(--teal);
+  border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;
+  background:#fff;outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;}
+.add-prod-btn{background:var(--teal);color:#fff;border:none;border-radius:6px;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.add-prod-btn:hover{background:var(--teal-dark);}
+
+/* ── 버튼들 ── */
+.add-stage-btn{width:100%;padding:10px;border:2px dashed var(--teal);border-radius:8px;
+  background:var(--teal-light);cursor:pointer;font-family:inherit;font-size:13px;
+  font-weight:700;color:var(--teal-dark);transition:all .15s;}
+.add-stage-btn:hover{background:#c5ecec;}
+.gen-btn{background:var(--teal-dark);color:#fff;border:none;border-radius:8px;
+  padding:14px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:background .15s;}
+.gen-btn:hover{background:#1a6a68;}
+
+/* ── 모달 ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
+  align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.overlay.on{display:flex;}
+.modal{background:#fff;border-radius:12px;width:360px;max-width:94vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;}
+.modal-hdr{background:var(--teal-dark);padding:14px 16px;display:flex;
+  align-items:center;justify-content:space-between;}
+.modal-hdr h2{color:#fff;font-size:15px;font-weight:700;}
+.modal-x{background:none;border:none;color:rgba(255,255,255,.8);font-size:18px;
+  cursor:pointer;padding:0 4px;}
+.modal-x:hover{color:#fff;}
+.modal-body{padding:16px;}
+.modal-body .f-row{margin-bottom:10px;}
+.modal-ok{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;
+  border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
+.modal-ok:hover{background:var(--teal-dark);}
+.days-row{display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end;}
+.days-unit{font-size:13px;font-weight:700;color:var(--muted);padding-bottom:8px;}
+
+/* ── 재고 초과 경고 ── */
+.over-warning{background:#FFEBEE;border:1.5px solid #FFCDD2;border-radius:6px;
+  padding:6px 10px;font-size:11px;color:var(--red);font-weight:700;margin-top:4px;
+  display:none;}
+.over-warning.show{display:block;}
+
+/* ── 드래그앤드롭 ── */
+.inv-item{cursor:grab;transition:box-shadow .15s,transform .15s;}
+.inv-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.12);transform:translateX(2px);}
+.inv-item.dragging{opacity:.5;cursor:grabbing;}
+.drag-handle{font-size:13px;color:#bbb;margin-right:6px;user-select:none;}
+.drop-zone{border:2px dashed #ccc;border-radius:6px;padding:8px;
+  text-align:center;font-size:11px;color:#aaa;margin-top:6px;
+  transition:all .15s;}
+.drop-zone.drag-over{border-color:var(--teal);background:var(--teal-light);
+  color:var(--teal-dark);font-weight:700;}
+.prod-row-wrap{background:#f9f9f9;border-radius:6px;padding:6px 8px;margin-bottom:4px;
+  border:1.5px solid #eee;}
+
+/* ════════════════════
+   처방전 페이지 (인쇄용)
+════════════════════ */
+.page-card{background:white;box-shadow:0 4px 20px rgba(0,0,0,.15);
+  border-radius:6px;overflow:hidden;}
+
+/* A4 landscape 비율 (297:210) 화면 미리보기 */
+.page-card{width:840px;min-height:595px;}
+
+/* ── 표지 ── */
+.cover-page{background:var(--teal);padding:40px;display:flex;
+  flex-direction:column;align-items:center;justify-content:space-between;
+  min-height:595px;}
+.cover-naturebio{color:rgba(255,255,255,.9);font-size:26px;letter-spacing:10px;
+  font-weight:300;margin-bottom:30px;}
+.cover-box{background:linear-gradient(145deg,#1e8a88 0%,#3AACAA 55%,#2d9e9c 100%);
+  border:6px solid rgba(255,255,255,.9);
+  border-radius:4px;padding:36px 50px;text-align:center;
+  width:75%;display:flex;flex-direction:column;gap:14px;}
+.cover-region{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
+.cover-crop-area{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
+.cover-rx{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
+.cover-logo-area{display:flex;flex-direction:column;align-items:center;gap:10px;
+  margin-top:24px;}
+.cover-logo-top{display:flex;align-items:center;gap:5px;}
+.leaf-icon{height:46px;width:auto;object-fit:contain;}
+.cover-logo-texts{display:flex;flex-direction:column;gap:0;line-height:1;}
+.cover-logo-sub{font-size:13px;color:rgba(255,255,255,.85);letter-spacing:2px;
+  line-height:1.3;margin-bottom:3px;}
+.cover-logo-name{font-size:30px;font-weight:900;color:#fff;letter-spacing:2px;
+  line-height:1;}
+.cover-tagline-bar{background:rgba(255,235,205,.85);border-radius:20px;
+  padding:6px 28px;font-size:13px;letter-spacing:3px;color:#7a5a30;margin-top:8px;}
+
+/* ── 내용 페이지 ── */
+.content-page{background:var(--teal);padding:14px;min-height:595px;
+  display:flex;flex-direction:column;}
+.content-inner{background:#fff;border:3px solid rgba(255,255,255,.6);
+  border-radius:4px;flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.page-purpose{background:#fff;color:#111;font-size:22px;font-weight:900;
+  padding:16px 18px;text-align:center;letter-spacing:1px;
+  border:3.5px solid var(--teal);border-bottom:none;}
+.rx-table{width:100%;border-collapse:collapse;flex:1;border:3.5px solid var(--teal);}
+.rx-table th{background:#fff;color:#111;border:3.5px solid var(--teal);
+  padding:12px 10px;font-size:19px;font-weight:700;text-align:center;}
+.rx-table td{border:3.5px solid var(--teal);padding:11px 10px;font-size:var(--rx-fs,17px);
+  font-weight:700;vertical-align:middle;background:#fff;text-align:center;color:#111;}
+.rx-table .stage-td{background:#E0F5F5;text-align:center;font-size:var(--rx-fs,17px);
+  font-weight:900;width:110px;color:#111;line-height:1.4;
+  border-right:3.5px solid var(--teal);}
+.rx-table .product-td{font-size:var(--rx-fs,17px);font-weight:700;color:#111;text-align:center;}
+.rx-table .size-td{text-align:center;color:#111;font-size:var(--rx-fs,17px);font-weight:700;}
+.rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;white-space:nowrap;}
+.rx-table .desc-td{font-size:var(--rx-fs,17px);color:#111;font-weight:600;text-align:center;}
+.rx-table tbody tr:hover td{background:#f0fbfb;}
+.page-footer-bar{background:#fff;color:#111;padding:10px 16px;
+  font-size:14px;font-weight:700;text-align:center;letter-spacing:1px;
+  display:flex;justify-content:center;gap:16px;
+  border:3.5px solid var(--teal);border-top:none;}
+
+/* ── 플로팅 재고 패널 ── */
+.inv-float{position:fixed;top:60px;left:416px;z-index:500;
+  background:#fff;border:2px solid var(--teal);border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.22);width:270px;display:none;
+  user-select:none;}
+.inv-float.show{display:block;}
+.inv-float-hdr{background:var(--teal-dark);color:#fff;padding:8px 12px;
+  border-radius:8px 8px 0 0;display:flex;align-items:center;
+  justify-content:space-between;cursor:grab;}
+.inv-float-hdr:active{cursor:grabbing;}
+.inv-float-title{font-size:12px;font-weight:700;letter-spacing:.5px;}
+.inv-float-close{background:none;border:none;color:rgba(255,255,255,.8);
+  font-size:15px;cursor:pointer;padding:0 2px;line-height:1;}
+.inv-float-close:hover{color:#fff;}
+.inv-float-body{padding:8px 10px;max-height:320px;overflow-y:auto;}
+.inv-float-btn{position:fixed;left:8px;background:var(--teal);color:#fff;
+  border:none;border-radius:20px;padding:5px 11px;font-family:inherit;
+  font-size:11px;font-weight:700;cursor:pointer;z-index:490;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);display:none;}
+.inv-float-btn:hover{background:var(--teal-dark);}
+
+/* ── 인쇄 ── */
+@media print{
+  @page{size:A4 landscape;margin:0;}
+  .app-header,.builder,.preview-area > *:not(.print-pages){display:none!important;}
+  .layout{display:block;}
+  .preview-area{padding:0;background:none;overflow:visible;}
+  .print-pages{display:block;}
+  .page-card{width:100%;box-shadow:none;border-radius:0;page-break-after:always;}
+  .cover-page,.content-page{min-height:210mm;}
+  .mobile-tabs{display:none!important;}
+}
+.print-pages{display:contents;}
+
+/* ══ 모바일 반응형 ══ */
+.mobile-tabs{display:none;}
+@media(max-width:768px){
+  /* 하단 탭 바 */
+  .mobile-tabs{
+    display:flex;position:fixed;bottom:0;left:0;right:0;height:54px;
+    background:#fff;border-top:2px solid var(--teal);z-index:300;
+    box-shadow:0 -2px 10px rgba(0,0,0,.12);
+  }
+  .mobile-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;font-family:inherit;
+    font-size:10px;font-weight:700;color:#aaa;cursor:pointer;
+    gap:2px;border:none;background:none;padding:0;
+    transition:color .15s;
+  }
+  .mobile-tab .m-icon{font-size:20px;line-height:1;}
+  .mobile-tab.active{color:var(--teal-dark);border-top:3px solid var(--teal);}
+
+  /* 레이아웃: 단일 열, 탭 제어 */
+  .layout{
+    grid-template-columns:1fr!important;
+    grid-template-rows:1fr;
+    height:calc(100vh - 48px - 54px);
+    overflow:hidden;
+  }
+  .builder{grid-column:1;grid-row:1;border-right:none;display:flex;}
+  .preview-area{
+    grid-column:1;grid-row:1;display:none;
+    padding:10px;overflow:auto;align-items:flex-start;
+  }
+  .toc-panel{
+    grid-column:1;grid-row:1;display:none;
+    border-left:none;max-width:100%;min-width:unset;
+  }
+  /* 탭 전환 상태 */
+  .layout.m-preview .builder,.layout.m-preview .toc-panel{display:none;}
+  .layout.m-preview .preview-area{display:flex;}
+  .layout.m-toc .builder,.layout.m-toc .preview-area{display:none;}
+  .layout.m-toc .toc-panel{display:flex;}
+
+  /* 리사이즈 핸들 숨김 */
+  .toc-resize-handle{display:none;}
+
+  /* 헤더 */
+  .app-header{padding:10px 14px;}
+  .app-header h1{font-size:14px;}
+  .back-btn{font-size:12px;padding:5px 10px;}
+
+  /* 빌더 폼 조정 */
+  .b-section{padding:10px 10px;}
+  .b-title{font-size:12px;padding:5px 10px;}
+  .f-row.col3{grid-template-columns:1fr 1fr;}
+  .f-row.col4{grid-template-columns:1fr 1fr;}
+  .prod-row{grid-template-columns:1fr 45px 82px 24px;gap:4px;}
+  .prod-item-top-row{grid-template-columns:65px 1fr!important;}
+  .add-prod-row{grid-template-columns:1fr 48px;}
+
+  /* 입력 요소 터치 친화적 */
+  input,select,textarea{font-size:14px!important;min-height:34px;}
+  .btn-add-stage,.btn-add-cost{font-size:13px;padding:10px 12px;}
+  .stage-card{margin:6px 8px 0;}
+
+  /* TOC */
+  .toc-item{padding:10px 10px;gap:6px;}
+  .toc-label{font-size:13px;}
+
+  /* 미리보기 페이지 스케일 */
+  #printPages{
+    transform-origin:top left;
+    transition:none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <button class="back-btn" onclick="window.location.href='Index.html'">← 거래명세표</button>
+  <h1>📋 처방전 작성</h1>
+</div>
+
+<!-- 모바일 하단 탭 바 -->
+<div class="mobile-tabs" id="mobileTabs">
+  <button class="mobile-tab active" id="mTab-builder" onclick="switchMobileTab('builder')">
+    <span class="m-icon">✏️</span><span>입력</span>
+  </button>
+  <button class="mobile-tab" id="mTab-preview" onclick="switchMobileTab('preview')">
+    <span class="m-icon">👁️</span><span>미리보기</span>
+  </button>
+  <button class="mobile-tab" id="mTab-toc" onclick="switchMobileTab('toc')">
+    <span class="m-icon">📑</span><span>목차</span>
+  </button>
+</div>
+
+<div class="layout" id="mainLayout">
+
+  <!-- ── 빌더 패널 ── -->
+  <div class="builder">
+
+    <!-- 표지 정보 -->
+    <div class="b-section">
+      <div class="b-title">① 표지 정보</div>
+      <div class="f-row col3">
+        <div class="fg"><label>지역</label>
+          <input id="bRegion" placeholder="예) 금산+추부"></div>
+        <div class="fg"><label>평수</label>
+          <input id="bArea" type="number" placeholder="400" min="1"></div>
+        <div class="fg"><label>종류</label>
+          <select id="bAreaType" onchange="onBAreaTypeChange()">
+            <option value="농사">농사</option>
+            <option value="하우스">하우스</option>
+            <option value="노지">노지</option>
+            <option value="직접입력">✏️ 직접입력</option>
+          </select>
+          <input id="bAreaTypeDirect" type="text" placeholder="직접입력"
+            style="display:none;margin-top:4px;width:100%;padding:5px 8px;
+            border:1.5px solid var(--teal);border-radius:6px;font-size:13px;"
+            oninput="schedulePreview()">
+        </div>
+      </div>
+      <div class="f-row col2">
+        <div class="fg"><label>작물</label>
+          <select id="bCrop">
+            <option value="">-- 선택 --</option>
+            <option>감자</option><option>고구마</option><option>고추</option>
+            <option>깻잎</option><option>대파</option><option>딸기</option>
+            <option>레드향</option><option>마</option><option>멜론</option>
+            <option>블루베리</option><option>사과</option><option>상추</option>
+            <option>수박</option><option>시금치</option><option>오이</option>
+            <option>참외</option><option>천혜향</option><option>청경채</option>
+            <option>캠벨(포도)</option><option>콩</option><option>콩나물</option>
+            <option>파프리카</option>
+          </select></div>
+        <div class="fg"><label>고객명</label>
+          <input id="bName" placeholder="고객명"></div>
+      </div>
+    </div>
+
+    <!-- 재고 현황 -->
+    <div class="b-section">
+      <div class="b-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+           onclick="toggleInvSection()">
+        <span>② 재고 현황 (거래명세표 기준)</span>
+        <span id="invToggleIcon" style="font-size:13px;color:var(--teal-dark);font-weight:900;">▲</span>
+      </div>
+      <div class="inv-list" id="invList">
+        <div class="inv-empty">거래명세표에서 제품을 담아주세요</div>
+      </div>
+    </div>
+
+    <!-- 단계 목록 -->
+    <div class="b-section" style="flex:1;">
+      <div class="b-title">③ 처방 단계</div>
+      <div class="stages-list" id="stagesList">
+        <div class="inv-empty" id="stagesEmpty">아래 버튼으로 단계를 추가해주세요</div>
+      </div>
+    </div>
+
+    <!-- 버튼 -->
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;
+         border-top:1px solid #f0f0f0;background:#fafafa;">
+      <button class="add-stage-btn" onclick="openStageModal()">＋ 단계 추가</button>
+      <button class="add-stage-btn" style="background:#E0F5F5;color:var(--teal-dark);border-color:var(--teal);"
+        onclick="openCostModal()">＋ 평당가 계산</button>
+      <button class="gen-btn" style="background:#1565C0;" onclick="doPrint()">🖨️ 처방전 인쇄 / PDF</button>
+    </div>
+  </div>
+
+  <!-- ── 미리보기 패널 ── -->
+  <div class="preview-area" id="previewArea">
+    <div id="previewPlaceholder" style="color:#999;font-size:14px;text-align:center;padding:60px 20px;">
+      <div style="font-size:40px;margin-bottom:12px;">📋</div>
+      왼쪽에서 정보를 입력하면<br>
+      처방전이 <strong>실시간으로</strong> 업데이트됩니다
+    </div>
+  </div>
+
+  <!-- ── 목차 패널 ── -->
+  <div class="toc-panel" id="tocPanel">
+    <div class="toc-resize-handle" id="tocResizeHandle"></div>
+    <div class="toc-head">📑 목차 순서</div>
+    <div class="toc-list" id="tocList">
+      <div style="color:#bbb;font-size:11px;text-align:center;padding:20px 8px;">
+        단계를 추가하면<br>목차가 생성됩니다
+      </div>
+    </div>
+    <div style="padding:8px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;">
+      ⠿ 드래그로 순서 변경
+    </div>
+  </div>
+
+</div>
+
+<!-- ── 비용 요약 모달 ── -->
+<div class="cost-modal-overlay" id="costOverlay">
+  <div class="cost-modal">
+    <h2>💰 사용금액 요약 (평당 평균)</h2>
+    <div id="costModalBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-ok" onclick="applyCost()">✓ 처방전에 추가</button>
+      <button class="modal-ok" style="background:#e53935;" onclick="removeCost()">✕ 요약 제거</button>
+      <button class="modal-ok" style="background:#888;" onclick="closeCostModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 플로팅 재고 패널 ── -->
+<div class="inv-float" id="invFloat">
+  <div class="inv-float-hdr" id="invFloatHdr"
+    onmousedown="startFloatDrag(event)">
+    <span class="inv-float-title">📦 재고 현황</span>
+    <button class="inv-float-close" onclick="closeInvFloat()">✕</button>
+  </div>
+  <div class="inv-float-body">
+    <div class="inv-list" id="invFloatList">
+      <div class="inv-empty">제품을 담아주세요</div>
+    </div>
+  </div>
+</div>
+
+<!-- 닫혔을 때 다시 열기 버튼 -->
+<button id="invReopenBtn" onclick="openInvFloat();this.style.display='none';"
+  style="display:none;position:fixed;top:60px;left:416px;z-index:490;
+    background:var(--teal-dark);color:#fff;border:none;border-radius:0 6px 6px 0;
+    padding:8px 10px;font-family:inherit;font-size:11px;font-weight:700;
+    cursor:pointer;writing-mode:vertical-rl;letter-spacing:2px;
+    box-shadow:2px 2px 8px rgba(0,0,0,.2);">📦 재고</button>
+
+<!-- ── 단계 추가 모달 ── -->
+<div class="overlay" id="stageOverlay" onclick="closeStageOut(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>단계 추가</h2>
+      <button class="modal-x" onclick="closeStageModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="f-row col2">
+        <div class="fg"><label>월</label>
+          <select id="mMonth">
+            <option value="0">-- 해당없음 --</option>
+            <option value="1">1월</option><option value="2">2월</option>
+            <option value="3">3월</option><option value="4">4월</option>
+            <option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option>
+            <option value="9">9월</option><option value="10">10월</option>
+            <option value="11">11월</option><option value="12">12월</option>
+          </select></div>
+        <div class="fg"><label>단계 종류</label>
+          <select id="mType" onchange="onTypeChange()">
+            <option value="경운전">경운 "전"</option>
+            <option value="경운후">경운 "후"</option>
+            <option value="정식당일">정식+당일 (첫물 줄때)</option>
+            <option value="정식후">정식 "후"</option>
+            <option value="관주">관주</option>
+            <option value="엽면">엽면</option>
+          </select></div>
+      </div>
+      <div class="f-row" id="daysRow" style="display:none;">
+        <div class="fg">
+          <label>정식 후 며칠?</label>
+          <div class="days-row">
+            <input id="mDays" type="number" placeholder="10" min="1">
+            <span class="days-unit">일 후</span>
+          </div>
+        </div>
+      </div>
+      <div class="f-row" id="dateRangeRow">
+        <div class="fg"><label>날짜 간격 <span style="font-size:10px;color:#999;">(선택)</span></label>
+          <input id="mDateRange" placeholder="예) 7-10일 간격"></div>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label>이 단계의 목적/제목 <span style="font-size:10px;color:#999;">(처방전 헤더)</span></label>
+          <input id="mPurpose" placeholder="예) 냉해+저온+예방 뿌리발근 뿌리활착"></div>
+      </div>
+      <button class="modal-ok" onclick="confirmStage()">✓ 단계 추가</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 데이터 로드 ──────────────────────────
+let rxData = {};
+let stages = [];
+let stageIdCnt = 0;
+
+window.addEventListener('DOMContentLoaded', () => {
+  const raw = localStorage.getItem('rxData');
+  if (raw) {
+    rxData = JSON.parse(raw);
+    // 표지 정보 자동 채우기
+    document.getElementById('bName').value = rxData.name || '';
+    document.getElementById('bRegion').value = rxData.region || '';
+    document.getElementById('bArea').value = rxData.area || '';
+    if (rxData.crop) {
+      const sel = document.getElementById('bCrop');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === rxData.crop) { sel.selectedIndex = i; break; }
+      }
+    }
+  }
+  // areaType 로드
+  {
+    const stdTypes = ['농사','하우스','노지'];
+    const at = rxData.areaType || '농사';
+    const sel = document.getElementById('bAreaType');
+    if (stdTypes.includes(at)) {
+      sel.value = at;
+    } else if (at) {
+      sel.value = '직접입력';
+      document.getElementById('bAreaTypeDirect').style.display = 'block';
+      document.getElementById('bAreaTypeDirect').value = at;
+    }
+  }
+  renderInventory();
+  renderStages();
+  // 입력 변경시 실시간 처방전 업데이트
+  ['bName','bRegion','bArea','bCrop','bAreaType','bAreaTypeDirect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener('input', schedulePreview); el.addEventListener('change', schedulePreview); }
+  });
+  schedulePreview();
+  // 플로팅 재고 패널 항상 표시
+  openInvFloat();
+});
+
+// ── 플로팅 재고 패널 (항상 표시) ──────────
+let invSectionCollapsed = false;
+
+function toggleInvSection() {
+  invSectionCollapsed = !invSectionCollapsed;
+  const list = document.getElementById('invList');
+  const icon = document.getElementById('invToggleIcon');
+  list.style.display = invSectionCollapsed ? 'none' : '';
+  icon.textContent = invSectionCollapsed ? '▼' : '▲';
+}
+
+function closeInvFloat() {
+  document.getElementById('invFloat').classList.remove('show');
+  document.getElementById('invReopenBtn').style.display = 'block';
+}
+
+function openInvFloat() {
+  document.getElementById('invFloat').classList.add('show');
+  const btn = document.getElementById('invReopenBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+let floatDragging = false, floatOffX = 0, floatOffY = 0;
+function startFloatDrag(e) {
+  if (e.target.classList.contains('inv-float-close')) return;
+  floatDragging = true;
+  const panel = document.getElementById('invFloat');
+  const rect = panel.getBoundingClientRect();
+  floatOffX = e.clientX - rect.left;
+  floatOffY = e.clientY - rect.top;
+  e.preventDefault();
+}
+document.addEventListener('mousemove', e => {
+  if (!floatDragging) return;
+  const panel = document.getElementById('invFloat');
+  const x = Math.max(0, Math.min(e.clientX - floatOffX, window.innerWidth - panel.offsetWidth));
+  const y = Math.max(0, Math.min(e.clientY - floatOffY, window.innerHeight - panel.offsetHeight));
+  panel.style.left = x + 'px';
+  panel.style.top = y + 'px';
+});
+document.addEventListener('mouseup', () => { floatDragging = false; });
+
+// ── 재고 경고 쿨다운 ─────────────────────
+let overCooldown = 0; // 경고 후 남은 허용 클릭 수
+
+// ── 실시간 미리보기 ───────────────────────
+let previewTimer = null;
+function schedulePreview() {
+  syncPageOrder();
+  renderToc();
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(generatePreview, 300);
+}
+
+function onBAreaTypeChange() {
+  const sel = document.getElementById('bAreaType');
+  const direct = document.getElementById('bAreaTypeDirect');
+  direct.style.display = sel.value === '직접입력' ? 'block' : 'none';
+  schedulePreview();
+}
+
+function getBAreaType() {
+  const sel = document.getElementById('bAreaType');
+  if (!sel) return rxData.areaType || '농사';
+  if (sel.value === '직접입력') return document.getElementById('bAreaTypeDirect')?.value.trim() || '농사';
+  return sel.value;
+}
+
+// 표지 텍스트 길이에 따라 폰트 자동 축소 (최대 46px, 최소 20px)
+// 12자까지는 46px 유지, 초과 시 비례 축소
+function coverFontSize(text, base=46, min=20) {
+  if (!text) return base;
+  const len = text.length;
+  if (len <= 12) return base;
+  return Math.max(min, Math.round(base * 12 / len));
+}
+
+// ── 평수 옵션 생성 (공통) ─────────────────
+function makeAreaOptions(selected) {
+  const vals = [100,200,300,400,600,800];
+  const isCustom = selected && !vals.includes(Number(selected));
+  return `<option value="">-- 선택 --</option>` +
+    vals.map(v => `<option value="${v}" ${Number(selected)==v?'selected':''}>${v}평</option>`).join('') +
+    `<option value="직접입력" ${isCustom?'selected':''}>✏️ 직접입력</option>`;
+}
+
+// ── 재고 계산 ────────────────────────────
+function getInventory() {
+  const inv = {};
+  (rxData.cart || []).forEach(item => {
+    const key = item.name + '||' + item.size;
+    inv[key] = { name: item.name, size: item.size, total: item.qty, used: 0 };
+  });
+  stages.forEach(st => {
+    (st.products || []).forEach(p => {
+      if (inv[p.key]) inv[p.key].used += (p.qty || 0);
+    });
+  });
+  return inv;
+}
+
+function buildInvHTML(inv) {
+  const keys = Object.keys(inv);
+  if (!keys.length) return '<div class="inv-empty">거래명세표에서 제품을 담아주세요</div>';
+  return keys.map(k => {
+    const it = inv[k];
+    const rem = it.total - it.used;
+    const cls = rem < 0 ? 'over' : rem === 0 ? 'warn' : 'ok';
+    return `<div class="inv-item" draggable="true"
+        ondragstart="onDragStart(event,'${k}')"
+        ondragend="onDragEnd(event)">
+      <span class="drag-handle">⠿</span>
+      <div style="flex:1"><span class="inv-name">${it.name}</span>
+        <span class="inv-size"> (${it.size})</span></div>
+      <div class="inv-stock">
+        <span class="inv-total">총 ${it.total}</span>
+        <span class="inv-remain ${cls}">잔여 ${rem}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInventory() {
+  const inv = getInventory();
+  const html = buildInvHTML(inv);
+  document.getElementById('invList').innerHTML = html;
+  const floatList = document.getElementById('invFloatList');
+  if (floatList) floatList.innerHTML = html;
+}
+
+// ── 단계 타입 번호 계산 ───────────────────
+function recalcTypeNums() {
+  const counts = {};
+  stages.forEach(st => {
+    if (st.type === '관주' || st.type === '엽면') {
+      const k = `${st.month}_${st.type}`;
+      counts[k] = (counts[k] || 0) + 1;
+      st.typeNum = counts[k];
+    }
+  });
+}
+
+function getStageLabel(st) {
+  if (st.type === '경운전') return '경운 "전"';
+  if (st.type === '경운후') return '경운 "후"';
+  if (st.type === '정식당일') return '정식+당일\n(첫물 줄때)';
+  if (st.type === '정식후') return `정식 "후"\n${st.days || ''}일`;
+  if (st.type === '관주') return `관주(${st.typeNum || 1}안)`;
+  if (st.type === '엽면') return `엽면(${st.typeNum || 1}안)`;
+  return st.type;
+}
+
+function getStageBadge(st) {
+  const month = st.month ? `${st.month}월 ` : '';
+  const label = getStageLabel(st).replace('\n', ' ');
+  const date = st.dateRange ? ` · ${st.dateRange}` : '';
+  return month + label + date;
+}
+
+// ── 단계 렌더링 ───────────────────────────
+function renderStages() {
+  recalcTypeNums();
+  const inv = getInventory();
+  const list = document.getElementById('stagesList');
+  if (!stages.length) {
+    list.innerHTML = '<div class="inv-empty">아래 버튼으로 단계를 추가해주세요</div>';
+    renderToc();
+    return;
+  }
+  renderToc();
+  schedulePreview();
+  list.innerHTML = stages.map((st, si) => {
+    // 추가된 제품 행
+    const prods = (st.products || []).map((p, pi) => {
+      const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
+      const prodName = cartItem ? cartItem.name : (p.key ? p.key.split('||')[0] : '?');
+      const prodSize = cartItem ? cartItem.size : (p.key ? p.key.split('||')[1] : '');
+      const invItem = inv[p.key];
+      const isOver = invItem ? (invItem.used > invItem.total) : false;
+      const isCustomProdArea = p.prodArea && ![100,200,300,400,600,800].includes(Number(p.prodArea));
+      const UNITS = ['개','포','병'];
+      const unitVal = p.unit || '개';
+      const isCustomUnit = p.unit && !UNITS.includes(p.unit);
+      return `<div class="prod-item">
+        <div class="prod-item-head">
+          <div>
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;">
+              <span class="prod-item-name">${prodName}</span>
+              <span class="prod-item-size">(${prodSize})</span>
+              ${isOver ? `<span class="over-badge">⚠️ 재고초과</span>` : ''}
+            </div>
+            ${st.area ? `<div style="font-size:11px;color:var(--teal-dark);font-weight:700;margin-top:2px;">(${st.area}평)</div>` : ''}
+          </div>
+          <button class="prod-del-btn" onclick="delProd(${si},${pi})">✕ 삭제</button>
+        </div>
+        <div class="prod-item-inputs">
+          <div class="prod-item-top-row" style="grid-template-columns:70px 90px 1fr;">
+            <div>
+              <label>사용량</label>
+              <input class="qty-input" type="number" value="${p.qty||0}" min="0" step="1"
+                placeholder="0"
+                oninput="onQtyInput(${si},${pi},this.value)"
+                onblur="onQtyBlur(${si},${pi},this.value)">
+            </div>
+            <div>
+              <label>단위</label>
+              <select class="prod-area-select" id="unitSel_${si}_${pi}"
+                onchange="onUnitChange(${si},${pi},this.value)">
+                ${UNITS.map(u=>`<option value="${u}" ${unitVal===u?'selected':''}>${u}</option>`).join('')}
+                <option value="__direct__" ${isCustomUnit?'selected':''}>✏️ 직접입력</option>
+              </select>
+              <input class="area-custom" id="unitCustom_${si}_${pi}"
+                type="text" placeholder="단위입력"
+                value="${isCustomUnit ? p.unit : ''}"
+                style="display:${isCustomUnit?'block':'none'};margin-top:3px;font-size:11px;width:100%;"
+                oninput="onUnitCustom(${si},${pi},this.value)">
+            </div>
+            <div>
+              <label>평수 (선택)</label>
+              <select class="prod-area-select"
+                id="prodAreaSel_${si}_${pi}"
+                onchange="onProdAreaChange(${si},${pi},this.value)">
+                ${makeAreaOptions(p.prodArea)}
+              </select>
+              <input class="area-custom" id="prodAreaCustom_${si}_${pi}"
+                type="number" placeholder="직접입력" min="1" step="50"
+                value="${isCustomProdArea ? p.prodArea : ''}"
+                style="display:${isCustomProdArea?'block':'none'};margin-top:3px;font-size:11px;width:100%;"
+                oninput="onProdAreaCustom(${si},${pi},this.value)">
+            </div>
+          </div>
+          <div class="prod-desc-row">
+            <label>사용법 / 비고</label>
+            <input value="${p.desc||''}" placeholder="예) 물25말+200평 관주"
+              oninput="stages[${si}].products[${pi}].desc=this.value;schedulePreview();">
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // 드롭다운 옵션
+    const prodOptions = (rxData.cart||[]).map(c => {
+      const k = c.name+'||'+c.size;
+      const rem = inv[k] ? (inv[k].total - inv[k].used) : 0;
+      return `<option value="${k}">${c.name} (${c.size}) — 잔여 ${rem}</option>`;
+    }).join('');
+
+    // 평수 옵션 생성
+    const AREA_VALS = [100,200,300,400,600,800];
+    const areaOptions = AREA_VALS
+      .map(v => `<option value="${v}" ${st.area==v?'selected':''}>${v}평</option>`)
+      .join('');
+    const isCustomArea = st.area && !AREA_VALS.includes(Number(st.area));
+
+    const tags = st.funcTags || [];
+    const funcColor = st.funcColor || '#ffffff';
+    const SWATCHES = ['#ffffff','#E0F5F5','#FFF9C4','#FFE0B2','#FCE4EC','#EDE7F6','#DCEDC8','#B3E5FC'];
+    const tagsHtml = tags.length
+      ? tags.map((tag,ti) => `<div class="func-tag" draggable="true"
+            ondragstart="tagDragStart(event,${si},${ti})"
+            ondragend="tagDragEnd(event)">
+            ${tag}<button class="func-tag-del" onclick="delFuncTag(${si},${ti})">✕</button>
+          </div>`).join('')
+      : '<span class="func-empty-hint">선택하여 추가</span>';
+    const swatchHtml = SWATCHES.map(c => {
+      const active = funcColor === c;
+      return `<div class="c-swatch ${active?'active':''}"
+        style="background:${c};border-color:${active?'#333':'rgba(0,0,0,.15)'};"
+        onclick="setFuncColor(${si},'${c}')"></div>`;
+    }).join('');
+
+    return `<div class="stage-card" id="stageCard_${st.id}">
+      <div class="stage-head">
+        <span class="slabel">${getStageBadge(st)}</span>
+        <button class="stage-del" onclick="delStage(${si})" title="삭제">✕</button>
+      </div>
+      <div class="stage-body">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          ${st.type === '정식후' ? `
+          <div style="flex:0 0 90px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">📆 정식 후 며칠</label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" min="1"
+                style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid var(--teal);border-radius:5px;font-weight:700;text-align:center;"
+                placeholder="일수"
+                value="${st.days||''}"
+                oninput="onDaysChange(${si},this.value)">
+              <span style="font-size:12px;color:#555;font-weight:700;white-space:nowrap;">일 후</span>
+            </div>
+          </div>` : ''}
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">📅 날짜 간격</label>
+            <input style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;"
+              placeholder="예) 7-10일 간격"
+              value="${st.dateRange||''}"
+              oninput="onDateRangeChange(${si},this.value)">
+          </div>
+          <div style="flex:2;min-width:140px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">📌 단계 목적/제목 <span style="color:#9b7fd4;">(헤더)</span></label>
+            <input style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;"
+              placeholder="예) 냉해+저온+예방 뿌리발근"
+              value="${st.purpose||''}"
+              oninput="onPurposeChange(${si},this.value)">
+          </div>
+        </div>
+
+        <div class="func-row">
+          <label>📋 제품 기능 <span style="font-size:9px;color:#9b7fd4;font-weight:500;">(복수 선택 가능)</span></label>
+          <select class="func-select" onchange="addFuncTag(${si},this.value);this.value='';">
+            <option value="">── 선택하여 추가 ──</option>
+            <option>세균성+바이러스+시들음+예방</option>
+            <option>가스제거+뿌리발근+뿌리활착</option>
+            <option>가스제거+염류제거</option>
+            <option>작물활성</option>
+            <option>광합성촉진</option>
+            <option>냉해+저온+예방</option>
+            <option>잎+두껍게 잎+왁스층+강화</option>
+            <option value="__direct__">✏️ 직접입력...</option>
+          </select>
+          <div class="func-tags-area" id="funcTags_${si}"
+            ondragover="tagDragOver(event,${si})"
+            ondrop="tagDrop(event,${si})">
+            ${tagsHtml}
+          </div>
+          <div class="func-bottom">
+            <div class="color-palette">${swatchHtml}</div>
+            <button class="func-reset-btn" onclick="resetFuncTags(${si})">초기화</button>
+          </div>
+        </div>
+
+        <div class="area-row">
+          <label class="area-label">📐 적용 평수</label>
+          <select class="area-select" id="areaSel_${si}" onchange="onAreaChange(${si},this.value)">
+            <option value="">-- 선택 --</option>
+            ${areaOptions}
+            <option value="직접입력" ${isCustomArea?'selected':''}>✏️ 직접입력</option>
+          </select>
+          <input class="area-custom" id="areaCustom_${si}"
+            type="number" placeholder="평수 입력" min="1" step="50"
+            value="${isCustomArea ? st.area : ''}"
+            style="display:${isCustomArea ? 'block' : 'none'}"
+            oninput="onAreaCustom(${si},this.value)">
+          ${st.area ? `<span class="area-badge">${st.area}평</span>` : ''}
+        </div>
+
+        ${prods}
+        <div class="add-prod-section">
+          <div class="add-prod-row">
+            <select class="add-prod-select" id="prodSel_${si}">
+              <option value="">── 제품 선택 (거래명세표 기준) ──</option>
+              ${prodOptions}
+            </select>
+            <button class="add-prod-btn" onclick="addProdFromSelect(${si})">+ 추가</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 평수 선택 ─────────────────────────────
+function onAreaChange(si, val) {
+  if (val === '직접입력') {
+    const custom = document.getElementById(`areaCustom_${si}`);
+    if (custom) { custom.style.display = 'block'; custom.focus(); }
+    stages[si].area = '';
+  } else {
+    const custom = document.getElementById(`areaCustom_${si}`);
+    if (custom) custom.style.display = 'none';
+    stages[si].area = val ? Number(val) : '';
+    renderStages();
+  }
+}
+
+// ── 제품 기능 태그 ──────────────────────────
+function addFuncTag(si, val) {
+  if (!val) return;
+  if (!stages[si].funcTags) stages[si].funcTags = [];
+  if (val === '__direct__') {
+    const text = prompt('직접 입력:');
+    if (!text || !text.trim()) return;
+    stages[si].funcTags.push(text.trim());
+  } else {
+    if (!stages[si].funcTags.includes(val)) stages[si].funcTags.push(val);
+  }
+  renderStages();
+}
+function delFuncTag(si, ti) {
+  stages[si].funcTags.splice(ti, 1);
+  renderStages();
+}
+function resetFuncTags(si) {
+  stages[si].funcTags = [];
+  stages[si].funcColor = '#ffffff';
+  renderStages();
+}
+function setFuncColor(si, color) {
+  stages[si].funcColor = color;
+  renderStages();
+}
+
+// 태그 드래그앤드롭
+let tagDragSi = null, tagDragTi = null;
+function tagDragStart(e, si, ti) {
+  tagDragSi = si; tagDragTi = ti;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('tag-dragging');
+}
+function tagDragEnd(e) { e.currentTarget.classList.remove('tag-dragging'); }
+function tagDragOver(e, si) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+function tagDrop(e, si) {
+  e.preventDefault();
+  if (tagDragSi !== si || tagDragTi === null) return;
+  const tags = stages[si].funcTags;
+  const container = document.getElementById(`funcTags_${si}`);
+  const tagEls = [...container.querySelectorAll('.func-tag')];
+  let dropIdx = tags.length;
+  tagEls.forEach((el, i) => {
+    const rect = el.getBoundingClientRect();
+    if (e.clientX < rect.left + rect.width / 2 && i < dropIdx) dropIdx = i;
+  });
+  const [moved] = tags.splice(tagDragTi, 1);
+  const insertAt = dropIdx > tagDragTi ? dropIdx - 1 : dropIdx;
+  tags.splice(insertAt, 0, moved);
+  tagDragSi = null; tagDragTi = null;
+  renderStages();
+}
+
+function onUnitChange(si, pi, val) {
+  if (val === '__direct__') {
+    const c = document.getElementById(`unitCustom_${si}_${pi}`);
+    if (c) { c.style.display = 'block'; c.focus(); }
+    stages[si].products[pi].unit = '';
+  } else {
+    const c = document.getElementById(`unitCustom_${si}_${pi}`);
+    if (c) c.style.display = 'none';
+    stages[si].products[pi].unit = val;
+    schedulePreview();
+  }
+}
+
+function onUnitCustom(si, pi, val) {
+  stages[si].products[pi].unit = val.trim();
+  schedulePreview();
+}
+
+function onProdAreaChange(si, pi, val) {
+  if (val === '직접입력') {
+    const c = document.getElementById(`prodAreaCustom_${si}_${pi}`);
+    if (c) { c.style.display = 'block'; c.focus(); }
+    stages[si].products[pi].prodArea = '';
+  } else {
+    const c = document.getElementById(`prodAreaCustom_${si}_${pi}`);
+    if (c) c.style.display = 'none';
+    stages[si].products[pi].prodArea = val ? Number(val) : '';
+    schedulePreview();
+  }
+}
+
+function onProdAreaCustom(si, pi, val) {
+  stages[si].products[pi].prodArea = val ? Number(val) : '';
+  schedulePreview();
+}
+
+function onAreaCustom(si, val) {
+  stages[si].area = val ? Number(val) : '';
+  const badge = document.querySelector(`#stageCard_${stages[si].id} .area-badge`);
+  if (badge) badge.textContent = val ? val + '평' : '';
+  schedulePreview();
+}
+
+function onDaysChange(si, val) {
+  stages[si].days = parseInt(val) || null;
+  const badge = document.querySelector(`#stageCard_${stages[si].id} .slabel`);
+  if (badge) badge.textContent = getStageBadge(stages[si]);
+  schedulePreview();
+}
+
+function onDateRangeChange(si, val) {
+  stages[si].dateRange = val.trim();
+  // 배지 업데이트
+  const badge = document.querySelector(`#stageCard_${stages[si].id} .slabel`);
+  if (badge) badge.textContent = getStageBadge(stages[si]);
+  schedulePreview();
+}
+
+function onPurposeChange(si, val) {
+  stages[si].purpose = val.trim();
+  schedulePreview();
+}
+
+// ── 드래그앤드롭 ──────────────────────────
+let dragKey = null;
+
+function onDragStart(e, key) {
+  dragKey = key;
+  e.dataTransfer.effectAllowed = 'copy';
+  e.currentTarget.classList.add('dragging');
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+}
+function onDragOver(e, si) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  const zone = document.getElementById(`dropZone_${si}`);
+  if (zone) zone.classList.add('drag-over');
+}
+function onDragLeave(si) {
+  const zone = document.getElementById(`dropZone_${si}`);
+  if (zone) zone.classList.remove('drag-over');
+}
+function onDrop(e, si) {
+  e.preventDefault();
+  const zone = document.getElementById(`dropZone_${si}`);
+  if (zone) zone.classList.remove('drag-over');
+  if (!dragKey) return;
+  if (!stages[si].products) stages[si].products = [];
+  // 이미 같은 제품이 있으면 수량만 증가
+  const existing = stages[si].products.find(p => p.key === dragKey);
+  if (existing) {
+    existing.qty = (existing.qty || 0) + 1;
+  } else {
+    stages[si].products.push({ key: dragKey, qty: 1, desc: '', unit: '개' });
+  }
+  const droppedKey = dragKey;
+  dragKey = null;
+  checkOverStock(si, droppedKey);
+  renderStages();
+  renderInventory();
+}
+
+// ── 제품 조작 ─────────────────────────────
+function addProdFromSelect(si) {
+  const sel = document.getElementById(`prodSel_${si}`);
+  const key = sel ? sel.value : '';
+  if (!key) { alert('제품을 선택해주세요.'); return; }
+  if (!stages[si].products) stages[si].products = [];
+  const existing = stages[si].products.find(p => p.key === key);
+  if (existing) {
+    existing.qty = (existing.qty || 0) + 1;
+  } else {
+    stages[si].products.push({ key, qty: 1, desc: '', unit: '개' });
+  }
+  checkOverStock(si, key);
+  renderStages();
+  renderInventory();
+}
+
+function checkOverStock(si, key) {
+  const inv = getInventory();
+  if (inv[key] && inv[key].used > inv[key].total) {
+    if (overCooldown > 0) { overCooldown--; return; }
+    const it = inv[key];
+    alert(`⚠️ "${it.name}" 재고를 초과했습니다!\n총 재고: ${it.total} / 현재 배정: ${it.used}\n\n앞으로 5번 더 초과 시 다시 알려드립니다.`);
+    overCooldown = 5;
+  }
+}
+
+function delProd(si, pi) {
+  stages[si].products.splice(pi, 1);
+  renderStages();
+  renderInventory();
+}
+
+function onProdChange(si, pi, val) {
+  stages[si].products[pi].key = val;
+  renderStages();
+  renderInventory();
+}
+
+// 타이핑 중: 데이터만 저장, 화면 재렌더 없음
+function onQtyInput(si, pi, val) {
+  stages[si].products[pi].qty = parseFloat(val) || 0;
+  renderInventory();
+  schedulePreview();
+}
+
+// 포커스 떠날 때: 재고 초과 검사
+function onQtyBlur(si, pi, val) {
+  const qty = parseFloat(val) || 0;
+  stages[si].products[pi].qty = qty;
+  const key = stages[si].products[pi].key;
+  checkOverStock(si, key);
+  renderInventory();
+}
+
+function formatQty(qty, unit) {
+  if (!qty) return '';
+  const u = unit || '개';
+  const whole = Math.floor(qty);
+  const half = Math.abs(qty - whole - 0.5) < 0.001; // qty의 소수부가 0.5인지
+  if (half) {
+    return whole > 0 ? `${whole}${u}반` : `반${u}`;
+  }
+  return `${qty}${u}`;
+}
+
+function delStage(si) {
+  stages.splice(si, 1);
+  renderStages();
+  renderInventory();
+}
+
+// ── 단계 모달 ─────────────────────────────
+function openStageModal() {
+  document.getElementById('stageOverlay').classList.add('on');
+  document.getElementById('mDateRange').value = '';
+  document.getElementById('mPurpose').value = '';
+  document.getElementById('mDays').value = '';
+  onTypeChange();
+}
+function closeStageModal() {
+  document.getElementById('stageOverlay').classList.remove('on');
+}
+function closeStageOut(e) {
+  if (e.target === document.getElementById('stageOverlay')) closeStageModal();
+}
+function onTypeChange() {
+  const t = document.getElementById('mType').value;
+  document.getElementById('daysRow').style.display = t === '정식후' ? '' : 'none';
+}
+function confirmStage() {
+  const month = parseInt(document.getElementById('mMonth').value) || 0;
+  const type = document.getElementById('mType').value;
+  const days = parseInt(document.getElementById('mDays').value) || null;
+  const dateRange = document.getElementById('mDateRange').value.trim();
+  const purpose = document.getElementById('mPurpose').value.trim();
+  stages.push({ id: ++stageIdCnt, month, type, days, dateRange, purpose, funcTags: [], funcColor: '#ffffff', products: [] });
+  closeStageModal();
+  renderStages();
+  renderInventory();
+}
+
+// ── 목차 (TOC) ────────────────────────────
+let pageOrder = [];
+let tocDragKey = null;
+let pageThumbnails = {};
+
+function getPageLabel(key) {
+  if (key === 'cover') return '📄 표지';
+  if (key === 'cost')  return '💰 비용 요약';
+  if (key.startsWith('group_')) {
+    const month = parseInt(key.replace('group_', ''));
+    const grp = stages.filter(s => (s.month || 0) === month);
+    const purposes = [...new Set(grp.map(s => s.purpose).filter(Boolean))];
+    if (purposes.length) return purposes[0].slice(0, 14);
+    return month ? `${month}월 처방` : '기본 처방';
+  }
+  return key;
+}
+
+function syncPageOrder() {
+  const current = ['cover'];
+  const seen = {};
+  stages.forEach(st => {
+    const k = 'group_' + (st.month || 0);
+    if (!seen[k]) { seen[k] = true; current.push(k); }
+  });
+  if (costVisible) current.push('cost');
+  // 기존 순서 유지하되 신규 추가/삭제 반영
+  const kept = pageOrder.filter(k => current.includes(k));
+  current.forEach(k => { if (!kept.includes(k)) kept.push(k); });
+  pageOrder = kept;
+}
+
+function getTocPreview(key) {
+  if (key === 'cover') {
+    const region = document.getElementById('bRegion')?.value.trim() || '';
+    const crop   = document.getElementById('bCrop')?.value.trim()   || '';
+    const name   = document.getElementById('bName')?.value.trim()   || '';
+    const area   = document.getElementById('bArea')?.value.trim()   || '';
+    const lines = [
+      region || null,
+      crop ? crop + (area ? ` (${area}평)` : '') + (rxData.areaType||'농사') : null,
+      name  ? `처방전: ${name}` : null,
+    ].filter(Boolean);
+    if (!lines.length) return '';
+    return '<div class="toc-preview">' + lines.map(l => `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l}</div>`).join('') + '</div>';
+  }
+  if (key.startsWith('group_')) {
+    const month = parseInt(key.replace('group_', ''));
+    const grp = stages.filter(s => (s.month || 0) === month);
+    if (!grp.length) return '';
+    const rows = grp.map(st => {
+      const prods = (st.products || []).filter(p => p.key);
+      const label = getStageLabel(st).replace('\n', ' ');
+      return `<div class="toc-preview-row">
+        <span class="toc-preview-stage">${label}</span>
+        <span class="toc-preview-cnt">${prods.length}개</span>
+      </div>`;
+    }).join('');
+    return `<div class="toc-preview">${rows}</div>`;
+  }
+  if (key === 'cost') {
+    const inv = getInventory();
+    const cart = rxData.cart || [];
+    let grand = 0;
+    cart.forEach(item => {
+      const k2 = item.name + '||' + item.size;
+      const used = inv[k2] ? inv[k2].used : 0;
+      const sp = priceOverrides[k2]?.sp ?? (item.sp || 0);
+      grand += sp * used;
+    });
+    const area = parseInt(document.getElementById('bArea')?.value) || 0;
+    const per  = area ? Math.round(grand / area) : 0;
+    if (!grand) return '';
+    return `<div class="toc-preview">
+      <div>합계: ${grand.toLocaleString()}원</div>
+      ${per ? `<div>평당: ${per.toLocaleString()}원</div>` : ''}
+    </div>`;
+  }
+  return '';
+}
+
+function createPageThumbnail(pageEl) {
+  const SCALE = 0.17;
+  const W = 840;
+  const H = pageEl.scrollHeight || 595;
+  const thumbW = Math.round(W * SCALE);
+  const thumbH = Math.round(H * SCALE);
+  const clone = pageEl.cloneNode(true);
+  clone.removeAttribute('data-pagekey');
+  clone.style.cssText = `transform:scale(${SCALE});transform-origin:top left;position:absolute;top:0;left:0;width:${W}px;pointer-events:none;`;
+  return `<div style="width:${thumbW}px;height:${thumbH}px;overflow:hidden;position:relative;pointer-events:none;border:1px solid #ccc;border-radius:3px;background:#fff;margin-top:5px;">${clone.outerHTML}</div>`;
+}
+
+function updateTocThumbnails() {
+  pageThumbnails = {};
+  const pages = document.querySelectorAll('#printPages [data-pagekey]');
+  pages.forEach(pageEl => {
+    pageThumbnails[pageEl.dataset.pagekey] = createPageThumbnail(pageEl);
+  });
+  renderToc();
+}
+
+function renderToc() {
+  syncPageOrder();
+  const list = document.getElementById('tocList');
+  if (!list) return;
+  if (pageOrder.length <= 1 && !costVisible) {
+    list.innerHTML = '<div style="color:#bbb;font-size:11px;text-align:center;padding:20px 8px;">단계를 추가하면<br>목차가 생성됩니다</div>';
+    return;
+  }
+  list.innerHTML = pageOrder.map(k => {
+    const extraClass = k === 'cost' ? 'toc-cost' : k === 'cover' ? 'toc-cover' : '';
+    return `
+    <div class="toc-item ${extraClass}" draggable="true"
+      id="tocItem_${k}"
+      ondragstart="tocDragStart(event,'${k}')"
+      ondragover="tocDragOver(event,'${k}')"
+      ondrop="tocDrop(event,'${k}')"
+      ondragend="tocDragEnd()">
+      <div class="toc-item-head">
+        <span class="toc-drag">⠿</span>
+        <span class="toc-label">${getPageLabel(k)}</span>
+      </div>
+      ${pageThumbnails[k] || getTocPreview(k)}
+    </div>`;
+  }).join('');
+}
+
+function tocDragStart(e, key) {
+  tocDragKey = key;
+  e.dataTransfer.effectAllowed = 'move';
+}
+function tocDragOver(e, key) {
+  e.preventDefault();
+  document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('toc-drag-over'));
+  const el = document.getElementById('tocItem_' + key);
+  if (el) el.classList.add('toc-drag-over');
+}
+function tocDrop(e, targetKey) {
+  e.preventDefault();
+  document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('toc-drag-over'));
+  if (!tocDragKey || tocDragKey === targetKey) return;
+  const fi = pageOrder.indexOf(tocDragKey), ti = pageOrder.indexOf(targetKey);
+  if (fi === -1 || ti === -1) return;
+  pageOrder.splice(fi, 1);
+  pageOrder.splice(ti, 0, tocDragKey);
+  renderToc();
+  schedulePreview();
+}
+function tocDragEnd() {
+  document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('toc-drag-over'));
+  tocDragKey = null;
+}
+
+// ── TOC 패널 리사이즈 ──────────────────────
+(function() {
+  let resizing = false, startX = 0, startW = 0;
+  document.addEventListener('DOMContentLoaded', () => {
+    const handle = document.getElementById('tocResizeHandle');
+    if (!handle) return;
+    handle.addEventListener('mousedown', e => {
+      resizing = true;
+      startX = e.clientX;
+      startW = document.getElementById('tocPanel').offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!resizing) return;
+      const delta = startX - e.clientX; // 왼쪽으로 드래그 = 넓어짐
+      const newW = Math.min(400, Math.max(100, startW + delta));
+      const layout = document.getElementById('mainLayout');
+      if (layout) layout.style.gridTemplateColumns = `400px 1fr ${newW}px`;
+    });
+    document.addEventListener('mouseup', () => {
+      if (!resizing) return;
+      resizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  });
+})();
+
+// ── 비용 요약 ──────────────────────────────
+let costVisible = false;
+let priceOverrides = {}; // key → {retail, sp}
+
+function openCostModal() {
+  const inv = getInventory();
+  const cart = rxData.cart || [];
+  const area = parseInt(document.getElementById('bArea').value) || 0;
+
+  // 사용된 제품만 표시
+  const rows = cart.map(item => {
+    const key = item.name + '||' + item.size;
+    const used = inv[key] ? inv[key].used : 0;
+    if (!used) return null;
+    const retail = priceOverrides[key]?.retail ?? (item.retail || 0);
+    const sp     = priceOverrides[key]?.sp     ?? (item.sp     || 0);
+    return { key, name: item.name, size: item.size, retail, sp, used };
+  }).filter(Boolean);
+
+  if (!rows.length) {
+    alert('처방 단계에 제품을 먼저 추가해주세요.');
+    return;
+  }
+
+  // 열자마자 미리보기에 즉시 반영
+  if (!costVisible) {
+    costVisible = true;
+    renderToc();
+    schedulePreview();
+  }
+
+  const areaLabel = area ? `표지 평수 기준 (${area}평)` : '⚠️ 표지 평수 미입력';
+  let tableHtml = `<table class="cost-table">
+    <thead><tr>
+      <th>제품명</th><th>용량</th>
+      <th>소매가<br><span style="font-size:10px;font-weight:400;opacity:.8;">(정가·읽기전용)</span></th>
+      <th>공급가<br><span style="font-size:10px;font-weight:400;opacity:.8;">(할인적용·편집가능)</span></th>
+      <th>사용수량</th><th>계</th>
+    </tr></thead><tbody>`;
+  rows.forEach(r => {
+    const total = r.sp * r.used;
+    const discPct = r.retail > 0 ? Math.round((1 - r.sp / r.retail) * 100) : 0;
+    const discBadge = discPct > 0
+      ? `<span style="font-size:10px;color:#e53935;font-weight:700;margin-left:3px;">-${discPct}%</span>` : '';
+    tableHtml += `<tr>
+      <td style="text-align:left;font-weight:700;">${r.name}</td>
+      <td>${r.size}</td>
+      <td style="color:#999;background:#f8f8f8;">${r.retail ? r.retail.toLocaleString()+'원' : '-'}</td>
+      <td>
+        <input type="number" value="${r.sp}" style="width:85px;"
+          oninput="setPriceOverride('${r.key}','sp',this.value);updateCostModal()">
+        ${discBadge}
+      </td>
+      <td>${r.used}</td>
+      <td id="costRow_${r.key.replace(/\|/g,'_')}" style="font-weight:700;">${total.toLocaleString()}원</td>
+    </tr>`;
+  });
+  const grandTotal = rows.reduce((s, r) => s + r.sp * r.used, 0);
+  const perPyeong = area ? Math.round(grandTotal / area) : 0;
+  tableHtml += `</tbody><tfoot>
+    <tr class="cost-total-row">
+      <td colspan="5" style="text-align:right;font-size:13px;">합계</td>
+      <td id="costGrandTotal" style="font-size:14px;">${grandTotal.toLocaleString()}원</td>
+    </tr>
+    <tr class="cost-total-row" style="background:#C8E6C9;">
+      <td colspan="5" style="text-align:right;font-size:13px;">평당 단가 &nbsp;<span style="font-size:11px;color:#555;">${areaLabel}</span></td>
+      <td id="costPerPyeong" style="font-size:15px;font-weight:900;color:var(--teal-dark);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
+    </tr>
+  </tfoot></table>`;
+
+  document.getElementById('costModalBody').innerHTML = tableHtml;
+  document.getElementById('costOverlay').classList.add('on');
+}
+
+function setPriceOverride(key, field, val) {
+  if (!priceOverrides[key]) priceOverrides[key] = {};
+  priceOverrides[key][field] = parseFloat(val) || 0;
+}
+
+function updateCostModal() {
+  const inv = getInventory();
+  const cart = rxData.cart || [];
+  const area = parseInt(document.getElementById('bArea').value) || 0;
+  let grand = 0;
+  (cart || []).forEach(item => {
+    const key = item.name + '||' + item.size;
+    const used = inv[key] ? inv[key].used : 0;
+    if (!used) return;
+    const sp = priceOverrides[key]?.sp ?? (item.sp || 0);
+    const total = sp * used;
+    grand += total;
+    const el = document.getElementById('costRow_' + key.replace(/\|/g,'_'));
+    if (el) el.textContent = total.toLocaleString() + '원';
+  });
+  const el1 = document.getElementById('costGrandTotal');
+  const el2 = document.getElementById('costPerPyeong');
+  if (el1) el1.textContent = grand.toLocaleString() + '원';
+  if (el2) el2.textContent = area ? Math.round(grand/area).toLocaleString()+'원' : '표지 평수 미입력';
+  schedulePreview();
+}
+
+function applyCost() {
+  costVisible = true;
+  closeCostModal();
+  renderToc();
+  schedulePreview();
+}
+function removeCost() {
+  costVisible = false;
+  closeCostModal();
+  renderToc();
+  schedulePreview();
+}
+function closeCostModal() {
+  document.getElementById('costOverlay').classList.remove('on');
+}
+
+function generateCostPageHtml(area) {
+  const inv = getInventory();
+  const cart = rxData.cart || [];
+  const crop = document.getElementById('bCrop').value.trim();
+  const region = document.getElementById('bRegion').value.trim();
+  const name = document.getElementById('bName').value.trim();
+  const areaType = getBAreaType();
+
+  const rows = (cart || []).map(item => {
+    const key = item.name + '||' + item.size;
+    const used = inv[key] ? inv[key].used : 0;
+    if (!used) return null;
+    const retail = priceOverrides[key]?.retail ?? (item.retail || 0);
+    const sp     = priceOverrides[key]?.sp     ?? (item.sp     || 0);
+    return { name: item.name, size: item.size, retail, sp, used, total: sp * used };
+  }).filter(Boolean);
+
+  if (!rows.length) return '';
+
+  const grand = rows.reduce((s, r) => s + r.total, 0);
+  const perPyeong = area ? Math.round(grand / area) : 0;
+  const title = `${crop||''}${areaType} ${region||''} ${area?'('+area+'평) ':''} ${name||''} 처방전 사용금액`.trim();
+
+  let trs = rows.map(r => `<tr>
+    <td style="text-align:left;padding:8px 10px;">${r.name}</td>
+    <td style="padding:8px 6px;">${r.size}</td>
+    <td style="padding:8px 6px;">${r.retail ? r.retail.toLocaleString()+'원' : '-'}</td>
+    <td style="padding:8px 6px;font-weight:900;color:var(--teal-dark);">${r.sp ? r.sp.toLocaleString()+'원' : '-'}</td>
+    <td style="padding:8px 6px;">${r.used}</td>
+    <td style="padding:8px 6px;font-weight:700;">${r.total ? r.total.toLocaleString()+'원' : '-'}</td>
+  </tr>`).join('');
+
+  return `<div class="page-card" data-pagekey="cost">
+    <div class="content-page">
+      <div class="content-inner">
+        <div class="page-purpose">${title}</div>
+        <table class="rx-table" style="font-size:15px;">
+          <thead><tr>
+            <th style="text-align:left;">제품명</th>
+            <th>용량</th>
+            <th>소매가</th>
+            <th>공급가</th>
+            <th>사용량</th>
+            <th>계</th>
+          </tr></thead>
+          <tbody>${trs}</tbody>
+          <tfoot>
+            <tr style="background:#E0F5F5;">
+              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">합계</td>
+              <td style="padding:10px;font-weight:900;font-size:15px;border:3.5px solid var(--teal);">${grand.toLocaleString()}원</td>
+            </tr>
+            <tr style="background:#E0F5F5;">
+              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">평당 평균 ${area?'('+area+'평)':''}</td>
+              <td style="padding:10px;font-weight:900;font-size:16px;color:var(--teal-dark);border:3.5px solid var(--teal);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div class="page-footer-bar"><img src="logo.png" style="height:14px;vertical-align:middle;margin-right:4px;"> 천연바이오:010-3704-5963 &nbsp;&nbsp; 담당자:010-3704-5963</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── 처방전 생성 ───────────────────────────
+function generatePreview() {
+  const region = document.getElementById('bRegion').value.trim();
+  const area = document.getElementById('bArea').value.trim();
+  const crop = document.getElementById('bCrop').value.trim();
+  const name = document.getElementById('bName').value.trim();
+  const areaType = getBAreaType();
+
+  // 총 행 수 계산 → 자동 폰트 크기
+  let totalRows = 0;
+  stages.forEach(st => {
+    const prods = (st.products||[]).filter(p=>p.key);
+    totalRows += prods.length || 1;
+  });
+  const fs = totalRows <= 5 ? 18 : totalRows <= 8 ? 16 : totalRows <= 11 ? 14 : totalRows <= 15 ? 12 : totalRows <= 19 ? 10 : 9;
+  const thfs = Math.max(fs - 1, 9);
+
+  // ── 월별 그룹 미리 빌드 ──
+  const groups = {};
+  stages.forEach(st => {
+    const k = st.month || 0;
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(st);
+  });
+
+  function buildGroupPage(monthKey) {
+    const stagesInGroup = groups[monthKey] || [];
+    const purposes = [...new Set(stagesInGroup.map(s=>s.purpose).filter(Boolean))];
+    const pageTitle = purposes.join(' &nbsp;·&nbsp; ') || (monthKey ? `${monthKey}월 처방` : '기본 처방');
+    let rows = '';
+    stagesInGroup.forEach(st => {
+      const prods = (st.products || []).filter(p => p.key);
+      const dateInfo = st.dateRange ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.dateRange})</span>` : '';
+      const areaInfo = st.area ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.area}평)</span>` : '';
+      if (!prods.length) {
+        rows += `<tr>
+          <td class="stage-td">${getStageLabel(st)}${dateInfo}${areaInfo}</td>
+          <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td>
+        </tr>`; return;
+      }
+      prods.forEach((p, pi) => {
+        const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
+        const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
+        const prodSize = cartItem ? cartItem.size : p.key.split('||')[1] || '';
+        const qtyCell = p.qty ? formatQty(p.qty, p.unit) : '';
+        const prodAreaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
+        if (pi === 0) {
+          rows += `<tr>
+            <td class="stage-td" rowspan="${prods.length}">${getStageLabel(st)}${dateInfo}${areaInfo}</td>
+            <td class="product-td">${prodName}${prodAreaLine}</td>
+            <td class="size-td">${prodSize}</td>
+            <td class="qty-td">${qtyCell}</td>
+            <td class="desc-td">${p.desc || ''}</td>
+          </tr>`;
+        } else {
+          rows += `<tr>
+            <td class="product-td">${prodName}${prodAreaLine}</td>
+            <td class="size-td">${prodSize}</td>
+            <td class="qty-td">${qtyCell}</td>
+            <td class="desc-td">${p.desc || ''}</td>
+          </tr>`;
+        }
+      });
+    });
+    const allFuncRows = stagesInGroup.filter(s=>s.funcTags&&s.funcTags.length)
+      .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff'}));
+    const funcHeadHtml = allFuncRows.map(r=>
+      `<tr><th colspan="5" style="background:${r.color};color:#111;
+        font-size:var(--rx-fs,17px);font-weight:700;text-align:center;
+        padding:10px 14px;border:1.5px solid var(--teal);letter-spacing:.5px;">
+        ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
+      </th></tr>`).join('');
+    return `<div class="page-card" data-pagekey="group_${monthKey}">
+      <div class="content-page"><div class="content-inner">
+        <div class="page-purpose">${pageTitle}</div>
+        <table class="rx-table">
+          <thead>${funcHeadHtml}
+            <tr>
+              <th style="width:110px;">시기/단계</th>
+              <th style="width:160px;">제품명</th>
+              <th style="width:70px;">용량</th>
+              <th style="width:90px;">사용량</th>
+              <th>물량/평수 (사용법)</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="page-footer-bar"><img src="logo.png" style="height:14px;vertical-align:middle;margin-right:4px;"> 천연바이오:010-3704-5963 &nbsp;&nbsp; 담당자:010-3704-5963</div>
+      </div></div>
+    </div>`;
+  }
+
+  // ── 표지 HTML ──
+  const cropText = crop ? crop + (area ? `(${area}평)` : '') + areaType : '';
+  const rxText   = '처방전:' + (name || '고객명');
+  // 세 줄 중 가장 긴 텍스트 기준으로 폰트 크기 통일
+  const allLines = [region, cropText, rxText].filter(Boolean);
+  const sharedFS = allLines.length ? Math.min(...allLines.map(t => coverFontSize(t))) : 46;
+  const coverHtml = `<div class="page-card" data-pagekey="cover">
+    <div class="cover-page">
+      <div class="cover-naturebio">N &nbsp; A &nbsp; T &nbsp; U &nbsp; R &nbsp; E &nbsp; B &nbsp; I &nbsp; O</div>
+      <div class="cover-box">
+        ${region ? `<div class="cover-region" style="font-size:${sharedFS}px;">${region}</div>` : ''}
+        <div class="cover-crop-area" style="font-size:${sharedFS}px;">${cropText || '&nbsp;'}</div>
+        <div class="cover-rx" style="font-size:${sharedFS}px;">${rxText}</div>
+      </div>
+      <div class="cover-logo-area">
+        <div class="cover-logo-top">
+          <img class="leaf-icon" src="logo.png" alt="천연바이오">
+          <div class="cover-logo-texts">
+            <span class="cover-logo-sub">미래농업의 선두기업</span>
+            <span class="cover-logo-name">천연바이오</span>
+          </div>
+        </div>
+        <div class="cover-tagline-bar">Top-ranking company of agricultural future</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── pageOrder 순서로 조합 ──
+  syncPageOrder();
+  renderToc();
+  let html = '';
+  pageOrder.forEach(key => {
+    if (key === 'cover') { html += coverHtml; return; }
+    if (key === 'cost')  { html += generateCostPageHtml(parseInt(area)||0); return; }
+    if (key.startsWith('group_')) {
+      const monthKey = parseInt(key.replace('group_',''));
+      if (groups[monthKey]) html += buildGroupPage(monthKey);
+    }
+  });
+
+  const preview = document.getElementById('previewArea');
+  preview.innerHTML = `<div class="print-pages" id="printPages" style="--rx-fs:${fs}px;--rx-th:${thfs}px;">${html}</div>`;
+  setTimeout(updateTocThumbnails, 80);
+  if (window.innerWidth <= 768) setTimeout(applyMobilePreviewScale, 120);
+}
+
+function doPrint() {
+  generatePreview();
+  setTimeout(() => window.print(), 200);
+}
+
+// ══ 모바일 탭 전환 ══
+let _mobileTab = 'builder';
+
+function switchMobileTab(tab) {
+  _mobileTab = tab;
+  const layout = document.getElementById('mainLayout');
+  layout.classList.remove('m-preview', 'm-toc');
+  if (tab === 'preview') layout.classList.add('m-preview');
+  if (tab === 'toc')     layout.classList.add('m-toc');
+
+  document.querySelectorAll('.mobile-tab').forEach(el => el.classList.remove('active'));
+  const tabEl = document.getElementById('mTab-' + tab);
+  if (tabEl) tabEl.classList.add('active');
+
+  if (tab === 'preview') {
+    // 미리보기 탭 전환 시 렌더링 + 스케일 적용
+    schedulePreview();
+    setTimeout(applyMobilePreviewScale, 350);
+  }
+}
+
+function applyMobilePreviewScale() {
+  if (window.innerWidth > 768) return;
+  const pp = document.getElementById('printPages');
+  if (!pp) return;
+  const previewArea = document.getElementById('previewArea');
+  const availW = (previewArea.clientWidth || window.innerWidth) - 20;
+  const scale = Math.min(1, availW / 840);
+  pp.style.transform = `scale(${scale})`;
+  pp.style.transformOrigin = 'top left';
+  // 스케일 후 높이 보정 (transform은 레이아웃 공간 유지됨)
+  const origH = pp.scrollHeight;
+  pp.style.marginBottom = `${Math.round(origH * scale - origH)}px`;
+}
+
+// 창 크기 변경 시 스케일 재적용 / 초기화
+window.addEventListener('resize', () => {
+  if (window.innerWidth <= 768) {
+    if (_mobileTab === 'preview') applyMobilePreviewScale();
+  } else {
+    const pp = document.getElementById('printPages');
+    if (pp) { pp.style.transform = ''; pp.style.marginBottom = ''; }
+  }
+});
+</script>
+</body>
+</html>
