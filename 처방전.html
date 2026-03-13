@@ -1789,6 +1789,7 @@ function generatePreview() {
           <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
         return;
       }
+      const isMergedDesc = st.type === '관주' || st.type === '엽면';
       prods.forEach(({p, idx: pi}, rowIdx) => {
         const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
         const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
@@ -1798,7 +1799,17 @@ function generatePreview() {
         const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${prodName}${prodAreaLine}</td>`;
         const sizeTd = `<td class="size-td">${prodSize}</td>`;
         const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${qtyCell||'—'}</td>`;
-        const descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+        // 관주/엽면: 첫 행에만 desc 셀 출력 (rowspan으로 통합)
+        let descTd = '';
+        if (isMergedDesc) {
+          if (rowIdx === 0) {
+            const allDescs = [...new Set(prods.map(({p:pp}) => pp.desc||'').filter(Boolean))];
+            const descHtml = allDescs.length ? allDescs.join('<br>') : '<span style="color:#ccc;font-size:11px;">+</span>';
+            descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)" rowspan="${prods.length}" style="vertical-align:middle;">${descHtml}</td>`;
+          }
+        } else {
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+        }
         if (rowIdx === 0) {
           rows += `<tr><td ${stBase} rowspan="${prods.length}">${getStageLabel(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
