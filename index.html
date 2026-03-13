@@ -279,6 +279,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   transition:background .15s;}
 .add-btn:hover{background:var(--g-mid);}
 
+.au-item-actions{display:flex;gap:4px;flex-shrink:0;}
+.au-del-btn{background:#fff0f0;color:#C62828;border:1.5px solid #ffcdd2;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.au-del-btn:hover{background:#C62828;color:#fff;}
+.au-hdel-btn{background:#f5f5f5;color:#555;border:1.5px solid #ccc;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.au-hdel-btn:hover{background:#333;color:#fff;}
+.au-restore-btn{background:#e8f5e9;color:#2E7D32;border:1.5px solid #a5d6a7;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.au-restore-btn:hover{background:#2E7D32;color:#fff;}
+.au-deleted-toggle{width:100%;padding:10px 14px;background:none;border:1.5px dashed #ccc;border-radius:8px;font-family:inherit;font-size:12px;color:#999;cursor:pointer;margin-top:12px;text-align:left;}
+.au-deleted-toggle:hover{border-color:#aaa;color:#666;}
+.au-item.au-deleted-item{background:#fafafa;opacity:.75;}
+.au-del-date-lbl{font-size:10px;color:#E65100;flex:none;}
 /* ── 전체 미수금 목록 오버레이 ── */
 .au-overlay{display:none;position:fixed;inset:0;z-index:10000;background:#f0f0f0;overflow-y:auto;}
 .au-overlay.open{display:block;}
@@ -2032,8 +2043,12 @@ function renderUnpaidList(invoices,deleted){
         </div>
       </div>
       <div class="inv-actions">
-        <button class="inv-del-btn" onclick="onDeleteInvoice('${inv.id}')">삭제</button>
-      </div>`:''}
+        <button class="inv-del-btn" onclick="onDeleteInvoice('${inv.id}','unpaid')">삭제</button>
+        <button class="inv-del-btn" style="background:#f5f5f5;color:#555;border-color:#ccc;" onclick="openHardDeleteConfirm('${inv.id}','unpaid')">완전삭제</button>
+      </div>`:`<div class="inv-actions">
+        <button class="inv-del-btn" style="background:#e8f5e9;color:#2E7D32;border-color:#a5d6a7;" onclick="onRestoreInvoice('${inv.id}')">복구</button>
+        <button class="inv-del-btn" style="background:#f5f5f5;color:#555;border-color:#ccc;" onclick="openHardDeleteConfirm('${inv.id}','unpaid')">완전삭제</button>
+      </div>`}
     </div>`;
   }
 
@@ -2092,10 +2107,12 @@ function onRemovePayment(invId,payIdx){
     _reloadUnpaidModal();
   },'취소확인');
 }
-function onDeleteInvoice(id){
-  showConfirm('이 거래 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.',()=>{
+function onDeleteInvoice(id,from){
+  showConfirm('이 거래를 삭제하시겠습니까?\n(언제든 복구 가능)',()=>{
     deleteInvoice(id);
-    _reloadUnpaidModal();
+    if(from==='all') openAllUnpaid();
+    else _reloadUnpaidModal();
+    showToast('삭제됨 — 복구하려면 삭제 내역에서 복구 버튼을 누르세요');
   });
 }
 
@@ -2586,6 +2603,56 @@ function applyParsedInvoice(parsed){
   }
 }
 
+// ─── 완전삭제 / 복구 ────────────────────
+let _hardDelId=null,_hardDelFrom=null;
+function openHardDeleteConfirm(id,from){
+  _hardDelId=id; _hardDelFrom=from;
+  document.getElementById('hardDelPw').value='';
+  document.getElementById('hardDelPw').style.borderColor='';
+  document.getElementById('hardDelOverlay').style.display='flex';
+  setTimeout(()=>document.getElementById('hardDelPw').focus(),100);
+}
+function closeHardDelModal(){
+  document.getElementById('hardDelOverlay').style.display='none';
+  _hardDelId=null;
+}
+function closeHardDelOut(e){if(e.target.id==='hardDelOverlay')closeHardDelModal();}
+function confirmHardDelete(){
+  const pw=document.getElementById('hardDelPw').value;
+  if(pw!=='0021'){
+    document.getElementById('hardDelPw').style.borderColor='#C62828';
+    document.getElementById('hardDelPw').value='';
+    showToast('비밀번호가 틀렸습니다',false);
+    return;
+  }
+  const id=_hardDelId, from=_hardDelFrom;
+  closeHardDelModal();
+  const history=getInvoiceHistory();
+  const idx=history.findIndex(h=>h.id===id);
+  if(idx<0)return;
+  const inv=history.splice(idx,1)[0];
+  setInvoiceHistory(history);
+  updateUnpaidBadge();
+  pushToServer('delete',inv);
+  showToast('완전삭제 완료');
+  if(from==='all') openAllUnpaid();
+  else _reloadUnpaidModal();
+}
+function onRestoreInvoice(id,from){
+  const history=getInvoiceHistory();
+  const inv=history.find(h=>h.id===id);
+  if(!inv)return;
+  const paid=(inv.payments||[]).filter(p=>!p.cancelled).reduce((s,p)=>s+p.amount,0);
+  inv.status=paid>=inv.totals.grandTotal?'입금완료':paid>0?'일부입금':'미입금';
+  delete inv.deletedAt;
+  setInvoiceHistory(history);
+  updateUnpaidBadge();
+  pushToServer('update',inv);
+  showToast('복구 완료 ✓');
+  if(from==='all') openAllUnpaid();
+  else _reloadUnpaidModal();
+}
+
 // ─── 전체 미수금 목록 ────────────────────
 function openAllUnpaid(){
   const history=getInvoiceHistory();
@@ -2634,10 +2701,46 @@ function openAllUnpaid(){
         <span style="font-size:11px;color:#999;flex:1;">${crop}</span>
         <span class="au-amount">${comma(remain)}원</span>
         <span class="au-date">${date}</span>
+        <div class="au-item-actions">
+          <button class="au-del-btn" onclick="onDeleteInvoice('${h.id}','all')">삭제</button>
+          <button class="au-hdel-btn" onclick="openHardDeleteConfirm('${h.id}','all')">완전삭제</button>
+        </div>
       </div>`;
     });
     html+='</div>';
   });
+
+  // 소프트 삭제된 항목 (접힘)
+  const deleted=history.filter(h=>{
+    if(!h.deletedAt&&h.status!=='삭제됨')return false;
+    return true;
+  });
+  if(deleted.length){
+    const delId='au-del-'+Date.now();
+    html+=`<button class="au-deleted-toggle" onclick="
+      const s=document.getElementById('${delId}');
+      const open=s.style.display!=='none';
+      s.style.display=open?'none':'block';
+      this.textContent=open?'🗑 삭제된 내역 ${deleted.length}건 보기':'🗑 삭제된 내역 ${deleted.length}건 숨기기';
+    ">🗑 삭제된 내역 ${deleted.length}건 보기</button>
+    <div id="${delId}" style="display:none;"><div class="au-region-card" style="margin-top:8px;">
+      <div class="au-region-hdr"><span class="au-region-name" style="color:#999;">🗑 삭제된 내역</span></div>`;
+    deleted.sort((a,b)=>new Date(b.deletedAt||b.savedAt)-new Date(a.deletedAt||a.savedAt)).forEach(h=>{
+      const delDate=h.deletedAt?h.deletedAt.slice(5,10).replace('-','/'):'';
+      const phone=h.customer.phone||'번호없음';
+      html+=`<div class="au-item au-deleted-item">
+        <span class="au-name">${h.customer.name}</span>
+        <a class="au-phone" href="tel:${phone}" style="color:#aaa;">${phone}</a>
+        <span style="font-size:10px;color:#E65100;flex:1;">삭제 ${delDate}</span>
+        <span class="au-amount" style="color:#aaa;">${comma(h.totals.grandTotal)}원</span>
+        <div class="au-item-actions">
+          <button class="au-restore-btn" onclick="onRestoreInvoice('${h.id}','all')">복구</button>
+          <button class="au-hdel-btn" onclick="openHardDeleteConfirm('${h.id}','all')">완전삭제</button>
+        </div>
+      </div>`;
+    });
+    html+='</div></div></div>';
+  }
 
   document.getElementById('auContent').innerHTML=html;
   document.getElementById('auOverlay').classList.add('open');
@@ -2651,6 +2754,24 @@ function printAllUnpaid(){
 }
 </script>
 
+<!-- ── 완전삭제 비밀번호 모달 ── -->
+<div class="overlay" id="hardDelOverlay" onclick="closeHardDelOut(event)" style="display:none;z-index:11000;">
+  <div class="modal" style="max-width:280px;">
+    <div class="modal-hdr" style="background:#B71C1C;">
+      <h2 style="font-size:15px;">⚠️ 완전삭제 확인</h2>
+      <button class="modal-x" onclick="closeHardDelModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#C62828;font-weight:700;margin:0 0 14px;line-height:1.6;">서버에서도 영구 삭제됩니다.<br>복구가 불가능합니다.</p>
+      <div class="mf"><label>비밀번호</label>
+        <input type="password" id="hardDelPw" placeholder="비밀번호 입력"
+          style="text-align:center;font-size:22px;letter-spacing:6px;"
+          onkeydown="if(event.key==='Enter')confirmHardDelete()">
+      </div>
+      <button class="add-btn" style="background:#B71C1C;margin-top:8px;" onclick="confirmHardDelete()">완전삭제</button>
+    </div>
+  </div>
+</div>
 <!-- ── 전체 미수금 목록 오버레이 ── -->
 <div class="au-overlay" id="auOverlay">
   <div class="au-topbar">
