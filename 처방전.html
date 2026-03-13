@@ -674,10 +674,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="fg"><label>날짜 간격 <span style="font-size:10px;color:#999;">(선택)</span></label>
           <input id="mDateRange" placeholder="예) 7-10일 간격"></div>
       </div>
-      <div class="f-row">
-        <div class="fg"><label>이 단계의 목적/제목 <span style="font-size:10px;color:#999;">(처방전 헤더)</span></label>
-          <input id="mPurpose" placeholder="예) 냉해+저온+예방 뿌리발근 뿌리활착"></div>
-      </div>
       <button class="modal-ok" onclick="confirmStage()">✓ 단계 추가</button>
     </div>
   </div>
@@ -1127,13 +1123,6 @@ function renderStages() {
               </div>
             </div>
           </div>` : ''}
-          <div style="flex:2;min-width:140px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">📌 단계 목적/제목 <span style="color:#9b7fd4;">(헤더)</span></label>
-            <input style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;"
-              placeholder="예) 냉해+저온+예방 뿌리발근"
-              value="${st.purpose||''}"
-              oninput="onPurposeChange(${si},this.value)">
-          </div>
         </div>
 
         <div class="func-row">
@@ -1233,7 +1222,11 @@ function syncGroupOrder() {
   // 신규 그룹 추가 (뒤에 붙이기)
   seen.forEach(mk => {
     if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
-    if (!groupLabels[mk]) groupLabels[mk] = mk === 0 ? '기비 (기본시비)' : `${mk}월`;
+    if (!groupLabels[mk]) {
+      // 기존 purpose를 초기 레이블로 (구형 PDF 호환)
+      const firstPurpose = stages.filter(s => (s.month ?? 0) === mk).map(s => s.purpose).filter(Boolean)[0];
+      groupLabels[mk] = firstPurpose || (mk === 0 ? '기비 (기본시비)' : `${mk}월`);
+    }
   });
   // 없어진 그룹 제거
   stageGroupOrder = stageGroupOrder.filter(mk => seen.includes(mk));
@@ -1583,7 +1576,7 @@ function delStage(si) {
 function openStageModal() {
   document.getElementById('stageOverlay').classList.add('on');
   document.getElementById('mDateRange').value = '';
-  document.getElementById('mPurpose').value = '';
+  // mPurpose removed
   document.getElementById('mDays').value = '';
   onTypeChange();
 }
@@ -1602,8 +1595,7 @@ function confirmStage() {
   const type = document.getElementById('mType').value;
   const days = parseInt(document.getElementById('mDays').value) || null;
   const dateRange = document.getElementById('mDateRange').value.trim();
-  const purpose = document.getElementById('mPurpose').value.trim();
-  stages.push({ id: ++stageIdCnt, month, type, days, dateRange, purpose, funcTags: [], funcColor: '#ffffff', products: [] });
+  stages.push({ id: ++stageIdCnt, month, type, days, dateRange, purpose: '', funcTags: [], funcColor: '#ffffff', products: [] });
   closeStageModal();
   renderStages();
   renderInventory();
@@ -1619,10 +1611,8 @@ function getPageLabel(key) {
   if (key === 'cost')  return '💰 비용 요약';
   if (key.startsWith('group_')) {
     const month = parseInt(key.replace('group_', ''));
-    const grp = stages.filter(s => (s.month || 0) === month);
-    const purposes = [...new Set(grp.map(s => s.purpose).filter(Boolean))];
-    if (purposes.length) return purposes[0].slice(0, 14);
-    return month ? `${month}월 처방` : '기본 처방';
+    const lbl = groupLabels[month] || (month ? `${month}월 처방` : '기본 처방');
+    return lbl.slice(0, 14);
   }
   return key;
 }
@@ -2000,8 +1990,7 @@ function generatePreview() {
 
   function buildGroupPage(monthKey) {
     const stagesInGroup = groups[monthKey] || [];
-    const purposes = [...new Set(stagesInGroup.map(s=>s.purpose).filter(Boolean))];
-    const pageTitle = purposes.join(' · ') || (monthKey ? `${monthKey}월 처방` : '기본 처방');
+    const pageTitle = groupLabels[monthKey] || (monthKey ? `${monthKey}월 처방` : '기본 처방');
     let rows = '';
     stagesInGroup.forEach(st => {
       const si = stages.indexOf(st);
@@ -2655,7 +2644,7 @@ function openRxEdit(el) {
   const ed = document.getElementById('coverEditor');
   const cfg = {
     'page-title': { t:'페이지 제목', h:'이 처방 페이지의 제목',
-      get(){ const g=stages.filter(s=>(s.month||0)==mk); const p=[...new Set(g.map(s=>s.purpose).filter(Boolean))]; return p[0]||''; }},
+      get(){ return groupLabels[mk] || ''; }},
     'func-tags':  { t:'제품 기능 태그', h:'+ 로 구분  예) 뿌리활착+생장촉진',
       get(){ return (stages[si].funcTags||[]).join('+'); }},
     'stage-date': { t:'날짜/기간', h:'예) 3월20일-3월25일',
@@ -2687,7 +2676,10 @@ function onCeTextInput() {
     if (field === 'region') document.getElementById('bRegion').value = val.replace(/\n/g,' ');
     else if (field === 'rx') document.getElementById('bName').value  = val.replace(/\n/g,' ');
   } else if (type === 'page-title') {
-    stages.filter(s=>(s.month||0)==mk).forEach(s=>{ s.purpose = val; });
+    groupLabels[mk] = val;
+    // 그룹 헤더 입력 필드도 즉시 업데이트
+    const inp = document.querySelector(`#monthGrp_${mk} .group-label-input`);
+    if (inp) inp.value = val;
   } else if (type === 'func-tags') {
     stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
   } else if (type === 'stage-date') {
