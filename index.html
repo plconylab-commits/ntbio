@@ -85,7 +85,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .c-dak    .cat-title{background:#FFF3E0;color:#E65100;}
 .c-etc    .cat-title{background:#F3E5F5;color:#6A1B9A;}
 .c-powder .cat-title{background:#FFFDE7;color:#F9A825;}
-.c-cost   .cat-title{background:#EFEBE9;color:#4E342E;}
 
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
 
@@ -98,7 +97,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .c-dak    .prod-btn::before{background:#FB8C00;}
 .c-etc    .prod-btn::before{background:#8E24AA;}
 .c-powder .prod-btn::before{background:#FDD835;}
-.c-cost   .prod-btn::before{background:#795548;}
 .prod-btn:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(0,0,0,.1);
   border-color:var(--g-lt);}
 .prod-btn.sel{border-color:var(--g-btn);background:var(--g-pale);
@@ -876,9 +874,6 @@ const PRODS = [
   {cat:'분말비료',   name:'칼슘오래가지오',        size:'400g',       price:25000},
   {cat:'분말비료',   name:'칼슘오래가지오',        size:'200g',       price:15000},
   {cat:'분말비료',   name:'엘세로 유황',          size:'500g',       price:20000},
-  // ── 기타비용 ──
-  {cat:'기타비용',   name:'운송비',              size:'-',          price:0},
-  {cat:'기타비용',   name:'지게차',              size:'-',          price:0},
 ];
 
 const CAT_CLS = {
@@ -887,7 +882,6 @@ const CAT_CLS = {
   '액상비료':    'c-dak',
   '관주용(10L)': 'c-etc',
   '분말비료':    'c-powder',
-  '기타비용':    'c-cost',
 };
 const CAT_LBL = {
   '토양개량제':   '🪨 토양개량제',
@@ -895,7 +889,6 @@ const CAT_LBL = {
   '액상비료':    '💧 액상비료',
   '관주용(10L)': '🚿 액상 관주용',
   '분말비료':    '🌿 분말비료',
-  '기타비용':    '🚚 기타비용',
 };
 
 let cart=[], midx=-1;
@@ -958,6 +951,16 @@ function buildGrid(){
         <div class="psize">품목·금액 직접입력</div>
         <div class="pprice" style="color:var(--g-mid);font-size:11px;">기타 항목 추가</div>
       </div>
+      <div class="prod-btn cost-btn" onclick="addCostItem('운송비')">
+        <div class="pname">🚚</div>
+        <div class="psize">운송비</div>
+        <div class="pprice" style="color:var(--g-mid);font-size:11px;">금액 직접입력</div>
+      </div>
+      <div class="prod-btn cost-btn" onclick="addCostItem('지게차')">
+        <div class="pname">🏗️</div>
+        <div class="psize">지게차</div>
+        <div class="pprice" style="color:var(--g-mid);font-size:11px;">금액 직접입력</div>
+      </div>
     </div>`;
   el.appendChild(customBlock);
 
@@ -1012,6 +1015,11 @@ function openCustomModal(){
   calcCustom();
   document.getElementById('customOverlay').classList.add('on');
   setTimeout(()=>document.getElementById('cItemName').focus(),50);
+}
+function addCostItem(name){
+  cart.push({i:'cost_'+Date.now(),name,size:'-',retail:0,disc:0,sp:0,qty:1,gift:false,custom:true});
+  render();
+  showToast(name+' 추가 — 지원가에서 금액을 입력하세요');
 }
 function closeCustomModal(){document.getElementById('customOverlay').classList.remove('on');}
 function closeCustomOut(e){if(e.target===document.getElementById('customOverlay'))closeCustomModal();}
