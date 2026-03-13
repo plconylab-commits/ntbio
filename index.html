@@ -119,6 +119,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ord-list{flex:1;overflow-y:auto;padding:8px 0;}
 .ord-list::-webkit-scrollbar{width:4px;}
 .ord-list::-webkit-scrollbar-thumb{background:#bbb;border-radius:2px;}
+.ord-item[draggable]{cursor:grab;}
+.ord-item[draggable]:active{cursor:grabbing;}
+.ord-item.dragging{opacity:0.35;background:#f0f9f9;}
+.ord-item.drag-over-top{border-top:2.5px solid var(--teal);}
+.ord-item.drag-over-bot{border-bottom:2.5px solid var(--teal);}
+.sort-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:11px;font-weight:700;
+  padding:3px 8px;border-radius:5px;cursor:pointer;margin-left:6px;}
+.sort-btn:hover{background:rgba(255,255,255,.32);}
 .ord-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
   height:100%;color:#bbb;font-size:13px;gap:8px;}
 .ord-empty .ic{font-size:34px;}
@@ -622,6 +630,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="ord-header">
       <span>③ 주문 목록</span>
       <span class="ord-cnt" id="ordCnt">0개</span>
+      <button class="sort-btn" onclick="sortCart();render();" title="카테고리순 정렬">⇅ 정렬</button>
     </div>
     <div class="unpaid-alert" id="unpaidAlert" onclick="openUnpaidForCurrent()">
       ⚠️ <span id="unpaidAlertText"></span>
@@ -1130,6 +1139,7 @@ function addCostItem(name){
 function addCostConfirm(){
   const price=parseInt(document.getElementById('costPrice').value)||0;
   cart.push({i:'cost_'+Date.now(),name:_costName,size:'-',retail:price,disc:0,sp:price,qty:1,gift:false,custom:true});
+  sortCart();
   render();
   showToast(name+' 추가 — 지원가에서 금액을 입력하세요');
 }
@@ -1156,6 +1166,7 @@ function addCustomItem(){
   const disc=parseFloat(document.getElementById('cItemDisc').value)||0;
   const sp=Math.round(price*(1-disc/100));
   cart.push({i:'custom_'+Date.now(),name,size,retail:price,disc,sp,qty,gift:false,custom:true});
+  sortCart();
   render(); closeCustomModal();
 }
 document.addEventListener('keydown',e=>{
@@ -1204,6 +1215,7 @@ function addItem(){
   const sp=directVal>0?directVal:Math.round(p.price*(1-disc/100));
   const customSp=directVal>0;
   cart.push({i:midx,name:p.name,size:p.size,retail:p.price,disc,sp,qty,gift:false,customSp});
+  sortCart();
   render(); closeModal();
 }
 
@@ -1212,10 +1224,63 @@ function addGift(){
   const p=PRODS[midx];
   if(!cart.find(c=>c.i===midx&&c.gift))
     cart.push({i:midx,name:p.name,size:p.size,retail:p.price,disc:100,sp:0,qty:1,gift:true});
+    sortCart();
   render(); closeModal();
 }
 
 // ─── 카트 렌더 ───────────────────────────
+
+// ─── 카트 정렬 ────────────────────────────────
+const _CAT_SORT = {'토양개량제':0,'분말비료':1,'액상비료':2,'관주용(10L)':3,'NPK 엘크로':4};
+function _itemCatOrder(it){
+  const p = PRODS.find(p=>p.name===it.name&&p.size===it.size)||PRODS.find(p=>p.name===it.name);
+  return p ? (_CAT_SORT[p.cat]??99) : 99;
+}
+function _parseSize(s){
+  if(!s||s==='-')return 0;
+  const m=s.match(/([\d.]+)\s*(L|ml|cc|kg|g)/i); if(!m)return 0;
+  const v=parseFloat(m[1]),u=m[2].toLowerCase();
+  if(u==='l')return v*1000;
+  if(u==='ml'||u==='cc')return v;
+  if(u==='kg')return v*1e7; // kg > g > ml in sort
+  if(u==='g')return v*1e4;
+  return v;
+}
+function sortCart(){
+  cart.sort((a,b)=>{
+    const ca=_itemCatOrder(a),cb=_itemCatOrder(b);
+    if(ca!==cb)return ca-cb;
+    return _parseSize(a.size)-_parseSize(b.size); // 작은 용량이 위
+  });
+}
+
+// ─── 드래그&드롭 ─────────────────────────────
+let _dragIdx=null;
+function onDragStart(e,i){
+  _dragIdx=i;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>e.currentTarget.classList.add('dragging'),0);
+}
+function onDragOver(e,i){
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.ord-item').forEach((el,idx)=>{
+    el.classList.remove('drag-over-top','drag-over-bot');
+    if(idx===i&&idx!==_dragIdx)el.classList.add(i<_dragIdx?'drag-over-top':'drag-over-bot');
+  });
+}
+function onDrop(e,i){
+  e.preventDefault();
+  if(_dragIdx===null||_dragIdx===i)return;
+  const [item]=cart.splice(_dragIdx,1);
+  cart.splice(i>_dragIdx?i-1:i,0,item);
+  _dragIdx=null;
+  render();
+}
+function onDragEnd(){
+  _dragIdx=null;
+  document.querySelectorAll('.ord-item').forEach(el=>el.classList.remove('dragging','drag-over-top','drag-over-bot'));
+}
+
 function render(){
   // 버튼 뱃지
   PRODS.forEach((_,i)=>{
@@ -1236,7 +1301,7 @@ function render(){
   cnt.textContent=`${cart.filter(c=>!c.gift).reduce((s,c)=>s+c.qty,0)}개`;
 
   el.innerHTML=cart.map((it,i)=>{
-    if(it.gift)return`<div class="ord-item">
+    if(it.gift)return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()">
       <div class="ord-top">
         <div><input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
         <span class="ord-size">${it.size}</span></div>
@@ -1244,7 +1309,7 @@ function render(){
       </div><span class="gift-tag">본사지원</span></div>`;
     const lt=it.sp*it.qty;
     const dateDisp=it.date?it.date.slice(5).replace('-','/'):'';
-    return`<div class="ord-item">
+    return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()">
       <div class="ord-top">
         <div><input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
         <span class="ord-size">${it.size}</span></div>
