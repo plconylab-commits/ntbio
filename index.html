@@ -1721,12 +1721,14 @@ function openUnpaidForCurrent(){
 
 // ─── 미입금 모달 ─────────────────────────────
 function openUnpaidModal(filterName,filterPhone){
-  function showModal(){
-    _renderUnpaidModalFromLocal(filterName,filterPhone);
-    document.getElementById('unpaidOverlay').classList.add('on');
-  }
-  // 서버에서 최신 데이터 가져온 후 모달 표시 (실패 시 로컬 데이터로 표시)
-  syncFromServer().then(showModal).catch(showModal);
+  // 로컬 데이터로 즉시 모달 표시
+  _renderUnpaidModalFromLocal(filterName,filterPhone);
+  document.getElementById('unpaidOverlay').classList.add('on');
+  // 백그라운드에서 서버 동기화 후 자동 갱신
+  syncFromServer().then(()=>{
+    if(document.getElementById('unpaidOverlay').classList.contains('on'))
+      _renderUnpaidModalFromLocal(filterName,filterPhone);
+  }).catch(()=>{});
 }
 // 서버 동기화 없이 로컬 데이터로 즉시 재렌더링 (입금 추가/취소/삭제 후 빠른 반영용)
 function _renderUnpaidModalFromLocal(filterName,filterPhone){
