@@ -938,18 +938,29 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── 처방전에서 돌아온 경우 rxData→카트 연동 ──
-function _lookupRetailPrice(name) {
+function _lookupRetailPrice(name, size) {
   // 이름 정규화: 소문자, 공백제거, 괄호내용제거, 쎄→세
   const norm = s => s.toLowerCase().replace(/\s+/g,'').replace(/[\(（][^)）]*[\)）]/g,'').replace(/쎄/g,'세').replace(/-/g,'');
   const normName = norm(name);
-  // 1) 완전일치
-  let match = PRODS.find(p => norm(p.name) === normName);
-  // 2) 포함 일치
+  const normSize = size ? norm(size) : '';
+  const nameAndSize = p => norm(p.name) === normName && (!normSize || norm(p.size) === normSize);
+  const nameOnly   = p => norm(p.name) === normName;
+  // 1) 이름+규격 완전일치
+  let match = PRODS.find(nameAndSize);
+  // 2) 이름만 완전일치
+  if (!match) match = PRODS.find(nameOnly);
+  // 3) 포함 일치 (규격 우선)
+  if (!match) match = PRODS.find(p => {
+    const pn = norm(p.name);
+    const ps = norm(p.size);
+    const nameMatch = pn.includes(normName) || normName.includes(pn);
+    return nameMatch && (!normSize || ps === normSize);
+  });
   if (!match) match = PRODS.find(p => {
     const pn = norm(p.name);
     return pn.includes(normName) || normName.includes(pn);
   });
-  // 3) 영문·숫자 토큰 일치 (예: CK1, 10L)
+  // 4) 영문·숫자 토큰 일치 (예: CK1, 10L)
   if (!match) {
     const tokens = normName.match(/[a-z0-9]{2,}/g) || [];
     if (tokens.length > 0) {
@@ -973,7 +984,7 @@ window.addEventListener('pageshow', () => {
     if (rx.cart && rx.cart.length > 0 && cart.length === 0) {
       cart = rx.cart.map(c => {
         // 가격 없으면 PRODS에서 소비자가 조회
-        const retail = (c.retail && c.retail > 0) ? c.retail : _lookupRetailPrice(c.name);
+        const retail = (c.retail && c.retail > 0) ? c.retail : _lookupRetailPrice(c.name, c.size);
         const sp = (c.sp && c.sp > 0) ? c.sp : retail;
         const disc = retail > 0 ? Math.round((1 - sp / retail) * 100) : 0;
         return {
