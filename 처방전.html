@@ -880,13 +880,19 @@ function onTypeNumOverride(si, val) {
   schedulePreview();
 }
 
+function onTypeNumWord(si, word) {
+  stages[si].typeNumWord = word;
+  renderStages();
+  schedulePreview();
+}
+
 function getStageLabel(st) {
   if (st.type === '경운전') return '경운 "전"';
   if (st.type === '경운후') return '경운 "후"';
   if (st.type === '정식당일') return '정식+당일\n(첫물 줄때)';
   if (st.type === '정식후') return `정식 "후"\n${st.days || ''}일`;
-  if (st.type === '관주') return `관주(${st.typeNum || 1}번)`;
-  if (st.type === '엽면') return `엽면(${st.typeNum || 1}번)`;
+  if (st.type === '관주') return `관주(${st.typeNum || 1}${st.typeNumWord || '번'})`;
+  if (st.type === '엽면') return `엽면(${st.typeNum || 1}${st.typeNumWord || '번'})`;
   return st.type;
 }
 
@@ -1040,12 +1046,22 @@ function renderStages() {
               value="${st.dateRange||''}"
               oninput="onDateRangeChange(${si},this.value)">
           </div>
-          ${(st.type==='관주'||st.type==='엽면') ? `<div style="flex:0 0 64px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">번호</label>
-            <input type="number" min="1" max="9"
-              style="width:100%;font-size:15px;font-weight:900;text-align:center;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);"
-              value="${st.typeNumOverride || st.typeNum || 1}"
-              oninput="onTypeNumOverride(${si},this.value)">
+          ${(st.type==='관주'||st.type==='엽면') ? `<div style="flex:0 0 110px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">번호 &amp; 단위</label>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input type="number" min="1" max="9"
+                style="width:48px;font-size:15px;font-weight:900;text-align:center;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);"
+                value="${st.typeNumOverride || st.typeNum || 1}"
+                oninput="onTypeNumOverride(${si},this.value)">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <button type="button"
+                  style="font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;cursor:pointer;border:1.5px solid var(--teal);font-family:inherit;${(st.typeNumWord||'번')==='번'?'background:var(--teal);color:#fff;':'background:#fff;color:var(--teal);'}"
+                  onclick="onTypeNumWord(${si},'번')">번</button>
+                <button type="button"
+                  style="font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;cursor:pointer;border:1.5px solid var(--teal);font-family:inherit;${(st.typeNumWord||'번')==='안'?'background:var(--teal);color:#fff;':'background:#fff;color:var(--teal);'}"
+                  onclick="onTypeNumWord(${si},'안')">안</button>
+              </div>
+            </div>
           </div>` : ''}
           <div style="flex:2;min-width:140px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📌 단계 목적/제목 <span style="color:#9b7fd4;">(헤더)</span></label>
@@ -1935,7 +1951,7 @@ function generatePreview() {
         m: s.month, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
-        a: s.area||0, to: s.typeNumOverride||0
+        a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||''
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined
@@ -2097,6 +2113,7 @@ function applyRxData(d) {
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0,
+    typeNumWord: s.tw||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
