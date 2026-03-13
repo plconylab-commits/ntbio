@@ -272,9 +272,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border:6px solid rgba(255,255,255,.9);
   border-radius:4px;padding:36px 50px;text-align:center;
   width:75%;display:flex;flex-direction:column;gap:14px;}
-.cover-region{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
-.cover-crop-area{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
-.cover-rx{font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;}
+.cover-region{font-weight:900;color:#fff;line-height:1.3;white-space:pre-wrap;word-break:break-word;}
+.cover-crop-area{font-weight:900;color:#fff;line-height:1.3;white-space:pre-wrap;word-break:break-word;}
+.cover-rx{font-weight:900;color:#fff;line-height:1.3;white-space:pre-wrap;word-break:break-word;}
 .cover-logo-area{display:flex;flex-direction:column;align-items:center;gap:10px;
   margin-top:24px;}
 .cover-logo-top{display:flex;align-items:center;gap:5px;}
@@ -286,16 +286,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   line-height:1;}
 .cover-tagline-bar{background:rgba(255,235,205,.85);border-radius:20px;
   padding:6px 28px;font-size:13px;letter-spacing:3px;color:#7a5a30;margin-top:8px;}
-/* 표지 인라인 편집 */
+/* 표지·처방전 인라인 편집 */
 .cover-editable{cursor:pointer;transition:opacity .15s;border-radius:4px;}
 .cover-editable:hover{opacity:.72;outline:2px dashed rgba(255,255,255,.7);outline-offset:4px;}
+.rx-editable{cursor:pointer;position:relative;}
+.rx-editable:hover{background:rgba(58,172,170,.08);outline:1.5px dashed var(--teal);outline-offset:1px;}
 #coverEditor{position:fixed;z-index:9999;background:#fff;border-radius:14px;
   box-shadow:0 6px 32px rgba(0,0,0,.28);padding:18px 20px;width:300px;display:none;
   top:50%;left:50%;transform:translate(-50%,-50%);}
 #coverEditor .ce-title{font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:12px;}
 #coverEditor label{font-size:11px;font-weight:700;color:#666;display:block;margin-bottom:3px;}
-#coverEditor input[type=text]{width:100%;padding:7px 10px;border:1.5px solid var(--teal);
-  border-radius:7px;font-size:14px;box-sizing:border-box;}
+#coverEditor textarea{width:100%;padding:7px 10px;border:1.5px solid var(--teal);
+  border-radius:7px;font-size:14px;box-sizing:border-box;resize:vertical;min-height:38px;
+  font-family:inherit;line-height:1.5;}
 #coverEditor .ce-fs-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
 #coverEditor .ce-fs-row label{margin:0;white-space:nowrap;}
 #coverEditor .ce-fs-num{width:68px;padding:6px 8px;border:1.5px solid #ccc;
@@ -1737,53 +1740,47 @@ function generatePreview() {
   function buildGroupPage(monthKey) {
     const stagesInGroup = groups[monthKey] || [];
     const purposes = [...new Set(stagesInGroup.map(s=>s.purpose).filter(Boolean))];
-    const pageTitle = purposes.join(' &nbsp;·&nbsp; ') || (monthKey ? `${monthKey}월 처방` : '기본 처방');
+    const pageTitle = purposes.join(' · ') || (monthKey ? `${monthKey}월 처방` : '기본 처방');
     let rows = '';
     stagesInGroup.forEach(st => {
-      const prods = (st.products || []).filter(p => p.key);
+      const si = stages.indexOf(st);
+      const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
       const dateInfo = st.dateRange ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.dateRange})</span>` : '';
       const areaInfo = st.area ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.area}평)</span>` : '';
+      const stBase = `class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" onclick="openRxEdit(this)"`;
       if (!prods.length) {
-        rows += `<tr>
-          <td class="stage-td">${getStageLabel(st)}${dateInfo}${areaInfo}</td>
-          <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td>
-        </tr>`; return;
+        rows += `<tr><td ${stBase}>${getStageLabel(st)}${dateInfo}${areaInfo}</td>
+          <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        return;
       }
-      prods.forEach((p, pi) => {
+      prods.forEach(({p, idx: pi}, rowIdx) => {
         const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
         const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
         const prodSize = cartItem ? cartItem.size : p.key.split('||')[1] || '';
         const qtyCell = p.qty ? formatQty(p.qty, p.unit) : '';
         const prodAreaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
-        if (pi === 0) {
-          rows += `<tr>
-            <td class="stage-td" rowspan="${prods.length}">${getStageLabel(st)}${dateInfo}${areaInfo}</td>
-            <td class="product-td">${prodName}${prodAreaLine}</td>
-            <td class="size-td">${prodSize}</td>
-            <td class="qty-td">${qtyCell}</td>
-            <td class="desc-td">${p.desc || ''}</td>
-          </tr>`;
+        const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${prodName}${prodAreaLine}</td>`;
+        const sizeTd = `<td class="size-td">${prodSize}</td>`;
+        const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${qtyCell||'—'}</td>`;
+        const descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+        if (rowIdx === 0) {
+          rows += `<tr><td ${stBase} rowspan="${prods.length}">${getStageLabel(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
-          rows += `<tr>
-            <td class="product-td">${prodName}${prodAreaLine}</td>
-            <td class="size-td">${prodSize}</td>
-            <td class="qty-td">${qtyCell}</td>
-            <td class="desc-td">${p.desc || ''}</td>
-          </tr>`;
+          rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         }
       });
     });
     const allFuncRows = stagesInGroup.filter(s=>s.funcTags&&s.funcTags.length)
-      .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff'}));
+      .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff',si:stages.indexOf(s)}));
     const funcHeadHtml = allFuncRows.map(r=>
-      `<tr><th colspan="5" style="background:${r.color};color:#111;
-        font-size:var(--rx-fs,17px);font-weight:700;text-align:center;
-        padding:10px 14px;border:1.5px solid var(--teal);letter-spacing:.5px;">
+      `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this)"
+        style="background:${r.color};color:#111;font-size:var(--rx-fs,17px);font-weight:700;
+        text-align:center;padding:10px 14px;border:1.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;">
         ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
       </th></tr>`).join('');
     return `<div class="page-card" data-pagekey="group_${monthKey}">
       <div class="content-page"><div class="content-inner">
-        <div class="page-purpose">${pageTitle}</div>
+        <div class="page-purpose rx-editable" data-edit="page-title" data-monthkey="${monthKey}" onclick="openRxEdit(this)">${pageTitle}</div>
         <table class="rx-table">
           <thead>${funcHeadHtml}
             <tr>
@@ -1821,9 +1818,9 @@ function generatePreview() {
     <div class="cover-page">
       <div class="cover-naturebio">N &nbsp; A &nbsp; T &nbsp; U &nbsp; R &nbsp; E &nbsp; B &nbsp; I &nbsp; O</div>
       <div class="cover-box">
-        ${regionText ? `<div class="cover-region cover-editable" style="font-size:${lineFs.region}px;" onclick="editCoverLine('region')">${regionText}</div>` : `<div class="cover-region cover-editable" style="font-size:14px;opacity:.5;" onclick="editCoverLine('region')">+ 지역 추가</div>`}
-        ${cropText ? `<div class="cover-crop-area cover-editable" style="font-size:${lineFs.cropArea}px;" onclick="editCoverLine('cropArea')">${cropText}</div>` : `<div class="cover-crop-area cover-editable" style="font-size:14px;opacity:.5;" onclick="editCoverLine('cropArea')">+ 작물/평수 추가</div>`}
-        <div class="cover-rx cover-editable" style="font-size:${lineFs.rx}px;" onclick="editCoverLine('rx')">${rxText}</div>
+        ${regionText ? `<div class="cover-region cover-editable" style="font-size:${lineFs.region}px;" onclick="editCoverLine('region')">${regionText.replace(/\n/g,'<br>')}</div>` : ''}
+        ${cropText ? `<div class="cover-crop-area cover-editable" style="font-size:${lineFs.cropArea}px;" onclick="editCoverLine('cropArea')">${cropText.replace(/\n/g,'<br>')}</div>` : ''}
+        <div class="cover-rx cover-editable" style="font-size:${lineFs.rx}px;" onclick="editCoverLine('rx')">${rxText.replace(/\n/g,'<br>')}</div>
       </div>
       <div class="cover-logo-area">
         <div class="cover-logo-top">
@@ -2302,94 +2299,137 @@ function applyParsedRx(parsed) {
   schedulePreview();
 }
 
-// ── 표지 인라인 편집 ─────────────────────
-let _ceField = null;
+// ── 표지·처방전 통합 인라인 편집 ─────────────────────
+let _editorCtx = null; // { type, field?, si?, pi?, mk? }
 
 function editCoverLine(field) {
-  _ceField = field;
+  _editorCtx = { type: 'cover', field };
   const ed = document.getElementById('coverEditor');
   const ccText = rxData.coverCustomText || {};
   const ccFs   = rxData.coverCustomFs   || {};
-
   const titles = { region:'지역 편집', cropArea:'작물/평수 편집', rx:'고객명 편집' };
   const hints  = {
-    region: '지역 텍스트를 직접 입력하세요.',
-    cropArea: '작물/평수 텍스트를 직접 입력하세요.',
-    rx: '고객명만 입력하세요. (처방전: 접두어 자동 표시)'
+    region: '지역 텍스트 · 엔터로 줄바꿈 가능',
+    cropArea: '작물/평수 텍스트 · 엔터로 줄바꿈 가능',
+    rx: '고객명만 입력 (처방전: 접두어 자동 표시)'
   };
   ed.querySelector('.ce-title').textContent = titles[field];
   ed.querySelector('.ce-hint').textContent  = hints[field];
-
-  // 현재 텍스트 결정
   let curText = '';
   if (field === 'region') {
-    curText = ccText.region !== undefined ? ccText.region : (document.getElementById('bRegion').value || '');
+    curText = ccText.region !== undefined ? ccText.region : (document.getElementById('bRegion').value||'');
   } else if (field === 'cropArea') {
     if (ccText.cropArea !== undefined) { curText = ccText.cropArea; }
     else {
       const crop = document.getElementById('bCrop').value;
       const area = document.getElementById('bArea').value;
-      const at   = getBAreaType();
-      curText = crop ? crop + (area ? `(${area}평)` : '') + at : '';
+      curText = crop ? crop + (area ? `(${area}평)` : '') + getBAreaType() : '';
     }
   } else {
-    curText = ccText.rx !== undefined ? ccText.rx : (document.getElementById('bName').value || '');
+    curText = ccText.rx !== undefined ? ccText.rx : (document.getElementById('bName').value||'');
   }
   ed.querySelector('#ceText').value = curText;
-
-  // 현재 폰트 크기
   const allLines = [
-    ccText.region  !== undefined ? ccText.region  : (document.getElementById('bRegion').value||''),
+    ccText.region !== undefined ? ccText.region : (document.getElementById('bRegion').value||''),
     ccText.cropArea !== undefined ? ccText.cropArea : '',
     '처방전:' + (ccText.rx !== undefined ? ccText.rx : (document.getElementById('bName').value||'고객명'))
   ].filter(Boolean);
-  const autoFs = allLines.length ? Math.min(...allLines.map(t => coverFontSize(t))) : 46;
+  const autoFs = allLines.length ? Math.min(...allLines.map(t=>coverFontSize(t))) : 46;
   ed.querySelector('#ceFsNum').value = ccFs[field] || autoFs;
-
+  ed.querySelector('.ce-fs-row').style.display = 'flex';
+  ed.querySelector('.ce-clear-btn').style.display = '';
   ed.style.display = 'block';
+  setTimeout(()=>ed.querySelector('#ceText').focus(),50);
+}
+
+function openRxEdit(el) {
+  const type = el.dataset.edit;
+  const si   = parseInt(el.dataset.si);
+  const pi   = parseInt(el.dataset.pi);
+  const mk   = el.dataset.monthkey !== undefined ? parseInt(el.dataset.monthkey) : null;
+  _editorCtx = { type, si, pi, mk };
+  const ed = document.getElementById('coverEditor');
+  const cfg = {
+    'page-title': { t:'페이지 제목', h:'이 처방 페이지의 제목',
+      get(){ const g=stages.filter(s=>(s.month||0)==mk); const p=[...new Set(g.map(s=>s.purpose).filter(Boolean))]; return p[0]||''; }},
+    'func-tags':  { t:'제품 기능 태그', h:'+ 로 구분  예) 뿌리활착+생장촉진',
+      get(){ return (stages[si].funcTags||[]).join('+'); }},
+    'stage-date': { t:'날짜/기간', h:'예) 3월20일-3월25일',
+      get(){ return stages[si].dateRange||''; }},
+    'prod-desc':  { t:'사용방법', h:'예) 물(10말)  주1회 500배액',
+      get(){ return stages[si].products[pi].desc||''; }},
+    'prod-qty':   { t:'사용량', h:'숫자 입력  예) 1  0.5  2',
+      get(){ return String(stages[si].products[pi].qty||''); }},
+    'prod-name':  { t:'제품명', h:'제품명 변경 (용량은 재고에서 수정)',
+      get(){ return stages[si].products[pi].key.split('||')[0]; }},
+  };
+  const c = cfg[type]; if (!c) return;
+  ed.querySelector('.ce-title').textContent = c.t;
+  ed.querySelector('.ce-hint').textContent  = c.h;
+  ed.querySelector('#ceText').value = c.get();
+  ed.querySelector('.ce-fs-row').style.display = 'none';
+  ed.querySelector('.ce-clear-btn').style.display = 'none';
+  ed.style.display = 'block';
+  setTimeout(()=>ed.querySelector('#ceText').focus(),50);
 }
 
 function onCeTextInput() {
   const val = document.getElementById('ceText').value;
-  if (!rxData.coverCustomText) rxData.coverCustomText = {};
-  rxData.coverCustomText[_ceField] = val;
-  // 빌더 입력도 동기화
-  if (_ceField === 'region') document.getElementById('bRegion').value = val;
-  else if (_ceField === 'rx')  document.getElementById('bName').value  = val;
+  if (!_editorCtx) return;
+  const { type, field, si, pi, mk } = _editorCtx;
+  if (type === 'cover') {
+    if (!rxData.coverCustomText) rxData.coverCustomText = {};
+    rxData.coverCustomText[field] = val;
+    if (field === 'region') document.getElementById('bRegion').value = val.replace(/\n/g,' ');
+    else if (field === 'rx') document.getElementById('bName').value  = val.replace(/\n/g,' ');
+  } else if (type === 'page-title') {
+    stages.filter(s=>(s.month||0)==mk).forEach(s=>{ s.purpose = val; });
+  } else if (type === 'func-tags') {
+    stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
+  } else if (type === 'stage-date') {
+    stages[si].dateRange = val;
+  } else if (type === 'prod-desc') {
+    stages[si].products[pi].desc = val;
+  } else if (type === 'prod-qty') {
+    const qty = parseFloat(val);
+    if (!isNaN(qty)) stages[si].products[pi].qty = qty;
+  } else if (type === 'prod-name') {
+    const p = stages[si].products[pi];
+    p.key = val.trim() + '||' + (p.key.split('||')[1]||'');
+  }
   schedulePreview();
 }
 
 function onCeFsInput() {
   const fs = parseInt(document.getElementById('ceFsNum').value);
-  if (!fs || fs < 8 || fs > 120) return;
+  if (!fs || fs < 8 || fs > 120 || !_editorCtx || _editorCtx.type !== 'cover') return;
   if (!rxData.coverCustomFs) rxData.coverCustomFs = {};
-  rxData.coverCustomFs[_ceField] = fs;
+  rxData.coverCustomFs[_editorCtx.field] = fs;
   schedulePreview();
 }
 
 function resetCoverFs() {
-  if (!rxData.coverCustomFs) return;
-  delete rxData.coverCustomFs[_ceField];
-  const allLines = [
-    document.getElementById('bRegion').value||'',
-    '처방전:' + (document.getElementById('bName').value||'고객명')
-  ].filter(Boolean);
-  const autoFs = Math.min(...allLines.map(t => coverFontSize(t)));
-  document.getElementById('ceFsNum').value = autoFs;
+  if (!rxData.coverCustomFs || !_editorCtx) return;
+  delete rxData.coverCustomFs[_editorCtx.field];
+  const allLines = [document.getElementById('bRegion').value||'', '처방전:'+(document.getElementById('bName').value||'고객명')].filter(Boolean);
+  document.getElementById('ceFsNum').value = Math.min(...allLines.map(t=>coverFontSize(t)));
   schedulePreview();
 }
 
 function clearCoverLine() {
+  if (!_editorCtx || _editorCtx.type !== 'cover') return;
+  const field = _editorCtx.field;
   if (!rxData.coverCustomText) rxData.coverCustomText = {};
-  rxData.coverCustomText[_ceField] = '';  // empty = hide line (for region/cropArea)
+  delete rxData.coverCustomText[field];
   document.getElementById('ceText').value = '';
-  if (_ceField === 'region') document.getElementById('bRegion').value = '';
+  if (field === 'region') document.getElementById('bRegion').value = '';
+  else if (field === 'cropArea') { document.getElementById('bCrop').value = ''; document.getElementById('bArea').value = ''; }
   schedulePreview();
 }
 
 function closeCoverEditor() {
   document.getElementById('coverEditor').style.display = 'none';
-  _ceField = null;
+  _editorCtx = null;
 }
 
 function _saveRxStages() {
@@ -2415,7 +2455,7 @@ function _saveRxStages() {
     <button class="ce-close" onclick="closeCoverEditor()">×</button>
   </div>
   <label for="ceText" style="margin-top:6px;">내용</label>
-  <input type="text" id="ceText" oninput="onCeTextInput()" placeholder="텍스트 입력">
+  <textarea id="ceText" rows="2" oninput="onCeTextInput()" placeholder="텍스트 입력"></textarea>
   <div class="optional-hint ce-hint"></div>
   <div class="ce-fs-row" style="margin-top:12px;">
     <label>폰트 크기</label>
@@ -2424,7 +2464,7 @@ function _saveRxStages() {
     <button class="ce-auto-btn" onclick="resetCoverFs()">자동</button>
   </div>
   <div style="display:flex;gap:8px;margin-top:14px;">
-    <button onclick="clearCoverLine()" style="flex:1;padding:7px 0;border:1px solid #eee;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#fff8f8;color:#c55;">줄 지우기</button>
+    <button class="ce-clear-btn" onclick="clearCoverLine()" style="flex:1;padding:7px 0;border:1px solid #eee;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#fff8f8;color:#c55;">줄 지우기</button>
     <button onclick="closeCoverEditor()" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--teal);color:#fff;">확인</button>
   </div>
 </div>
