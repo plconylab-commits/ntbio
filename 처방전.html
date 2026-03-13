@@ -103,14 +103,26 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 /* ── 월 그룹 ── */
 .stages-list{display:flex;flex-direction:column;gap:12px;}
 .month-group{border:2px solid var(--teal);border-radius:10px;overflow:hidden;}
-.month-group-header{background:var(--teal-dark);color:#fff;padding:7px 12px;
-  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
-.month-group-header:hover{background:var(--teal);}
-.month-group-label{font-size:15px;font-weight:900;letter-spacing:.5px;}
-.month-group-count{font-size:11px;opacity:.75;background:rgba(255,255,255,.2);
-  border-radius:10px;padding:1px 7px;}
-.month-group-arrow{margin-left:auto;font-size:11px;transition:transform .2s;}
-.month-group-arrow.open{transform:rotate(180deg);}
+.month-group-header{background:var(--teal-dark);color:#fff;padding:6px 10px;
+  display:flex;align-items:center;gap:6px;user-select:none;}
+.month-group.dragging{opacity:.45;border-style:dashed;}
+.month-group.drag-over{border-color:#fff;background:rgba(255,255,255,.07);}
+.group-drag-handle{cursor:grab;font-size:17px;opacity:.7;line-height:1;flex-shrink:0;}
+.group-drag-handle:active{cursor:grabbing;}
+.group-label-input{flex:1;background:transparent;border:none;
+  border-bottom:1.5px solid rgba(255,255,255,.4);color:#fff;
+  font-size:14px;font-weight:900;padding:2px 4px;outline:none;
+  min-width:60px;font-family:inherit;letter-spacing:.3px;}
+.group-label-input:focus{border-bottom-color:#fff;background:rgba(255,255,255,.15);border-radius:3px 3px 0 0;}
+.month-group-count{font-size:11px;opacity:.7;background:rgba(255,255,255,.2);
+  border-radius:10px;padding:1px 7px;flex-shrink:0;}
+.group-copy-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;
+  font-size:11px;font-weight:700;font-family:inherit;flex-shrink:0;}
+.group-copy-btn:hover{background:rgba(255,255,255,.35);}
+.group-toggle-btn{background:none;border:none;color:#fff;cursor:pointer;
+  font-size:13px;padding:2px 5px;border-radius:3px;flex-shrink:0;}
+.group-toggle-btn:hover{background:rgba(255,255,255,.2);}
 .month-group-body{background:#f4fbfb;display:flex;flex-direction:column;gap:8px;padding:8px;}
 .month-group-body.collapsed{display:none;}
 /* ── 단계 카드 ── */
@@ -676,6 +688,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 let rxData = {};
 let stages = [];
 let stageIdCnt = 0;
+let groupLabels = {};      // { mk: '커스텀 레이블' }
+let stageGroupOrder = [];  // 그룹 표시 순서 (mk 배열)
+let _dragGroupMk = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   const raw = localStorage.getItem('rxData');
@@ -717,6 +732,8 @@ window.addEventListener('DOMContentLoaded', () => {
         pageOrder = saved.pageOrder || [];
         costVisible = saved.costVisible || false;
         priceOverrides = saved.priceOverrides || {};
+        groupLabels = saved.groupLabels || {};
+        stageGroupOrder = saved.stageGroupOrder || [];
         if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
         if (saved.coverCustomText) {
           const ct = {...saved.coverCustomText};
@@ -928,12 +945,14 @@ function renderStages() {
   renderToc();
   schedulePreview();
 
+  // 그룹 순서 동기화
+  syncGroupOrder();
+
   // 월별 그룹으로 묶기
   const groupMap = {};
-  const groupOrder = [];
   stages.forEach((st, si) => {
     const mk = st.month ?? 0;
-    if (!groupMap[mk]) { groupMap[mk] = []; groupOrder.push(mk); }
+    if (!groupMap[mk]) groupMap[mk] = [];
     groupMap[mk].push(si);
   });
 
@@ -1150,16 +1169,26 @@ function renderStages() {
     </div>`;
   }; // makeCard 끝
 
-  list.innerHTML = groupOrder.map(mk => {
+  list.innerHTML = stageGroupOrder.filter(mk => groupMap[mk]).map(mk => {
     const siList = groupMap[mk];
-    const monthLabel = mk === 0 ? '기비 (기본시비)' : `${mk}월`;
+    const label = groupLabels[mk] || (mk === 0 ? '기비 (기본시비)' : `${mk}월`);
     const isCollapsed = !!window._monthGroupCollapsed[mk];
     const cardsHtml = siList.map(si => makeCard(stages[si], si)).join('');
-    return `<div class="month-group">
-      <div class="month-group-header" onclick="toggleMonthGroup(${mk})">
-        <span class="month-group-label">${monthLabel}</span>
+    return `<div class="month-group" id="monthGrp_${mk}"
+        ondragover="groupDragOver(event,${mk})"
+        ondrop="groupDrop(event,${mk})">
+      <div class="month-group-header" draggable="true"
+          ondragstart="groupDragStart(event,${mk})"
+          ondragend="groupDragEnd(event)">
+        <span class="group-drag-handle" ondragstart="event.stopPropagation()" style="pointer-events:none;">⠿</span>
+        <input class="group-label-input" value="${label.replace(/"/g,'&quot;')}"
+          placeholder="카테고리 이름"
+          oninput="setGroupLabel(${mk},this.value)"
+          onclick="event.stopPropagation()"
+          ondragstart="event.stopPropagation()">
         <span class="month-group-count">${siList.length}단계</span>
-        <span class="month-group-arrow${isCollapsed ? '' : ' open'}">▲</span>
+        <button class="group-copy-btn" onclick="event.stopPropagation();copyGroup(${mk})" title="그룹 복사">⎘ 복사</button>
+        <button class="group-toggle-btn" onclick="event.stopPropagation();toggleMonthGroup(${mk})">${isCollapsed ? '▼' : '▲'}</button>
       </div>
       <div class="month-group-body${isCollapsed ? ' collapsed' : ''}">
         ${cardsHtml}
@@ -1172,6 +1201,99 @@ function toggleMonthGroup(mk) {
   if (!window._monthGroupCollapsed) window._monthGroupCollapsed = {};
   window._monthGroupCollapsed[mk] = !window._monthGroupCollapsed[mk];
   renderStages();
+}
+
+// ── 그룹 순서 동기화 ─────────────────────
+function syncGroupOrder() {
+  const seen = [];
+  stages.forEach(st => {
+    const mk = st.month ?? 0;
+    if (!seen.includes(mk)) seen.push(mk);
+  });
+  // 신규 그룹 추가 (뒤에 붙이기)
+  seen.forEach(mk => {
+    if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
+    if (!groupLabels[mk]) groupLabels[mk] = mk === 0 ? '기비 (기본시비)' : `${mk}월`;
+  });
+  // 없어진 그룹 제거
+  stageGroupOrder = stageGroupOrder.filter(mk => seen.includes(mk));
+}
+
+// ── 그룹 레이블 수정 ─────────────────────
+function setGroupLabel(mk, val) {
+  groupLabels[mk] = val;
+  schedulePreview();
+  _saveRxStages();
+}
+
+// ── 그룹 복사 ────────────────────────────
+function copyGroup(mk) {
+  const newMk = Math.max(0, ...stages.map(s => s.month ?? 0), ...stageGroupOrder) + 1;
+  const srcStages = stages.filter(st => (st.month ?? 0) === mk);
+  if (!srcStages.length) return;
+  const copies = srcStages.map(st => ({
+    ...st,
+    id: ++stageIdCnt,
+    month: newMk,
+    products: (st.products || []).map(p => ({...p})),
+    funcTags: [...(st.funcTags || [])],
+  }));
+  // 원본 그룹의 마지막 stage 바로 뒤에 삽입
+  let insertIdx = stages.length;
+  for (let i = stages.length - 1; i >= 0; i--) {
+    if ((stages[i].month ?? 0) === mk) { insertIdx = i + 1; break; }
+  }
+  stages.splice(insertIdx, 0, ...copies);
+  const mkIdx = stageGroupOrder.indexOf(mk);
+  stageGroupOrder.splice(mkIdx + 1, 0, newMk);
+  groupLabels[newMk] = (groupLabels[mk] || `${mk}월`) + ' (복사)';
+  renderStages();
+  schedulePreview();
+  _saveRxStages();
+}
+
+// ── 그룹 드래그 ──────────────────────────
+function groupDragStart(e, mk) {
+  _dragGroupMk = mk;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(mk));
+  setTimeout(() => {
+    const el = document.getElementById(`monthGrp_${mk}`);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+function groupDragEnd(e) {
+  document.querySelectorAll('.month-group').forEach(el => {
+    el.classList.remove('dragging','drag-over');
+  });
+  _dragGroupMk = null;
+}
+function groupDragOver(e, mk) {
+  if (_dragGroupMk === null || _dragGroupMk === mk) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.month-group').forEach(el => el.classList.remove('drag-over'));
+  const el = document.getElementById(`monthGrp_${mk}`);
+  if (el) el.classList.add('drag-over');
+}
+function groupDrop(e, mk) {
+  e.preventDefault();
+  if (_dragGroupMk === null || _dragGroupMk === mk) return;
+  const fromIdx = stageGroupOrder.indexOf(_dragGroupMk);
+  const toIdx   = stageGroupOrder.indexOf(mk);
+  if (fromIdx < 0 || toIdx < 0) return;
+  stageGroupOrder.splice(fromIdx, 1);
+  stageGroupOrder.splice(toIdx, 0, _dragGroupMk);
+  // stages 배열도 그룹 순서에 맞춰 재정렬
+  const newStages = [];
+  stageGroupOrder.forEach(gmk => {
+    stages.forEach(st => { if ((st.month ?? 0) === gmk) newStages.push(st); });
+  });
+  stages = newStages;
+  _dragGroupMk = null;
+  renderStages();
+  schedulePreview();
+  _saveRxStages();
 }
 
 // ── 평수 선택 ─────────────────────────────
@@ -1999,10 +2121,12 @@ function generatePreview() {
         m: s.month, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
-        a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||''
+        a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
       })),
       po: pageOrder, cv: costVisible,
-      po2: Object.keys(priceOverrides).length ? priceOverrides : undefined
+      po2: Object.keys(priceOverrides).length ? priceOverrides : undefined,
+      gl: Object.keys(groupLabels).length ? groupLabels : undefined,
+      go: stageGroupOrder.length ? stageGroupOrder : undefined
     };
     const rxB64 = btoa(encodeURIComponent(JSON.stringify(rxEmbed)));
     html += `<div style="position:absolute;overflow:hidden;height:1px;width:1px;opacity:0.01;font-size:0.5px;color:white;">##RX##${rxB64}##RX##</div>`;
@@ -2160,8 +2284,7 @@ function applyRxData(d) {
   stages = (d.st||[]).map(s => ({
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
-    typeNumOverride: s.to||0,
-    typeNumWord: s.tw||'',
+    typeNumOverride: s.to||0, typeNumWord: s.tw||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
@@ -2177,6 +2300,8 @@ function applyRxData(d) {
   pageOrder = d.po || [];
   costVisible = d.cv || false;
   if (d.po2) priceOverrides = d.po2;
+  if (d.gl) groupLabels = d.gl;
+  if (d.go) stageGroupOrder = d.go;
 
   // localStorage 업데이트 (거래명세표 연동 + 단계 영속)
   localStorage.setItem('rxData', JSON.stringify(rxData));
@@ -2600,6 +2725,7 @@ function _saveRxStages() {
         products: s.products||[], area: s.area||null
       })),
       pageOrder, costVisible, priceOverrides,
+      groupLabels, stageGroupOrder,
       coverCustomFs: rxData.coverCustomFs || {},
       coverCustomText: rxData.coverCustomText || {}
     }));
