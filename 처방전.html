@@ -662,6 +662,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const raw = localStorage.getItem('rxData');
   if (raw) {
     rxData = JSON.parse(raw);
+    localStorage.removeItem('rxData'); // 한 번만 소비
     // 표지 정보 자동 채우기
     document.getElementById('bName').value = rxData.name || '';
     document.getElementById('bRegion').value = rxData.region || '';
@@ -698,7 +699,11 @@ window.addEventListener('DOMContentLoaded', () => {
         costVisible = saved.costVisible || false;
         priceOverrides = saved.priceOverrides || {};
         if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
-        if (saved.coverCustomText) rxData.coverCustomText = saved.coverCustomText;
+        if (saved.coverCustomText) {
+          const ct = {...saved.coverCustomText};
+          delete ct.rx; // 이전 고객명은 복원하지 않음
+          rxData.coverCustomText = ct;
+        }
       }
     } catch(e) {}
   }
