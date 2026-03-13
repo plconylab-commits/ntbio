@@ -2136,8 +2136,8 @@ function applyParsedInvoice(parsed){
   msg+='주소: '+(parsed.addr||'❌ PDF에 없음 → 서버에서 자동 조회');
   alert(msg);
 
-  // 주소가 없으면 서버에서 자동 조회 (고객명+연락처가 있을 경우)
-  if(!parsed.addr && parsed.name && parsed.phone){
+  // 이름+연락처가 있으면 항상 서버 동기화 → 미수금 배지 + 빈 필드 자동 채우기
+  if(parsed.name && parsed.phone){
     checkUnpaidOnCustomer();
   }
 }
