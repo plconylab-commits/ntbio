@@ -480,7 +480,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <body>
 
 <div class="app-header">
-  <button class="back-btn" onclick="location.href='index.html'">← 거래명세표</button>
+  <button class="back-btn" onclick="goBackToCart()">← 거래명세표</button>
   <h1>📋 처방전 작성</h1>
   <label class="back-btn" style="cursor:pointer;margin-left:auto;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
 </div>
@@ -2730,6 +2730,37 @@ function clearCoverLine() {
 function closeCoverEditor() {
   document.getElementById('coverEditor').style.display = 'none';
   _editorCtx = null;
+}
+
+// ── 거래명세표로 이동 전 cart 수량 동기화 ──
+function goBackToCart() {
+  // 단계별 제품 수량 합산
+  const totals = {};
+  stages.forEach(st => {
+    (st.products || []).forEach(p => {
+      if (!p.key) return;
+      totals[p.key] = (totals[p.key] || 0) + (p.qty || 0);
+    });
+  });
+
+  // 기존 cart 수량 업데이트
+  const updatedCart = (rxData.cart || []).map(c => {
+    const key = c.name + '||' + c.size;
+    const stageQty = Math.ceil(totals[key] || 0);
+    return { ...c, qty: stageQty > 0 ? stageQty : c.qty };
+  });
+
+  // stages에는 있지만 cart에 없는 제품 추가
+  Object.entries(totals).forEach(([key, qty]) => {
+    if (!updatedCart.find(c => c.name + '||' + c.size === key)) {
+      const parts = key.split('||');
+      updatedCart.push({ name: parts[0], size: parts[1] || '', qty: Math.ceil(qty), retail: 0, sp: 0 });
+    }
+  });
+
+  rxData.cart = updatedCart;
+  localStorage.setItem('rxData', JSON.stringify(rxData));
+  location.href = 'index.html';
 }
 
 function _saveRxStages() {
