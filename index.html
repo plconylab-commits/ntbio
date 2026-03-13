@@ -837,44 +837,57 @@ function initInvoiceDB(){
 
 // ─── 제품 데이터 ───────────────────────────
 const PRODS = [
-  // ── 토양개량제 ──
-  {cat:'토양개량제', name:'뉴천연팜(분상)',  size:'15kg',  price:25000},
-  {cat:'토양개량제', name:'옥토팜(펠렛)',    size:'20kg',  price:20000},
-  {cat:'토양개량제', name:'옥스팜(입상)',    size:'20kg',  price:35000},
-  // ── NPK 엘크로 ──
-  {cat:'NPK 엘크로', name:'NPK엘크로 20-20-20', size:'25kg',       price:155000},
-  {cat:'NPK 엘크로', name:'엘크로 15-30-15',    size:'25kg',       price:155000},
-  {cat:'NPK 엘크로', name:'엘크로 6-11-44',     size:'25kg',       price:155000},
-  // ── 액상비료 ──
-  {cat:'액상비료',   name:'토양속보약',          size:'1L',         price:45000},
-  {cat:'액상비료',   name:'토양속보약',          size:'500ml',      price:30000},
-  {cat:'액상비료',   name:'양자 동충하초',        size:'1L',         price:50000},
-  {cat:'액상비료',   name:'양자 식물에너지',      size:'1L',         price:45000},
-  {cat:'액상비료',   name:'파이토',              size:'1L',         price:55000},
-  {cat:'액상비료',   name:'파이토',              size:'500ml',      price:30000},
-  {cat:'액상비료',   name:'파이토칼',            size:'1L',         price:55000},
-  {cat:'액상비료',   name:'엘세로닥터 액상',      size:'1L',         price:30000},
-  {cat:'액상비료',   name:'엘세로 유황 액상',     size:'500ml',      price:12000},
-  {cat:'액상비료',   name:'칼슘오래가지오 액상',  size:'500ml',      price:10000},
-  {cat:'액상비료',   name:'딱하나로',            size:'1L',         price:40000},
-  {cat:'액상비료',   name:'딱하나로',            size:'500ml',      price:25000},
-  {cat:'액상비료',   name:'농약분해제',           size:'1L',         price:25000},
-  {cat:'액상비료',   name:'엠비올(게르마늄)',     size:'1L',         price:70000},
-  {cat:'액상비료',   name:'케이투 붕산',          size:'130ml',      price:12000},
-  {cat:'액상비료',   name:'썬모아',              size:'250ml',      price:25000},
-  {cat:'액상비료',   name:'엘세로 용해제',        size:'120ml',      price:0},
-  // ── 액상 관주용 ──
-  {cat:'관주용(10L)', name:'딥루트',             size:'10L',        price:65000},
-  {cat:'관주용(10L)', name:'당도비대킹',          size:'10L',        price:60000},
-  {cat:'관주용(10L)', name:'엘크로',             size:'10L',        price:50000},
-  {cat:'관주용(10L)', name:'양자 식물에너지',     size:'10L',        price:100000},
-  // ── 분말비료 ──
-  {cat:'분말비료',   name:'천연팜골드',           size:'1kg',        price:25000},
-  {cat:'분말비료',   name:'무침용',              size:'5kg',        price:25000},
-  {cat:'분말비료',   name:'엘세로 CK-1',         size:'120g',       price:55000},
-  {cat:'분말비료',   name:'칼슘오래가지오',        size:'400g',       price:25000},
-  {cat:'분말비료',   name:'칼슘오래가지오',        size:'200g',       price:15000},
-  {cat:'분말비료',   name:'엘세로 유황',          size:'500g',       price:20000},
+  // ── 토양개량제 ─────────────────────────────────────────────────────────
+  {cat:'토양개량제',  name:'뉴천연팜(분상)',        size:'15kg',   price: 25000},
+  {cat:'토양개량제',  name:'옥토팜(펠렛)',          size:'20kg',   price: 20000},
+  {cat:'토양개량제',  name:'옥스팜(입상)',          size:'20kg',   price: 35000},
+
+  // ── NPK 엘크로 ─────────────────────────────────────────────────────────
+  {cat:'NPK 엘크로',  name:'NPK엘크로 20-20-20',   size:'25kg',   price:155000},
+  {cat:'NPK 엘크로',  name:'엘크로 15-30-15',      size:'25kg',   price:155000},
+  {cat:'NPK 엘크로',  name:'엘크로 6-11-44',       size:'25kg',   price:155000},
+
+  // ── 액상비료 ───────────────────────────────────────────────────────────
+  {cat:'액상비료',    name:'토양속보약',            size:'1L',     price: 45000},
+  {cat:'액상비료',    name:'토양속보약',            size:'500ml',  price: 25000},
+  {cat:'액상비료',    name:'풀빅산',               size:'1L',     price: 35000},
+  {cat:'액상비료',    name:'깔조아',               size:'-',      price: 50000},
+  {cat:'액상비료',    name:'딱하나로',             size:'1L',     price: 40000},
+  {cat:'액상비료',    name:'딱하나로',             size:'500ml',  price: 25000},
+  {cat:'액상비료',    name:'파이토',               size:'1L',     price: 55000},
+  {cat:'액상비료',    name:'파이토',               size:'500ml',  price: 30000},
+  {cat:'액상비료',    name:'파이토칼',             size:'1L',     price: 55000},
+  {cat:'액상비료',    name:'실렌에너지 gb2',        size:'1L',     price: 55000},
+  {cat:'액상비료',    name:'실렌에너지 fa3',        size:'1L',     price: 55000},
+  {cat:'액상비료',    name:'양자 동충하초',         size:'1L',     price: 50000},
+  {cat:'액상비료',    name:'양자 식물에너지',       size:'1L',     price: 45000},
+  {cat:'액상비료',    name:'엠비올(게르마늄)',       size:'1L',     price: 70000},
+  {cat:'액상비료',    name:'농약분해제',            size:'1L',     price: 25000},
+  {cat:'액상비료',    name:'칼슘오래가지오 액상',   size:'500ml',  price: 10000},
+  {cat:'액상비료',    name:'엘세로닥터 액상',       size:'1L',     price: 30000},
+  {cat:'액상비료',    name:'엘세로 유황 액상',      size:'500ml',  price: 12000},
+  {cat:'액상비료',    name:'엘세로 용해제',         size:'120ml',  price:     0},
+  {cat:'액상비료',    name:'케이투 붕산',           size:'130ml',  price: 12000},
+  {cat:'액상비료',    name:'썬모아',               size:'250ml',  price: 25000},
+
+  // ── 관주용 (10L) ───────────────────────────────────────────────────────
+  {cat:'관주용(10L)', name:'양자 식물에너지',       size:'10L',    price:100000},
+  {cat:'관주용(10L)', name:'딥루트',               size:'10L',    price: 65000},
+  {cat:'관주용(10L)', name:'당도비대킹',            size:'10L',    price: 60000},
+  {cat:'관주용(10L)', name:'엘크로',               size:'10L',    price: 50000},
+
+  // ── 분말비료 ───────────────────────────────────────────────────────────
+  {cat:'분말비료',    name:'생명픽스',              size:'1kg',    price:110000},
+  {cat:'분말비료',    name:'생명픽스',              size:'400g',   price: 44000},
+  {cat:'분말비료',    name:'스테비팜',              size:'500g',   price: 50000},
+  {cat:'분말비료',    name:'스테비팜',              size:'100g',   price: 12000},
+  {cat:'분말비료',    name:'천연팜골드',            size:'1kg',    price: 25000},
+  {cat:'분말비료',    name:'엘세로 CK-1',          size:'120g',   price: 55000},
+  {cat:'분말비료',    name:'칼슘오래가지오',         size:'400g',   price: 25000},
+  {cat:'분말비료',    name:'칼슘오래가지오',         size:'200g',   price: 15000},
+  {cat:'분말비료',    name:'칼슘오래가지오(귀비)',   size:'10kg',   price: 25000},
+  {cat:'분말비료',    name:'무침용',               size:'5kg',    price: 25000},
+  {cat:'분말비료',    name:'엘세로 유황',           size:'500g',   price: 20000},
 ];
 
 const CAT_CLS = {
