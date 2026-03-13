@@ -271,7 +271,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
   /* 화면 UI 모두 숨기기 */
   .app-header,.left,.ord-header,.actions,.del-btn,.qty-btn,.disc-ctrl,
-  .ord-cnt,.ord-empty,.summary,.vat-row,.btn-unpaid,.btn-import,.unpaid-alert{display:none!important;}
+  .ord-cnt,.ord-empty,.summary,.vat-row,.btn-unpaid,.btn-import,.btn-check-unpaid,.unpaid-alert{display:none!important;}
 
   body{background:#fff;font-family:'Noto Sans KR',sans-serif;}
   .layout{display:block;height:auto;}
@@ -428,6 +428,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border-radius:7px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;
   cursor:pointer;width:100%;position:relative;transition:all .15s;}
 .btn-unpaid:hover{background:var(--red);color:#fff;}
+.btn-check-unpaid{background:#FFF8E1;color:#E65100;border:1.5px solid #FFB300;
+  border-radius:7px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;
+  cursor:pointer;width:100%;transition:all .15s;}
+.btn-check-unpaid:hover{background:#FFB300;color:#fff;}
 .unpaid-badge{background:var(--red);color:#fff;font-size:11px;font-weight:900;padding:1px 7px;border-radius:9px;margin-left:6px;display:none;}
 .unpaid-badge.show{display:inline;}
 .btn-import{background:var(--g-pale);color:var(--g-dark);border:1.5px solid var(--g-btn);
@@ -640,6 +644,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="act-group">
         <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="onPdfSelected(this)">
         <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; 거래명세표 PDF 업로드</button>
+        <button class="btn-check-unpaid" onclick="checkUnpaidOnCustomer()">🔍&nbsp; 미수금 확인</button>
         <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
       </div>
       <div class="act-divider"></div>
