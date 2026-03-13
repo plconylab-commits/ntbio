@@ -411,11 +411,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .inv-amounts .total{color:var(--text);}
 .inv-amounts .paid-amt{color:#2E7D32;}
 .inv-amounts .remain{color:var(--red);}
-.inv-pay-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+.inv-pay-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;}
+.inv-pay-date{border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:12px;width:100%;box-sizing:border-box;}
+.inv-pay-date:focus{border-color:var(--teal);outline:none;}
+.inv-payer-input{border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:12px;width:100%;box-sizing:border-box;}
+.inv-payer-input:focus{border-color:var(--teal);outline:none;}
 .inv-pay-input{flex:1;border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-family:inherit;font-size:13px;font-weight:700;text-align:right;}
 .inv-pay-input:focus{border-color:var(--teal);outline:none;}
 .inv-pay-btn{background:#2E7D32;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .inv-pay-btn:hover{background:#1B5E20;}
+.pay-payer{font-size:11px;color:#1565C0;font-weight:600;margin-left:4px;}
 .inv-del-btn{background:#fff;color:var(--muted);border:1.5px solid #eee;border-radius:6px;padding:7px 14px;font-family:inherit;font-size:12px;cursor:pointer;}
 .inv-del-btn:hover{border-color:var(--red);color:var(--red);}
 .inv-actions{display:flex;gap:6px;justify-content:flex-end;}
@@ -1635,12 +1640,14 @@ function saveInvoice(){
   pushToServer('save',record);
 }
 
-function addPayment(id,amount){
+function addPayment(id,amount,payDate,payer){
   if(!amount||amount<=0)return;
   const history=getInvoiceHistory();
   const inv=history.find(h=>h.id===id);
   if(!inv)return;
-  inv.payments.push({amount,date:new Date().toISOString()});
+  const entry={amount,date:payDate||new Date().toISOString()};
+  if(payer)entry.payer=payer;
+  inv.payments.push(entry);
   inv.paidAmount=(inv.paidAmount||0)+amount;
   if(inv.paidAmount>=inv.totals.grandTotal){
     inv.status='입금완료';
@@ -1772,12 +1779,13 @@ function renderUnpaidList(invoices,deleted){
     const paymentsHtml=(inv.payments&&inv.payments.length)?
       '<div class="inv-payments">'+inv.payments.map((p,pi)=>{
         const pds=fmtDate(p.date);
+        const payerDisp=p.payer?`<span class="pay-payer">${p.payer}</span>`:'';
         if(p.cancelled){
           const cds=p.cancelledAt?fmtDate(p.cancelledAt):'';
-          return`<div class="inv-pay-entry cancelled"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span><span class="pay-cancel-label">취소${cds?' '+cds:''}</span></div>`;
+          return`<div class="inv-pay-entry cancelled"><span class="pay-date">${pds}</span>${payerDisp}<span class="pay-amount">+${won(p.amount)}</span><span class="pay-cancel-label">취소${cds?' '+cds:''}</span></div>`;
         }
-        if(isDeleted) return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span></div>`;
-        return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span><span class="pay-amount">+${won(p.amount)}</span><button class="inv-pay-cancel" onclick="onRemovePayment('${inv.id}',${pi})" title="입금 취소">✕</button></div>`;
+        if(isDeleted) return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span>${payerDisp}<span class="pay-amount">+${won(p.amount)}</span></div>`;
+        return`<div class="inv-pay-entry"><span class="pay-date">${pds}</span>${payerDisp}<span class="pay-amount">+${won(p.amount)}</span><button class="inv-pay-cancel" onclick="onRemovePayment('${inv.id}',${pi})" title="입금 취소">✕</button></div>`;
       }).join('')+'</div>':'';
     return`<div class="inv-card${isDeleted?' deleted':''}">
       <div class="inv-card-hdr">
@@ -1793,9 +1801,13 @@ function renderUnpaidList(invoices,deleted){
       </div>
       ${paymentsHtml}
       ${!isDeleted?`<div class="inv-pay-row">
-        <input type="number" class="inv-pay-input" id="pay_${inv.id}" placeholder="입금액 입력" min="0">
-        <span style="font-size:12px;color:var(--muted);">원</span>
-        <button class="inv-pay-btn" onclick="onAddPayment('${inv.id}')">입금</button>
+        <input type="date" class="inv-pay-date" id="paydate_${inv.id}" value="${new Date().toISOString().slice(0,10)}">
+        <input type="text" class="inv-payer-input" id="payer_${inv.id}" placeholder="입금자명 (선택)">
+        <div style="display:flex;align-items:center;gap:4px;width:100%;">
+          <input type="number" class="inv-pay-input" id="pay_${inv.id}" placeholder="입금액 입력" min="0">
+          <span style="font-size:12px;color:var(--muted);">원</span>
+          <button class="inv-pay-btn" onclick="onAddPayment('${inv.id}')">입금</button>
+        </div>
       </div>
       <div class="inv-actions">
         <button class="inv-del-btn" onclick="onDeleteInvoice('${inv.id}')">삭제</button>
@@ -1825,7 +1837,11 @@ function onAddPayment(id){
   const input=document.getElementById('pay_'+id);
   const amount=parseInt(input.value)||0;
   if(amount<=0){alert('입금액을 입력하세요.');return;}
-  addPayment(id,amount);
+  const dateInput=document.getElementById('paydate_'+id);
+  const payerInput=document.getElementById('payer_'+id);
+  const payDate=dateInput&&dateInput.value?new Date(dateInput.value+'T00:00:00').toISOString():new Date().toISOString();
+  const payer=payerInput?payerInput.value.trim():'';
+  addPayment(id,amount,payDate,payer);
   _reloadUnpaidModal();
 }
 function showConfirm(msg,onOk,okLabel){
