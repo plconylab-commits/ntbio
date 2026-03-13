@@ -734,7 +734,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="modal-body">
       <div class="mf"><label>금액 (원)</label>
-        <input type="number" id="costPrice" value="" min="0" placeholder="예) 50000"
+        <input type="number" id="costPrice" value="" placeholder="예) 50000 또는 -30000 (차감)"
           style="font-size:20px;font-weight:900;text-align:center;"
           oninput="" onkeydown="if(event.key==='Enter')addCostConfirm()"></div>
       <button class="add-btn" onclick="addCostConfirm()">✓ 추가</button>
@@ -1350,10 +1350,10 @@ function render(){
       <div class="ord-prices">
         <span class="retail-p">${won(it.retail)}</span>
         <span>→</span>
-        <span class="supply-p">${won(it.sp)}</span>
+        <span class="supply-p" style="${it.sp<0?'color:var(--blue)':''}">${it.sp<0?'−'+won(-it.sp):won(it.sp)}</span>
         ${it.disc>0?`<span class="disc-tag">${it.disc}%↓</span>`:''}
         <span>×${it.qty} =</span>
-        <span class="line-tot">${won(lt)}</span>
+        <span class="line-tot" style="${lt<0?'color:var(--blue)':''}">${lt<0?'−'+won(-lt):won(lt)}</span>
       </div></div>`;
   }).join('');
 
@@ -1491,14 +1491,17 @@ function syncPrint(){
         <td class="gift">증정용</td>
         <td class="gift">증정용</td></tr>`;
       const dateCell=it.date?it.date.slice(5).replace('-','/'):'';
-      return`<tr>
+      const isNeg=it.sp<0;
+      const negSt=isNeg?'color:#1565C0;font-weight:900;':'';
+      const tot=it.sp*it.qty;
+      return`<tr${isNeg?' style="color:#1565C0;"':''}>
         <td>${dateCell}</td>
         <td class="name">${it.name}</td>
         <td>${it.size}</td>
         <td class="num">${it.qty}</td>
-        <td>${comma(it.retail)}</td>
-        <td>${comma(it.sp)}</td>
-        <td>${comma(it.sp*it.qty)}</td></tr>`;
+        <td style="${negSt}">${isNeg?'−'+comma(-it.retail):comma(it.retail)}</td>
+        <td style="${negSt}">${isNeg?'−'+comma(-it.sp):comma(it.sp)}</td>
+        <td style="${negSt}">${tot<0?'−'+comma(-tot):comma(tot)}</td></tr>`;
     }).join('');
   }
 
