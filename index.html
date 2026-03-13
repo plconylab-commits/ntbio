@@ -419,6 +419,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .inv-del-btn{background:#fff;color:var(--muted);border:1.5px solid #eee;border-radius:6px;padding:7px 14px;font-family:inherit;font-size:12px;cursor:pointer;}
 .inv-del-btn:hover{border-color:var(--red);color:var(--red);}
 .inv-actions{display:flex;gap:6px;justify-content:flex-end;}
+.inv-upd{font-size:11px;color:var(--muted);margin-left:auto;font-weight:400;}
 .unpaid-alert{display:none;background:var(--red-lt);color:var(--red);padding:9px 14px;
   font-size:13px;font-weight:700;cursor:pointer;text-align:center;
   border-bottom:1.5px solid var(--red);animation:unpaidPulse 1.5s ease-in-out;}
@@ -709,6 +710,22 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="mrow"><span class="lbl">합계 (공급가 × 수량)</span><span class="vt" id="ccTotal">₩0</span></div>
       </div>
       <button class="add-btn" onclick="addCustomItem()">✓ 주문에 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 커스텀 확인 모달 -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:300px;text-align:center;">
+    <div class="modal-hdr" style="background:#C62828;">
+      <h2 id="confirmTitle">확인</h2>
+    </div>
+    <div class="modal-body" style="padding:20px 16px;">
+      <p id="confirmMsg" style="margin:0 0 20px;line-height:1.6;white-space:pre-line;"></p>
+      <div style="display:flex;gap:10px;">
+        <button id="confirmCancelBtn" style="flex:1;padding:11px;border-radius:7px;border:1.5px solid #ccc;background:#f5f5f5;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">취소</button>
+        <button id="confirmOkBtn" style="flex:1;padding:11px;border-radius:7px;border:none;background:#C62828;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">삭제</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1559,6 +1576,7 @@ function addPayment(id,amount){
   }else{
     inv.status='일부입금';
   }
+  inv.updatedAt=new Date().toISOString();
   setInvoiceHistory(history);
   updateUnpaidBadge();
   pushToServer('update',inv);
@@ -1572,6 +1590,7 @@ function removePayment(invId,payIdx){
   inv.paidAmount=Math.max(0,(inv.paidAmount||0)-removed.amount);
   if(inv.paidAmount<=0){inv.status='미입금';inv.paidAmount=0;}
   else if(inv.paidAmount<inv.totals.grandTotal){inv.status='일부입금';inv.paidAt=null;}
+  inv.updatedAt=new Date().toISOString();
   setInvoiceHistory(history);
   updateUnpaidBadge();
   pushToServer('update',inv);
@@ -1659,10 +1678,12 @@ function renderUnpaidList(invoices){
       return`<div>${it.name} ${it.size} ×${it.qty} = ${won(it.sp*it.qty)}</div>`;
     }).join('');
 
+    const updDisp=inv.updatedAt?'수정: '+inv.updatedAt.slice(0,10).replace(/-/g,'.'):'';
     return`<div class="inv-card">
       <div class="inv-card-hdr">
         <span class="inv-date">${dateDisp}</span>
         <span class="inv-status ${statusCls}">${inv.status}</span>
+        ${updDisp?`<span class="inv-upd">${updDisp}</span>`:''}
       </div>
       <div class="inv-items">${itemsHtml}</div>
       <div class="inv-amounts">
@@ -1671,7 +1692,8 @@ function renderUnpaidList(invoices){
         <span class="remain">잔액: ${won(remain)}</span>
       </div>
       ${(inv.payments&&inv.payments.length)?'<div class="inv-payments">'+inv.payments.map((p,pi)=>{
-        const pd=new Date(p.date);const pds=(pd.getMonth()+1)+'/'+pd.getDate();
+        const pd=new Date(p.date);
+        const pds=pd.getFullYear()+'.'+String(pd.getMonth()+1).padStart(2,'0')+'.'+String(pd.getDate()).padStart(2,'0');
         return'<div class="inv-pay-entry"><span class="pay-date">'+pds+'</span><span class="pay-amount">+'+won(p.amount)+'</span><button class="inv-pay-cancel" onclick="onRemovePayment(\''+inv.id+'\','+pi+')" title="입금 취소">✕</button></div>';
       }).join('')+'</div>':''}
       <div class="inv-pay-row">
@@ -1697,21 +1719,36 @@ function onAddPayment(id){
   if(name&&phone)openUnpaidModal(name,phone);
   else openUnpaidModal();
 }
-function onRemovePayment(invId,payIdx){
-  if(!confirm('이 입금을 취소하시겠습니까?'))return;
-  removePayment(invId,payIdx);
+function showConfirm(msg,onOk,okLabel){
+  document.getElementById('confirmMsg').textContent=msg;
+  document.getElementById('confirmOkBtn').textContent=okLabel||'삭제';
+  document.getElementById('confirmOkBtn').style.background=okLabel==='취소확인'?'#E65100':'#C62828';
+  document.getElementById('confirmOverlay').classList.add('on');
+  document.getElementById('confirmOkBtn').onclick=()=>{
+    document.getElementById('confirmOverlay').classList.remove('on');
+    onOk();
+  };
+  document.getElementById('confirmCancelBtn').onclick=()=>{
+    document.getElementById('confirmOverlay').classList.remove('on');
+  };
+}
+function _reloadUnpaidModal(){
   const name=document.getElementById('cName').value.trim();
   const phone=document.getElementById('cPhone').value.trim();
   if(name&&phone)openUnpaidModal(name,phone);
   else openUnpaidModal();
 }
+function onRemovePayment(invId,payIdx){
+  showConfirm('이 입금 기록을 취소하시겠습니까?',()=>{
+    removePayment(invId,payIdx);
+    _reloadUnpaidModal();
+  },'취소확인');
+}
 function onDeleteInvoice(id){
-  if(!confirm('이 내역을 삭제하시겠습니까?'))return;
-  deleteInvoice(id);
-  const name=document.getElementById('cName').value.trim();
-  const phone=document.getElementById('cPhone').value.trim();
-  if(name&&phone)openUnpaidModal(name,phone);
-  else openUnpaidModal();
+  showConfirm('이 거래 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.',()=>{
+    deleteInvoice(id);
+    _reloadUnpaidModal();
+  });
 }
 
 function checkUnpaidOnCustomer(){
