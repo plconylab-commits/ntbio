@@ -710,6 +710,23 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<!-- 운송비/지게차 금액 입력 모달 -->
+<div class="overlay" id="costOverlay" onclick="closeCostOut(event)">
+  <div class="modal" style="max-width:280px;">
+    <div class="modal-hdr">
+      <h2 id="costTitle">운송비</h2>
+      <button class="modal-x" onclick="closeCostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mf"><label>금액 (원)</label>
+        <input type="number" id="costPrice" value="" min="0" placeholder="예) 50000"
+          style="font-size:20px;font-weight:900;text-align:center;"
+          oninput="" onkeydown="if(event.key==='Enter')addCostConfirm()"></div>
+      <button class="add-btn" onclick="addCostConfirm()">✓ 추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- 기타 직접입력 모달 -->
 <div class="overlay" id="customOverlay" onclick="closeCustomOut(event)">
   <div class="modal">
@@ -1102,11 +1119,22 @@ function openCustomModal(){
   document.getElementById('customOverlay').classList.add('on');
   setTimeout(()=>document.getElementById('cItemName').focus(),50);
 }
+let _costName='';
 function addCostItem(name){
-  cart.push({i:'cost_'+Date.now(),name,size:'-',retail:0,disc:0,sp:0,qty:1,gift:false,custom:true});
+  _costName=name;
+  document.getElementById('costTitle').textContent=name;
+  document.getElementById('costPrice').value='';
+  document.getElementById('costOverlay').classList.add('on');
+  setTimeout(()=>document.getElementById('costPrice').focus(),100);
+}
+function addCostConfirm(){
+  const price=parseInt(document.getElementById('costPrice').value)||0;
+  cart.push({i:'cost_'+Date.now(),name:_costName,size:'-',retail:price,disc:0,sp:price,qty:1,gift:false,custom:true});
   render();
   showToast(name+' 추가 — 지원가에서 금액을 입력하세요');
 }
+function closeCostModal(){document.getElementById('costOverlay').classList.remove('on');}
+function closeCostOut(e){if(e.target===document.getElementById('costOverlay'))closeCostModal();}
 function closeCustomModal(){document.getElementById('customOverlay').classList.remove('on');}
 function closeCustomOut(e){if(e.target===document.getElementById('customOverlay'))closeCustomModal();}
 
