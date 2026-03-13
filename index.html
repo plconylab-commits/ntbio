@@ -957,6 +957,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('cDate').value=todayVal;
   buildGrid();
   syncPrint();
+  _loadRxDataFromStorage(); // 처방전에서 이동해온 경우 cart 채우기 (fresh load)
   initInvoiceDB().then(()=>{
     updateUnpaidBadge();
     syncFromServer().then(()=>{
@@ -1000,13 +1001,13 @@ function _lookupRetailPrice(name, size) {
   return match ? match.price : 0;
 }
 
-window.addEventListener('pageshow', () => {
+window.addEventListener('pageshow', e => {
   // 날짜는 항상 오늘로 갱신
   const _d=new Date(), _pad=n=>String(n).padStart(2,'0');
   document.getElementById('cDate').value=`${_d.getFullYear()}-${_pad(_d.getMonth()+1)}-${_pad(_d.getDate())}`;
   document.getElementById('p-date').textContent=`${_d.getFullYear()}년 ${_d.getMonth()+1}월 ${_d.getDate()}일`;
-
-  _loadRxDataFromStorage();
+  // bfcache 복원 시에도 rxData 체크
+  if (e.persisted) _loadRxDataFromStorage();
 });
 
 function _loadRxDataFromStorage() {
@@ -1034,10 +1035,6 @@ function _loadRxDataFromStorage() {
   } catch(e) {}
 }
 
-// bfcache 복원 시에도 rxData 체크 (history.back 방어)
-window.addEventListener('pageshow', e => {
-  if (e.persisted) _loadRxDataFromStorage();
-});
 
 // ─── 제품 그리드 ─────────────────────────
 function buildGrid(){
