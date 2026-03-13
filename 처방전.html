@@ -901,6 +901,14 @@ function recalcTypeNums() {
   });
 }
 
+function onStageTypeChange(si, val) {
+  stages[si].type = val;
+  recalcTypeNums();
+  renderStages();
+  schedulePreview();
+  _saveRxStages();
+}
+
 function onTypeNumOverride(si, val) {
   const n = parseInt(val);
   stages[si].typeNumOverride = (n >= 1) ? n : 0;
@@ -1071,6 +1079,18 @@ function renderStages() {
       </div>
       <div class="stage-body">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <div style="flex:0 0 110px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">📋 단계 종류</label>
+            <select style="width:100%;font-size:12px;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);font-weight:700;font-family:inherit;"
+              onchange="onStageTypeChange(${si},this.value)">
+              <option value="경운전"  ${st.type==='경운전' ?'selected':''}>경운 "전"</option>
+              <option value="경운후"  ${st.type==='경운후' ?'selected':''}>경운 "후"</option>
+              <option value="정식당일"${st.type==='정식당일'?'selected':''}>정식+당일</option>
+              <option value="정식후"  ${st.type==='정식후' ?'selected':''}>정식 "후"</option>
+              <option value="관주"    ${st.type==='관주'   ?'selected':''}>관주</option>
+              <option value="엽면"    ${st.type==='엽면'   ?'selected':''}>엽면</option>
+            </select>
+          </div>
           ${st.type === '정식후' ? `
           <div style="flex:0 0 90px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📆 정식 후 며칠</label>
