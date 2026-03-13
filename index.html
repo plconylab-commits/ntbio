@@ -2133,23 +2133,38 @@ function parseProductRows(tableText,items){
             nameTokens2.push(tokens[k]);
         }
         const cName=nameTokens2.join(' ').trim();
-        // "-" 토큰 스킵
+        // "-" 사이즈 토큰 스킵
         let afterStart=j+1;
         if(afterStart<tokens.length&&tokens[afterStart]==='-') afterStart++;
         let afterTokens2=[];
-        for(let k=afterStart;k<Math.min(afterStart+6,tokens.length);k++){
-          if(tokens[k].match(/^[가-힣]{2,}/)&&!tokens[k].match(/^[\d,]+$/)) break;
+        for(let k=afterStart;k<Math.min(afterStart+8,tokens.length);k++){
+          if(tokens[k].match(/^[가-힣]{2,}/)&&!tokens[k].match(/^-?[\d,]+$/)) break;
           afterTokens2.push(tokens[k]);
         }
-        const nums2=afterTokens2.filter(t=>t.match(/^[\d,]+$/));
+        // "-" + "90,000" → "-90,000" 병합
+        let merged=[];
+        for(let k=0;k<afterTokens2.length;k++){
+          if(afterTokens2[k]==='-'&&k+1<afterTokens2.length&&afterTokens2[k+1].match(/^[\d,]+$/)){
+            merged.push('-'+afterTokens2[k+1]); k++;
+          } else merged.push(afterTokens2[k]);
+        }
+        const nums2=merged.filter(t=>t.match(/^-?[\d,]+$/));
         let qty2=1,sp2=0;
-        if(nums2.length>=1) qty2=parseInt(nums2[0].replace(/,/g,''))||1;
-        if(nums2.length>=3) sp2=parseInt(nums2[2].replace(/,/g,''));
-        else if(nums2.length>=2) sp2=parseInt(nums2[1].replace(/,/g,''));
+        if(nums2.length===1){
+          // 숫자 1개 = 금액 (운송비 450,000 / 지게차 -90,000)
+          sp2=parseInt(nums2[0].replace(/,/g,''));
+        } else if(nums2.length>=3){
+          qty2=parseInt(nums2[0].replace(/,/g,''))||1;
+          sp2=parseInt(nums2[nums2.length-1].replace(/,/g,''));
+        } else if(nums2.length===2){
+          const n1=parseInt(nums2[0].replace(/,/g,''));
+          const n2=parseInt(nums2[1].replace(/,/g,''));
+          if(Math.abs(n1)<=100){qty2=n1;sp2=n2;} else{qty2=1;sp2=n2;}
+        }
         if(cName){
           items.push({
             i:'custom_'+Date.now()+'_'+items.length,
-            name:cName,size:'-',retail:sp2,disc:0,sp:sp2,qty:qty2,
+            name:cName,size:'-',retail:Math.abs(sp2),disc:0,sp:sp2,qty:qty2,
             gift:false,custom:true,date:itemDate2
           });
         }
