@@ -100,8 +100,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .inv-remain.over{background:#FFEBEE;color:#C62828;}
 .inv-empty{color:#bbb;font-size:12px;text-align:center;padding:8px 0;}
 
+/* ── 월 그룹 ── */
+.stages-list{display:flex;flex-direction:column;gap:12px;}
+.month-group{border:2px solid var(--teal);border-radius:10px;overflow:hidden;}
+.month-group-header{background:var(--teal-dark);color:#fff;padding:7px 12px;
+  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.month-group-header:hover{background:var(--teal);}
+.month-group-label{font-size:15px;font-weight:900;letter-spacing:.5px;}
+.month-group-count{font-size:11px;opacity:.75;background:rgba(255,255,255,.2);
+  border-radius:10px;padding:1px 7px;}
+.month-group-arrow{margin-left:auto;font-size:11px;transition:transform .2s;}
+.month-group-arrow.open{transform:rotate(180deg);}
+.month-group-body{background:#f4fbfb;display:flex;flex-direction:column;gap:8px;padding:8px;}
+.month-group-body.collapsed{display:none;}
 /* ── 단계 카드 ── */
-.stages-list{display:flex;flex-direction:column;gap:10px;}
 .stage-card{border:1.5px solid #e0e0e0;border-radius:8px;overflow:hidden;}
 .stage-head{background:var(--teal);color:#fff;padding:8px 12px;
   display:flex;align-items:center;justify-content:space-between;}
@@ -915,7 +927,20 @@ function renderStages() {
   }
   renderToc();
   schedulePreview();
-  list.innerHTML = stages.map((st, si) => {
+
+  // 월별 그룹으로 묶기
+  const groupMap = {};
+  const groupOrder = [];
+  stages.forEach((st, si) => {
+    const mk = st.month ?? 0;
+    if (!groupMap[mk]) { groupMap[mk] = []; groupOrder.push(mk); }
+    groupMap[mk].push(si);
+  });
+
+  // 닫힌 그룹 상태 유지
+  if (!window._monthGroupCollapsed) window._monthGroupCollapsed = {};
+
+  const makeCard = (st, si) => {
     // 추가된 제품 행
     const prods = (st.products || []).map((p, pi) => {
       const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
@@ -1123,7 +1148,30 @@ function renderStages() {
         </div>
       </div>
     </div>`;
+  }; // makeCard 끝
+
+  list.innerHTML = groupOrder.map(mk => {
+    const siList = groupMap[mk];
+    const monthLabel = mk === 0 ? '기비 (기본시비)' : `${mk}월`;
+    const isCollapsed = !!window._monthGroupCollapsed[mk];
+    const cardsHtml = siList.map(si => makeCard(stages[si], si)).join('');
+    return `<div class="month-group">
+      <div class="month-group-header" onclick="toggleMonthGroup(${mk})">
+        <span class="month-group-label">${monthLabel}</span>
+        <span class="month-group-count">${siList.length}단계</span>
+        <span class="month-group-arrow${isCollapsed ? '' : ' open'}">▲</span>
+      </div>
+      <div class="month-group-body${isCollapsed ? ' collapsed' : ''}">
+        ${cardsHtml}
+      </div>
+    </div>`;
   }).join('');
+}
+
+function toggleMonthGroup(mk) {
+  if (!window._monthGroupCollapsed) window._monthGroupCollapsed = {};
+  window._monthGroupCollapsed[mk] = !window._monthGroupCollapsed[mk];
+  renderStages();
 }
 
 // ── 평수 선택 ─────────────────────────────
