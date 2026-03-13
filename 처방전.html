@@ -861,11 +861,23 @@ function recalcTypeNums() {
   const counts = {};
   stages.forEach(st => {
     if (st.type === '관주' || st.type === '엽면') {
-      const k = `${st.month}_${st.type}`;
-      counts[k] = (counts[k] || 0) + 1;
-      st.typeNum = counts[k];
+      if (st.typeNumOverride) {
+        st.typeNum = st.typeNumOverride; // 수동 설정 우선
+      } else {
+        const k = `${st.month}_${st.type}`;
+        counts[k] = (counts[k] || 0) + 1;
+        st.typeNum = counts[k];
+      }
     }
   });
+}
+
+function onTypeNumOverride(si, val) {
+  const n = parseInt(val);
+  stages[si].typeNumOverride = (n >= 1) ? n : 0;
+  recalcTypeNums();
+  renderStages();
+  schedulePreview();
 }
 
 function getStageLabel(st) {
@@ -1028,6 +1040,13 @@ function renderStages() {
               value="${st.dateRange||''}"
               oninput="onDateRangeChange(${si},this.value)">
           </div>
+          ${(st.type==='관주'||st.type==='엽면') ? `<div style="flex:0 0 64px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">안 번호</label>
+            <input type="number" min="1" max="9"
+              style="width:100%;font-size:15px;font-weight:900;text-align:center;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);"
+              value="${st.typeNumOverride || st.typeNum || 1}"
+              oninput="onTypeNumOverride(${si},this.value)">
+          </div>` : ''}
           <div style="flex:2;min-width:140px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📌 단계 목적/제목 <span style="color:#9b7fd4;">(헤더)</span></label>
             <input style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;"
@@ -1916,7 +1935,7 @@ function generatePreview() {
         m: s.month, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
-        a: s.area||0
+        a: s.area||0, to: s.typeNumOverride||0
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined
@@ -2077,6 +2096,7 @@ function applyRxData(d) {
   stages = (d.st||[]).map(s => ({
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
+    typeNumOverride: s.to||0,
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
