@@ -664,6 +664,20 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('bAreaTypeDirect').value = at;
     }
   }
+  // PDF 불러오기로 저장된 처방 단계 복원
+  const rawStages = localStorage.getItem('rxStages');
+  if (rawStages) {
+    try {
+      const saved = JSON.parse(rawStages);
+      if (saved.stages && saved.stages.length > 0) {
+        stageIdCnt = 0;
+        stages = saved.stages.map(s => ({ ...s, id: ++stageIdCnt }));
+        pageOrder = saved.pageOrder || [];
+        costVisible = saved.costVisible || false;
+        priceOverrides = saved.priceOverrides || {};
+      }
+    } catch(e) {}
+  }
   renderInventory();
   renderStages();
   // 입력 변경시 실시간 처방전 업데이트
@@ -1983,8 +1997,9 @@ function applyRxData(d) {
   costVisible = d.cv || false;
   if (d.po2) priceOverrides = d.po2;
 
-  // localStorage 업데이트 (거래명세표 연동)
+  // localStorage 업데이트 (거래명세표 연동 + 단계 영속)
   localStorage.setItem('rxData', JSON.stringify(rxData));
+  _saveRxStages();
 
   renderStages();
   renderInventory();
@@ -2177,10 +2192,24 @@ function applyParsedRx(parsed) {
   priceOverrides = {};
 
   localStorage.setItem('rxData', JSON.stringify(rxData));
+  _saveRxStages();
 
   renderStages();
   renderInventory();
   schedulePreview();
+}
+
+function _saveRxStages() {
+  try {
+    localStorage.setItem('rxStages', JSON.stringify({
+      stages: stages.map(s => ({
+        type: s.type, month: s.month||0, days: s.days||'', dateRange: s.dateRange||'',
+        purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
+        products: s.products||[], area: s.area||null
+      })),
+      pageOrder, costVisible, priceOverrides
+    }));
+  } catch(e) {}
 }
 </script>
 </body>
