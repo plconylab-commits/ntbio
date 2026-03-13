@@ -1801,6 +1801,7 @@ function renderUnpaidList(invoices,deleted){
       </div>
       ${paymentsHtml}
       ${!isDeleted?`<div class="inv-pay-row">
+        <label style="font-size:11px;color:var(--muted);margin-bottom:-4px;">입금날짜</label>
         <input type="date" class="inv-pay-date" id="paydate_${inv.id}" value="${new Date().toISOString().slice(0,10)}">
         <input type="text" class="inv-payer-input" id="payer_${inv.id}" placeholder="입금자명 (선택)">
         <div style="display:flex;align-items:center;gap:4px;width:100%;">
