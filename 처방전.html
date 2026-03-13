@@ -1987,7 +1987,7 @@ async function onRxPdfSelected(input) {
 function applyRxData(d) {
   rxData = {
     name: d.n||'', region: d.rg||'', area: d.ar||'', crop: d.cr||'', areaType: d.at||'농사',
-    cart: (d.cart||[]).map(c => ({ name:c[0], size:c[1], qty:c[2], retail:c[3]||0, sp:c[4]||0 }))
+    cart: (d.cart||[]).map(c => ({ name:c[0], size:c[1], qty:Math.ceil(c[2]||1), retail:c[3]||0, sp:c[4]||0 }))
   };
 
   // 빌더 입력 채우기
@@ -2229,7 +2229,7 @@ function parseRxPdfText(pageTexts) {
 
   // cart 구성
   result.cart = Object.values(productMap).map(p => ({
-    name: p.name, size: p.size, qty: p.qty, retail: 0, sp: 0
+    name: p.name, size: p.size, qty: Math.ceil(p.qty), retail: 0, sp: 0
   }));
 
   return result;
