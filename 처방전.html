@@ -286,6 +286,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   line-height:1;}
 .cover-tagline-bar{background:rgba(255,235,205,.85);border-radius:20px;
   padding:6px 28px;font-size:13px;letter-spacing:3px;color:#7a5a30;margin-top:8px;}
+/* 표지 인라인 편집 */
+.cover-editable{cursor:pointer;transition:opacity .15s;border-radius:4px;}
+.cover-editable:hover{opacity:.72;outline:2px dashed rgba(255,255,255,.7);outline-offset:4px;}
+#coverEditor{position:fixed;z-index:9999;background:#fff;border-radius:14px;
+  box-shadow:0 6px 32px rgba(0,0,0,.28);padding:18px 20px;width:300px;display:none;
+  top:50%;left:50%;transform:translate(-50%,-50%);}
+#coverEditor .ce-title{font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:12px;}
+#coverEditor label{font-size:11px;font-weight:700;color:#666;display:block;margin-bottom:3px;}
+#coverEditor input[type=text]{width:100%;padding:7px 10px;border:1.5px solid var(--teal);
+  border-radius:7px;font-size:14px;box-sizing:border-box;}
+#coverEditor .ce-fs-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
+#coverEditor .ce-fs-row label{margin:0;white-space:nowrap;}
+#coverEditor .ce-fs-num{width:68px;padding:6px 8px;border:1.5px solid #ccc;
+  border-radius:7px;font-size:14px;text-align:center;}
+#coverEditor .ce-auto-btn{font-size:11px;padding:4px 9px;border:1px solid #ccc;
+  border-radius:6px;background:#f5f5f5;cursor:pointer;white-space:nowrap;color:#555;}
+#coverEditor .ce-close{float:right;background:none;border:none;font-size:18px;
+  cursor:pointer;color:#999;padding:0;margin-top:-4px;}
+#coverEditor .optional-hint{font-size:11px;color:#aaa;margin-top:6px;}
 
 /* ── 내용 페이지 ── */
 .content-page{background:var(--teal);padding:14px;min-height:595px;
@@ -454,11 +473,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="b-section">
       <div class="b-title">① 표지 정보</div>
       <div class="f-row col3">
-        <div class="fg"><label>지역</label>
+        <div class="fg"><label>지역 <span style="color:#aaa;font-weight:400;font-size:11px;">(선택)</span></label>
           <input id="bRegion" placeholder="예) 금산+추부"></div>
-        <div class="fg"><label>평수</label>
+        <div class="fg"><label>평수 <span style="color:#aaa;font-weight:400;font-size:11px;">(선택)</span></label>
           <input id="bArea" type="number" placeholder="400" min="1"></div>
-        <div class="fg"><label>종류</label>
+        <div class="fg"><label>종류 <span style="color:#aaa;font-weight:400;font-size:11px;">(선택)</span></label>
           <select id="bAreaType" onchange="onBAreaTypeChange()">
             <option value="농사">농사</option>
             <option value="하우스">하우스</option>
@@ -472,7 +491,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
       <div class="f-row col2">
-        <div class="fg"><label>작물</label>
+        <div class="fg"><label>작물 <span style="color:#aaa;font-weight:400;font-size:11px;">(선택)</span></label>
           <select id="bCrop">
             <option value="">-- 선택 --</option>
             <option>감자</option><option>고구마</option><option>고추</option>
@@ -675,6 +694,8 @@ window.addEventListener('DOMContentLoaded', () => {
         pageOrder = saved.pageOrder || [];
         costVisible = saved.costVisible || false;
         priceOverrides = saved.priceOverrides || {};
+        if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
+        if (saved.coverCustomText) rxData.coverCustomText = saved.coverCustomText;
       }
     } catch(e) {}
   }
@@ -1781,18 +1802,28 @@ function generatePreview() {
   }
 
   // ── 표지 HTML ──
-  const cropText = crop ? crop + (area ? `(${area}평)` : '') + areaType : '';
-  const rxText   = '처방전:' + (name || '고객명');
-  // 세 줄 중 가장 긴 텍스트 기준으로 폰트 크기 통일
-  const allLines = [region, cropText, rxText].filter(Boolean);
-  const sharedFS = allLines.length ? Math.min(...allLines.map(t => coverFontSize(t))) : 46;
+  const ccText = rxData.coverCustomText || {};
+  const ccFs   = rxData.coverCustomFs   || {};
+  const cropText    = ccText.cropArea !== undefined ? ccText.cropArea
+                    : (crop ? crop + (area ? `(${area}평)` : '') + areaType : '');
+  const regionText  = ccText.region  !== undefined ? ccText.region  : region;
+  const rxSuffix    = ccText.rx      !== undefined ? ccText.rx      : (name || '고객명');
+  const rxText      = '처방전:' + rxSuffix;
+  // 세 줄 중 가장 긴 텍스트 기준으로 폰트 크기 통일 (커스텀 없는 경우)
+  const allLines = [regionText, cropText, rxText].filter(Boolean);
+  const autoFS   = allLines.length ? Math.min(...allLines.map(t => coverFontSize(t))) : 46;
+  const lineFs = {
+    region:   ccFs.region   || autoFS,
+    cropArea: ccFs.cropArea || autoFS,
+    rx:       ccFs.rx       || autoFS
+  };
   const coverHtml = `<div class="page-card" data-pagekey="cover">
     <div class="cover-page">
       <div class="cover-naturebio">N &nbsp; A &nbsp; T &nbsp; U &nbsp; R &nbsp; E &nbsp; B &nbsp; I &nbsp; O</div>
       <div class="cover-box">
-        ${region ? `<div class="cover-region" style="font-size:${sharedFS}px;">${region}</div>` : ''}
-        ${cropText ? `<div class="cover-crop-area" style="font-size:${sharedFS}px;">${cropText}</div>` : ''}
-        <div class="cover-rx" style="font-size:${sharedFS}px;">${rxText}</div>
+        ${regionText ? `<div class="cover-region cover-editable" style="font-size:${lineFs.region}px;" onclick="editCoverLine('region')">${regionText}</div>` : `<div class="cover-region cover-editable" style="font-size:14px;opacity:.5;" onclick="editCoverLine('region')">+ 지역 추가</div>`}
+        ${cropText ? `<div class="cover-crop-area cover-editable" style="font-size:${lineFs.cropArea}px;" onclick="editCoverLine('cropArea')">${cropText}</div>` : `<div class="cover-crop-area cover-editable" style="font-size:14px;opacity:.5;" onclick="editCoverLine('cropArea')">+ 작물/평수 추가</div>`}
+        <div class="cover-rx cover-editable" style="font-size:${lineFs.rx}px;" onclick="editCoverLine('rx')">${rxText}</div>
       </div>
       <div class="cover-logo-area">
         <div class="cover-logo-top">
@@ -2271,6 +2302,96 @@ function applyParsedRx(parsed) {
   schedulePreview();
 }
 
+// ── 표지 인라인 편집 ─────────────────────
+let _ceField = null;
+
+function editCoverLine(field) {
+  _ceField = field;
+  const ed = document.getElementById('coverEditor');
+  const ccText = rxData.coverCustomText || {};
+  const ccFs   = rxData.coverCustomFs   || {};
+
+  const titles = { region:'지역 편집', cropArea:'작물/평수 편집', rx:'고객명 편집' };
+  const hints  = {
+    region: '지역 텍스트를 직접 입력하세요.',
+    cropArea: '작물/평수 텍스트를 직접 입력하세요.',
+    rx: '고객명만 입력하세요. (처방전: 접두어 자동 표시)'
+  };
+  ed.querySelector('.ce-title').textContent = titles[field];
+  ed.querySelector('.ce-hint').textContent  = hints[field];
+
+  // 현재 텍스트 결정
+  let curText = '';
+  if (field === 'region') {
+    curText = ccText.region !== undefined ? ccText.region : (document.getElementById('bRegion').value || '');
+  } else if (field === 'cropArea') {
+    if (ccText.cropArea !== undefined) { curText = ccText.cropArea; }
+    else {
+      const crop = document.getElementById('bCrop').value;
+      const area = document.getElementById('bArea').value;
+      const at   = getBAreaType();
+      curText = crop ? crop + (area ? `(${area}평)` : '') + at : '';
+    }
+  } else {
+    curText = ccText.rx !== undefined ? ccText.rx : (document.getElementById('bName').value || '');
+  }
+  ed.querySelector('#ceText').value = curText;
+
+  // 현재 폰트 크기
+  const allLines = [
+    ccText.region  !== undefined ? ccText.region  : (document.getElementById('bRegion').value||''),
+    ccText.cropArea !== undefined ? ccText.cropArea : '',
+    '처방전:' + (ccText.rx !== undefined ? ccText.rx : (document.getElementById('bName').value||'고객명'))
+  ].filter(Boolean);
+  const autoFs = allLines.length ? Math.min(...allLines.map(t => coverFontSize(t))) : 46;
+  ed.querySelector('#ceFsNum').value = ccFs[field] || autoFs;
+
+  ed.style.display = 'block';
+}
+
+function onCeTextInput() {
+  const val = document.getElementById('ceText').value;
+  if (!rxData.coverCustomText) rxData.coverCustomText = {};
+  rxData.coverCustomText[_ceField] = val;
+  // 빌더 입력도 동기화
+  if (_ceField === 'region') document.getElementById('bRegion').value = val;
+  else if (_ceField === 'rx')  document.getElementById('bName').value  = val;
+  schedulePreview();
+}
+
+function onCeFsInput() {
+  const fs = parseInt(document.getElementById('ceFsNum').value);
+  if (!fs || fs < 8 || fs > 120) return;
+  if (!rxData.coverCustomFs) rxData.coverCustomFs = {};
+  rxData.coverCustomFs[_ceField] = fs;
+  schedulePreview();
+}
+
+function resetCoverFs() {
+  if (!rxData.coverCustomFs) return;
+  delete rxData.coverCustomFs[_ceField];
+  const allLines = [
+    document.getElementById('bRegion').value||'',
+    '처방전:' + (document.getElementById('bName').value||'고객명')
+  ].filter(Boolean);
+  const autoFs = Math.min(...allLines.map(t => coverFontSize(t)));
+  document.getElementById('ceFsNum').value = autoFs;
+  schedulePreview();
+}
+
+function clearCoverLine() {
+  if (!rxData.coverCustomText) rxData.coverCustomText = {};
+  rxData.coverCustomText[_ceField] = '';  // empty = hide line (for region/cropArea)
+  document.getElementById('ceText').value = '';
+  if (_ceField === 'region') document.getElementById('bRegion').value = '';
+  schedulePreview();
+}
+
+function closeCoverEditor() {
+  document.getElementById('coverEditor').style.display = 'none';
+  _ceField = null;
+}
+
 function _saveRxStages() {
   try {
     localStorage.setItem('rxStages', JSON.stringify({
@@ -2279,10 +2400,33 @@ function _saveRxStages() {
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null
       })),
-      pageOrder, costVisible, priceOverrides
+      pageOrder, costVisible, priceOverrides,
+      coverCustomFs: rxData.coverCustomFs || {},
+      coverCustomText: rxData.coverCustomText || {}
     }));
   } catch(e) {}
 }
 </script>
+
+<!-- 표지 줄 편집 패널 -->
+<div id="coverEditor">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <span class="ce-title">줄 편집</span>
+    <button class="ce-close" onclick="closeCoverEditor()">×</button>
+  </div>
+  <label for="ceText" style="margin-top:6px;">내용</label>
+  <input type="text" id="ceText" oninput="onCeTextInput()" placeholder="텍스트 입력">
+  <div class="optional-hint ce-hint"></div>
+  <div class="ce-fs-row" style="margin-top:12px;">
+    <label>폰트 크기</label>
+    <input type="number" id="ceFsNum" class="ce-fs-num" min="12" max="80" step="1" oninput="onCeFsInput()">
+    <span style="font-size:12px;color:#888;">px</span>
+    <button class="ce-auto-btn" onclick="resetCoverFs()">자동</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;">
+    <button onclick="clearCoverLine()" style="flex:1;padding:7px 0;border:1px solid #eee;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#fff8f8;color:#c55;">줄 지우기</button>
+    <button onclick="closeCoverEditor()" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--teal);color:#fff;">확인</button>
+  </div>
+</div>
 </body>
 </html>
