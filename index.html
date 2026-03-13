@@ -297,7 +297,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   color:#000;
   border:2px solid #000;
   width:100%;
+  display:flex;
+  flex-direction:column;
+  min-height:254mm; /* A4(297mm) - 상하여백(24mm) - 여유(19mm) */
+  box-sizing:border-box;
 }
+.p-body{flex:1;display:flex;flex-direction:column;}
+.p-filler td{height:27px;border:1px solid #d0d0d0;}
 
 /* 제목 */
 .p-title{
@@ -577,6 +583,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
         <div class="p-addr-row" id="p-addr-row"></div>
 
+        <div class="p-body">
         <table class="p-table">
           <thead>
             <tr>
@@ -591,6 +598,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
           </thead>
           <tbody id="p-tbody"></tbody>
         </table>
+        </div>
 
         <table class="p-footer-tbl">
           <tr>
@@ -1376,6 +1384,15 @@ function syncPrint(){
         <td>${comma(it.sp)}</td>
         <td>${comma(it.sp*it.qty)}</td></tr>`;
     }).join('');
+  }
+
+  // A4 채우기: 최소 16행 보장 (빈 행 추가)
+  const MIN_ROWS = 16;
+  const fillerCnt = Math.max(0, MIN_ROWS - cart.length);
+  if (fillerCnt > 0) {
+    tbody.innerHTML += Array(fillerCnt).fill(
+      '<tr class="p-filler"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'
+    ).join('');
   }
 
   // 합계금액
