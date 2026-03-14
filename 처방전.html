@@ -767,6 +767,17 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const parsedRx = parseRxPdfText(rawPdfText.split('\n').filter(Boolean));
         if (parsedRx.stages && parsedRx.stages.length > 0) {
+          // 제품 키 정규화: rxData.cart와 대조해서 name||size ↔ name(size)|| 자동 매핑
+          const cartKeys = new Set((rxData.cart||[]).map(c => c.name+'||'+(c.size||'')));
+          parsedRx.stages.forEach(st => {
+            st.products.forEach(p => {
+              if (!cartKeys.has(p.key)) {
+                const [nm, sz] = p.key.split('||');
+                // name||size → name(size)|| 시도
+                if (sz) { const alt=nm+'('+sz+')||'; if (cartKeys.has(alt)) p.key=alt; }
+              }
+            });
+          });
           stageIdCnt = 0;
           stages = parsedRx.stages.map(s => ({ ...s, id: ++stageIdCnt }));
         }
@@ -2481,6 +2492,34 @@ function applyRxData(d) {
 function parseRxPdfText(pageTexts) {
   // 문자열 하나면 배열로 감싸기 (하위호환)
   if (typeof pageTexts === 'string') pageTexts = pageTexts.split('\n\n').filter(Boolean);
+
+  // ── pdfjs 토큰 병합 전처리 ──
+  // 브라우저 pdfjs가 분리한 토큰을 재결합: 옥토팜 ( 펠렛 ) → 옥토팜(펠렛), 10 L → 10L, 반 통 → 반통 등
+  pageTexts = pageTexts.map(pg => {
+    const toks = pg.split(/\s+/).filter(Boolean);
+    const out = [];
+    for (let i = 0; i < toks.length; ) {
+      const t0=toks[i], t1=toks[i+1]||'', t2=toks[i+2]||'', t3=toks[i+3]||'';
+      // word + ( + content + ) → word(content)  [예: 옥토팜 ( 펠렛 ) → 옥토팜(펠렛)]
+      if (t1==='(' && t3===')' && t2 && !/^\d/.test(t2) && /[가-힣A-Za-z]/.test(t2)) {
+        out.push(t0+'('+t2+')'); i+=4;
+      // N + 평 → N평
+      } else if (/^\d+$/.test(t0) && t1==='평') {
+        out.push(t0+'평'); i+=2;
+      // N + 부피/무게단위 → N단위  [예: 10 L → 10L, 500 g → 500g]
+      } else if (/^\d+(?:\.\d+)?$/.test(t0) && /^(kg|g|L|ml|cc|리터)$/i.test(t1)) {
+        out.push(t0+t1); i+=2;
+      // N + 수량단위 → N수량단위  [예: 30 포 → 30포, 1 봉 → 1봉]
+      } else if (/^\d+(?:\.\d+)?$/.test(t0) && /^(봉|병|통|포|개|팩|박스|캔)$/.test(t1)) {
+        out.push(t0+t1); i+=2;
+      // 반 + 수량단위 → 반수량단위  [예: 반 통 → 반통, 반 병 → 반병]
+      } else if (t0==='반' && /^(봉|병|통|포|개|팩|박스)$/.test(t1)) {
+        out.push('반'+t1); i+=2;
+      } else { out.push(t0); i++; }
+    }
+    return out.join(' ');
+  });
+
   const result = { name:'', region:'', area:'', crop:'', areaType:'농사', stages:[], cart:[] };
   const allText = pageTexts.join('\n');
 
