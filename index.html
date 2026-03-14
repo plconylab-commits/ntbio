@@ -2442,6 +2442,8 @@ function onPdfSelected(input){
       // 2순위: 구버전 처방전 PDF (##RX## 없이 "처방전" 텍스트 포함) → 텍스트 파싱
       if(compact.includes('처방전') && !compact.includes('##TN##')){
         const info = parsePrescriptionText(text);
+        // 처방전.html에서 단계 파싱할 수 있도록 원본 텍스트 저장
+        localStorage.setItem('rxPdfRawText', text);
         applyParsedPrescription(info);
         return;
       }

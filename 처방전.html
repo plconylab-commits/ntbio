@@ -759,6 +759,20 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     } catch(e) {}
   }
+  // 구버전 처방전 PDF: rxPdfRawText에서 단계 파싱 (rxStages가 비어있을 때만)
+  if (stages.length === 0) {
+    const rawPdfText = localStorage.getItem('rxPdfRawText');
+    if (rawPdfText) {
+      localStorage.removeItem('rxPdfRawText');
+      try {
+        const parsedRx = parseRxPdfText(rawPdfText.split('\n').filter(Boolean));
+        if (parsedRx.stages && parsedRx.stages.length > 0) {
+          stageIdCnt = 0;
+          stages = parsedRx.stages.map(s => ({ ...s, id: ++stageIdCnt }));
+        }
+      } catch(e) {}
+    }
+  }
   document.getElementById('bManagerPhone').value = managerPhone;
   renderInventory();
   renderStages();
