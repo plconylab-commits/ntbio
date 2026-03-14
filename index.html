@@ -2291,7 +2291,12 @@ function onPdfSelected(input){
           return;
         }
       }
-      // 2순위: 거래명세표 PDF 텍스트 파싱
+      // 2순위: 구버전 처방전 PDF 감지 (##RX## 없이 "처방전" 텍스트 포함)
+      if(compact.includes('처방전') && !compact.includes('##TN##')){
+        showToast('⚠️ 이 처방전 PDF는 임베드 데이터가 없습니다.\n처방전.html에서 다시 출력 후 업로드해주세요.', true);
+        return;
+      }
+      // 3순위: 거래명세표 PDF 텍스트 파싱
       const parsed=parsePdfInvoice(text);
       applyParsedInvoice(parsed);
     }).catch(err=>{
