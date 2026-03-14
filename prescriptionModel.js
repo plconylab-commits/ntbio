@@ -54,6 +54,7 @@ function createItem(originalName, baseArea, baseQty, unit) {
  *       전체 평수 = 기준 평수로 간주 → baseQty 그대로 반환
  */
 function calcRequiredQty(totalArea, baseArea, baseQty) {
-  if (!baseArea) return baseQty;
+  // baseArea 또는 totalArea가 미입력(0/null)이면 비율 계산 불가 → baseQty 그대로 반환
+  if (!baseArea || !totalArea) return baseQty;
   return Math.ceil((totalArea / baseArea) * baseQty);
 }

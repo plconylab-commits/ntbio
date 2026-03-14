@@ -141,7 +141,9 @@ function openValidationModal(rx) {
   (rx.prescriptions || []).forEach(entry => {
     (entry.items || []).forEach(item => {
       const match = findProduct(item.originalName);
-      const finalQty = calcRequiredQty(totalArea, item.baseArea, item.baseQty);
+      // Math.ceil: 반개(0.5) → 1 등 실제 주문 가능한 정수로 올림
+      // 모달 "최종 수량" 입력란이 실제 장바구니에 담길 수량을 그대로 보여주도록
+      const finalQty = Math.ceil(calcRequiredQty(totalArea, item.baseArea, item.baseQty) || 0);
 
       // 하이라이트 판별
       let rowClass = '';
