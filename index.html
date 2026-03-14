@@ -2972,8 +2972,16 @@ function closeApiKeyOut(e){
   if(e.target===document.getElementById('apiKeyOverlay'))closeApiKeyModal();
 }
 function saveApiKey(){
-  const key=document.getElementById('apiKeyInput').value.trim();
-  if(!key){alert('API 키를 입력해 주세요.');return;}
+  const raw=document.getElementById('apiKeyInput').value.trim();
+  if(!raw){alert('API 키를 입력해 주세요.');return;}
+  // HTTP 헤더는 ISO-8859-1(ASCII)만 허용 — 한글 등 비ASCII 문자 제거
+  const key=raw.replace(/[^\x20-\x7E]/g,'');
+  if(key!==raw){
+    alert('API 키에 허용되지 않는 문자(한글·특수문자 등)가 포함되어 자동 제거되었습니다.\n\n저장된 키: '+key.substring(0,12)+'...\n\n키가 올바르지 않다면 다시 입력해 주세요.');
+  }
+  if(!key.startsWith('sk-')){
+    if(!confirm('입력한 키가 "sk-"로 시작하지 않습니다.\n그래도 저장하시겠습니까?\n\n입력값: '+key.substring(0,20)+'...'))return;
+  }
   localStorage.setItem('openai_api_key',key);
   closeApiKeyModal();
   showToast('API 키가 저장되었습니다 ✓');
