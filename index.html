@@ -659,7 +659,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="act-divider"></div>
       <div class="act-group">
         <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="onPdfSelected(this)">
-        <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; 거래명세표 PDF 업로드</button>
+        <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; PDF 업로드 (거래명세표 / 처방전)</button>
         <button class="btn-all-unpaid" onclick="openAllUnpaid()">📋&nbsp; 미수금 전체 목록</button>
         <button class="btn-check-unpaid" onclick="checkUnpaidOnCustomer()">🔍&nbsp; 미수금 확인</button>
         <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
@@ -2197,6 +2197,60 @@ function checkUnpaidOnCustomer(){
 }
 
 // ─── PDF 불러오기 ─────────────────────────────
+function applyRxPdfEmbed(d){
+  // 고객정보 채우기
+  document.getElementById('cName').value=d.n||'';
+  document.getElementById('cRegion').value=d.rg||'';
+  document.getElementById('cArea').value=d.ar||'';
+  document.getElementById('cCrop').value=d.cr||'';
+  const atEl=document.getElementById('cAreaType');
+  if(atEl&&d.at)atEl.value=d.at;
+
+  // cart 구성 (d.cart = [[name,size,qty,retail,sp], ...])
+  cart=[];
+  (d.cart||[]).forEach(c=>{
+    const [name,size,qty,retail,sp]=c;
+    const disc=retail>0?Math.round((1-sp/retail)*100):0;
+    cart.push({
+      i:'rx_'+Date.now()+'_'+Math.random().toString(36).slice(2),
+      name,size,qty:Math.ceil(qty||1),retail:retail||0,
+      disc,sp:sp||0,gift:false,custom:true
+    });
+  });
+
+  // rxStages 저장 → 처방전 이동 시 단계 복원
+  const stagesData={
+    stages:(d.st||[]).map(s=>({
+      type:s.t||'',month:s.m||0,days:s.d||'',dateRange:s.dr||'',
+      purpose:s.p||'',funcTags:s.ft||[],funcColor:s.fc||'#ffffff',
+      products:(s.pr||[]).map(pr=>({
+        key:pr[0],qty:pr[1],unit:pr[2]||'개',desc:pr[3]||'',prodArea:pr[4]||null
+      })),
+      area:s.a||null,
+      typeNumOverride:s.to||0,typeNumWord:s.tw||'',
+      stageLabelOverride:s.sl||''
+    })),
+    pageOrder:d.po||null,
+    costVisible:d.cv!==undefined?d.cv:true,
+    priceOverrides:d.po2||{},
+    groupLabels:d.gl||{},
+    stageGroupOrder:d.go||null
+  };
+  localStorage.setItem('rxStages',JSON.stringify(stagesData));
+
+  // rxData 저장
+  const rxData={
+    name:d.n||'',region:d.rg||'',area:d.ar||'',
+    crop:d.cr||'',areaType:d.at||'농사',
+    cart:cart.map(c=>({name:c.name,size:c.size,qty:c.qty,retail:c.retail,sp:c.sp}))
+  };
+  localStorage.setItem('rxData',JSON.stringify(rxData));
+
+  sortCart();render();syncPrint();
+  const stageCount=(d.st||[]).length;
+  showToast(`처방전 불러오기 완료 — ${cart.length}개 제품, ${stageCount}단계 연동됨 ✓`);
+}
+
 function onPdfSelected(input){
   const file=input.files[0];
   if(!file)return;
@@ -2207,6 +2261,18 @@ function onPdfSelected(input){
   reader.onload=function(e){
     const data=new Uint8Array(e.target.result);
     extractPdfText(data).then(text=>{
+      // 처방전 PDF 감지 (##RX## 임베드)
+      const compact=text.replace(/\s+/g,'');
+      const rxm=compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
+      if(rxm){
+        try{
+          const d=JSON.parse(decodeURIComponent(atob(rxm[1])));
+          console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
+          applyRxPdfEmbed(d);
+          return;
+        }catch(e){console.error('[PDF] ##RX## 디코딩 실패:',e);}
+      }
+      // 기존 거래명세표 파싱
       const parsed=parsePdfInvoice(text);
       applyParsedInvoice(parsed);
     }).catch(err=>{
