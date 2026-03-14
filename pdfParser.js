@@ -10,21 +10,36 @@
  * @param {number} scale - 렌더링 배율 (기본 2.0, 낮추면 저화질)
  * @returns {Promise<string[]>} Base64 data URL 배열 (각 페이지)
  */
+// 페이지당 최대 너비(px) — 이 값을 넘으면 비율 유지하며 축소
+const MAX_PAGE_WIDTH  = 1400;
+const MAX_PAGES       = 8;   // 처방전은 보통 1~5페이지, 최대 8장만 전송
+
 async function pdfToBase64Images(pdfFile, scale = 2.0) {
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const totalPages = Math.min(pdfDoc.numPages, MAX_PAGES);
   const images = [];
 
-  for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
+  for (let i = 1; i <= totalPages; i++) {
+    const page    = await pdfDoc.getPage(i);
+    let viewport  = page.getViewport({ scale });
+
+    // 너무 넓으면 scale을 조정해 MAX_PAGE_WIDTH 이하로 축소
+    if (viewport.width > MAX_PAGE_WIDTH) {
+      const adjScale = scale * (MAX_PAGE_WIDTH / viewport.width);
+      viewport = page.getViewport({ scale: adjScale });
+    }
+
+    const canvas  = document.createElement('canvas');
     canvas.width  = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    images.push(canvas.toDataURL('image/jpeg', 0.8));
+
+    // 품질 0.65로 낮춰 파일 크기 절감 (처방전 텍스트 가독성 충분)
+    images.push(canvas.toDataURL('image/jpeg', 0.65));
   }
 
+  console.log(`[Parser] 총 ${pdfDoc.numPages}페이지 중 ${totalPages}페이지 변환`);
   return images;
 }
 
@@ -45,7 +60,7 @@ async function callVisionAPI(base64Images) {
   // 이미지 파트 구성 (페이지마다 image_url 메시지 추가)
   const imageContents = base64Images.map(b64 => ({
     type: 'image_url',
-    image_url: { url: b64, detail: 'high' }
+    image_url: { url: b64, detail: 'auto' }
   }));
 
   // 마지막에 텍스트 지시 추가 (이미지는 image_url 파트, 지시문은 text 파트로 분리)
