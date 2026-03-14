@@ -540,7 +540,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="fg"><label>고객명</label>
           <input id="bName" placeholder="고객명"></div>
         <div class="fg"><label>담당자 전화</label>
-          <input id="bManagerPhone" placeholder="010-6317-0021" oninput="onManagerPhoneChange()"></div>
+          <input id="bManagerPhone" placeholder="010-3704-5963" oninput="onManagerPhoneChange()"></div>
       </div>
     </div>
 
@@ -685,7 +685,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 // ── 데이터 로드 ──────────────────────────
 let rxData = {};
 let stages = [];
-let managerPhone = localStorage.getItem('managerPhone') || '010-6317-0021';
+let managerPhone = localStorage.getItem('managerPhone') || '010-3704-5963';
 let stageIdCnt = 0;
 let groupLabels = {};      // { mk: '커스텀 레이블' }
 let stageGroupOrder = [];  // 그룹 표시 순서 (mk 배열)
@@ -810,7 +810,7 @@ function schedulePreview() {
 }
 
 function onManagerPhoneChange() {
-  managerPhone = document.getElementById('bManagerPhone').value.trim() || '010-6317-0021';
+  managerPhone = document.getElementById('bManagerPhone').value.trim() || '010-3704-5963';
   localStorage.setItem('managerPhone', managerPhone);
   schedulePreview();
 }
