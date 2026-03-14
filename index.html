@@ -2223,13 +2223,14 @@ function parsePrescriptionText(text) {
   const findProd = normt => {
     if(normt.length < 2) return null;
     let p = PRODS.find(p2 => norm(p2.name) === normt);
-    if(!p && normt.length >= 3) p = PRODS.find(p2 => { const pn=norm(p2.name); return pn.includes(normt)||normt.includes(pn); });
+    // 제품명이 토큰을 포함하는 방향만 허용 (역방향은 설명 텍스트 오매칭 방지)
+    if(!p && normt.length >= 3) p = PRODS.find(p2 => norm(p2.name).includes(normt));
     return p || null;
   };
   const bestProd = (normt, normSz) => {
     if(normSz) {
       const e = PRODS.find(p=>norm(p.name)===normt && norm(p.size)===normSz); if(e) return e;
-      const pe = PRODS.find(p=>{const pn=norm(p.name);return(pn.includes(normt)||normt.includes(pn))&&norm(p.size)===normSz;}); if(pe) return pe;
+      const pe = PRODS.find(p=>norm(p.name).includes(normt)&&norm(p.size)===normSz); if(pe) return pe;
     }
     return findProd(normt);
   };
@@ -2273,10 +2274,11 @@ function parsePrescriptionText(text) {
       i=j;
     } else {
       // 단일 제품, 행 순서 모드
-      let sizeStr=null, rawQty=1;
-      if(j<tokens.length && isSz(tokens[j])){ sizeStr=tokens[j++]; if(j<tokens.length && isQt(tokens[j])) rawQty=parseQt(tokens[j++]); }
-      else if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); }
-      addItem(tokens[i], sizeStr, rawQty);
+      let sizeStr=null, rawQty=1, foundQty=false;
+      if(j<tokens.length && isSz(tokens[j])){ sizeStr=tokens[j++]; if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; } }
+      else if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; }
+      // 규격이나 수량이 없으면 헤더/설명 텍스트로 간주, 추가 안 함
+      if(sizeStr || foundQty) addItem(tokens[i], sizeStr, rawQty);
       i=j;
     }
   }
