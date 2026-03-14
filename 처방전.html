@@ -2514,11 +2514,19 @@ async function onRxPdfSelected(input) {
   showRxToast('PDF 분석 중...');
 
   try {
-    const data    = new Uint8Array(await file.arrayBuffer());
-    const pages   = await extractRxPdfText(data);
+    // Safari DataCloneError 방지: File 객체 대신 순수 ArrayBuffer를 전달
+    const arrayBuffer = await file.arrayBuffer();
+    // pdfDoc을 한 번만 로드 — ArrayBuffer 이중 전송 방지
+    const pdfDoc  = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    // 1순위: ##RX## 인코딩 데이터 (자체 처방전 PDF)
-    const compact = pages.join(' ').replace(/\s+/g, '');
+    // 1순위: ##RX## 인코딩 데이터 (자체 처방전 PDF) — 이미 로드된 pdfDoc 재사용
+    const pageTxts = [];
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const tc   = await page.getTextContent();
+      pageTxts.push(tc.items.map(it => it.str).join(' '));
+    }
+    const compact = pageTxts.join(' ').replace(/\s+/g, '');
     const rxm     = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
     if (rxm) {
       const d = JSON.parse(decodeURIComponent(atob(rxm[1])));
@@ -2527,8 +2535,7 @@ async function onRxPdfSelected(input) {
       return;
     }
 
-    // 2순위: 좌표 기반 파싱 (외부 처방전 PDF)
-    const pdfDoc  = await pdfjsLib.getDocument({ data }).promise;
+    // 2순위: 좌표 기반 파싱 (외부 처방전 PDF) — 동일 pdfDoc 재사용
     const items   = await extractRxPdfCoords(pdfDoc);
     const parsed  = parseRxPdfCoords(items);
 

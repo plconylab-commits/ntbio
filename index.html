@@ -531,7 +531,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <img src="logo.png" style="height:32px;width:auto;vertical-align:middle;" alt="천연바이오">
   <h1>천연비료 거래명세표</h1>
   <span class="today" id="todayDisp"></span>
-  <button onclick="openApiKeyModal()" style="margin-left:8px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);border-radius:6px;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">⚙️ API 설정</button>
 </div>
 
 <div class="layout">
@@ -2957,34 +2956,6 @@ function printAllUnpaid(){
   document.body.classList.remove('print-au');
 }
 
-// ─── API 키 설정 모달 ───────────────────────────────────────────
-function openApiKeyModal(){
-  const saved=localStorage.getItem('openai_api_key')||'';
-  document.getElementById('apiKeyInput').value=saved;
-  document.getElementById('apiKeyOverlay').classList.add('on');
-  setTimeout(()=>document.getElementById('apiKeyInput').focus(),50);
-}
-function closeApiKeyModal(){
-  document.getElementById('apiKeyOverlay').classList.remove('on');
-}
-function closeApiKeyOut(e){
-  if(e.target===document.getElementById('apiKeyOverlay'))closeApiKeyModal();
-}
-function saveApiKey(){
-  const raw=document.getElementById('apiKeyInput').value.trim();
-  if(!raw){alert('API 키를 입력해 주세요.');return;}
-  // HTTP 헤더는 ISO-8859-1(ASCII)만 허용 — 한글 등 비ASCII 문자 제거
-  const key=raw.replace(/[^\x20-\x7E]/g,'');
-  if(key!==raw){
-    alert('API 키에 허용되지 않는 문자(한글·특수문자 등)가 포함되어 자동 제거되었습니다.\n\n저장된 키: '+key.substring(0,12)+'...\n\n키가 올바르지 않다면 다시 입력해 주세요.');
-  }
-  if(!key.startsWith('sk-')){
-    if(!confirm('입력한 키가 "sk-"로 시작하지 않습니다.\n그래도 저장하시겠습니까?\n\n입력값: '+key.substring(0,20)+'...'))return;
-  }
-  localStorage.setItem('openai_api_key',key);
-  closeApiKeyModal();
-  showToast('API 키가 저장되었습니다 ✓');
-}
 </script>
 
 <!-- ── 완전삭제 비밀번호 모달 ── -->
@@ -3016,27 +2987,5 @@ function saveApiKey(){
   <div class="au-content" id="auContent"></div>
 </div>
 
-<!-- API 키 설정 모달 -->
-<div class="overlay" id="apiKeyOverlay" onclick="closeApiKeyOut(event)" style="z-index:3000;">
-  <div class="modal" style="max-width:340px;">
-    <div class="modal-hdr">
-      <h2>⚙️ OpenAI API 설정</h2>
-      <button class="modal-x" onclick="closeApiKeyModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.6;">
-        처방전 PDF 분석에 사용되는 OpenAI API 키를 입력하세요.<br>
-        키는 이 기기의 브라우저에만 저장됩니다.
-      </p>
-      <div class="mf">
-        <label>API 키</label>
-        <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off"
-          style="font-family:monospace;letter-spacing:1px;"
-          onkeydown="if(event.key==='Enter')saveApiKey()">
-      </div>
-      <button class="add-btn" style="margin-top:8px;" onclick="saveApiKey()">✓ 저장</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
