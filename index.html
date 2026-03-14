@@ -2256,17 +2256,18 @@ function parsePrescriptionText(text) {
     const isColMode = isColModeWithSizes || isColModeWithAreas;
 
     if(isColModeWithSizes){
-      // 열 순서 모드 1: [이름×N] → [규격×N] → [수량×N]
+      // 열 순서 모드 1: [이름×N] → [규격×N] → [평수×N 스킵] → [수량×N]
       const nameBlock=[], szBlock=[], qtBlock=[];
       let j=i;
       while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
-      while(j<tokens.length && isAreaTok(tokens[j])) j++;
+      while(j<tokens.length && isAreaTok(tokens[j])) j++;  // 이름 뒤 평수 스킵
       while(j<tokens.length && isSz(tokens[j])) szBlock.push(tokens[j++]);
+      while(j<tokens.length && isAreaTok(tokens[j])) j++;  // 규격 뒤 평수 스킵
       while(j<tokens.length && isQt(tokens[j])) qtBlock.push(tokens[j++]);
       for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k], szBlock[k]||null, parseQt(qtBlock[k]||null));
       i=j;
     } else if(isColModeWithAreas){
-      // 열 순서 모드 2: [이름×N] → [평수×N 스킵] → [수량×N] — 기비 페이지
+      // 열 순서 모드 2: [이름×N] → [평수×N 스킵] → [수량×N] — 기비 페이지(열 우선 시)
       const nameBlock=[], qtBlock=[];
       let j=i;
       while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
@@ -2277,9 +2278,13 @@ function parsePrescriptionText(text) {
     } else {
       // 행 순서 모드: 한 토큰씩 처리 (헤더 혼재 방지)
       let j=i+1;
-      while(j<tokens.length && isAreaTok(tokens[j])) j++;
+      while(j<tokens.length && isAreaTok(tokens[j])) j++;  // 이름 바로 뒤 평수 스킵
       let sizeStr=null, rawQty=1, foundQty=false;
-      if(j<tokens.length && isSz(tokens[j])){ sizeStr=tokens[j++]; if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; } }
+      if(j<tokens.length && isSz(tokens[j])){
+        sizeStr=tokens[j++];
+        while(j<tokens.length && isAreaTok(tokens[j])) j++;  // 규격 뒤 평수 스킵 (이름 규격 평수 수량 순서 대응)
+        if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; }
+      }
       else if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; }
       // 규격 또는 수량이 있을 때만 추가 (없으면 헤더/설명)
       if(sizeStr || foundQty) addItem(tokens[i], sizeStr, rawQty);
