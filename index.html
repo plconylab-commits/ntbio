@@ -1446,7 +1446,17 @@ function applyGlobalDisc(){
   });
   render();
 }
-function clearAll(){if(!cart.length)return;if(confirm('전체 초기화하시겠습니까?')){cart=[];render();}}
+function clearAll(){
+  if(!confirm('전체 초기화하시겠습니까?\n고객정보, 제품목록, 처방전이 모두 삭제됩니다.')) return;
+  cart=[];
+  ['cName','cPhone','cPhone2','cAddr','cRegion','cArea'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const gd=document.getElementById('gDisc'); if(gd) gd.value='0';
+  const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
+  localStorage.removeItem('rxStages');
+  render(); syncPrint();
+}
 
 function updateSummary(){
   const retail=cart.filter(c=>!c.gift&&!c.byeoldo).reduce((s,c)=>s+c.retail*c.qty,0);

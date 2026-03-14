@@ -983,11 +983,15 @@ function redoStages() {
   showRxToast('↪ 다시 했습니다.');
 }
 function confirmResetPrescription() {
-  if (!confirm('처방전 전체를 초기화합니다.\n모든 단계와 카테고리가 삭제됩니다. 계속하시겠습니까?')) return;
+  if (!confirm('전체 초기화합니다.\n처방전 단계/카테고리와 거래명세표 제품목록·고객정보가 모두 삭제됩니다. 계속하시겠습니까?')) return;
   _pushHistory();
   stages = []; groupLabels = {}; stageGroupOrder = [];
+  // 거래명세표 cart·고객정보도 초기화
+  rxData.cart = []; rxData.name = ''; rxData.region = ''; rxData.area = ''; rxData.crop = ''; rxData.areaType = '';
+  ['bName','bRegion','bArea'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const bc=document.getElementById('bCrop'); if(bc) bc.selectedIndex=0;
   recalcTypeNums(); renderStages(); schedulePreview(); _saveRxStages();
-  showRxToast('처방전이 초기화되었습니다.');
+  showRxToast('처방전과 거래명세표가 초기화되었습니다.');
 }
 
 function onTypeNumWord(si, word) {
