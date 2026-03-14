@@ -2206,15 +2206,32 @@ function applyRxPdfEmbed(d){
   const atEl=document.getElementById('cAreaType');
   if(atEl&&d.at)atEl.value=d.at;
 
-  // cart 구성 (d.cart = [[name,size,qty,retail,sp], ...])
+  // cart 구성: d.cart가 있으면 사용, 없으면 stages에서 집계
+  let cartSource=d.cart||[];
+  if(cartSource.length===0 && (d.st||[]).length>0){
+    // 처방전 단독 생성 시 cart가 비어있을 수 있음 → stages에서 제품·수량 집계
+    const totals={};
+    (d.st||[]).forEach(s=>{
+      (s.pr||[]).forEach(pr=>{
+        if(!pr[0])return;
+        totals[pr[0]]=(totals[pr[0]]||0)+(pr[1]||0);
+      });
+    });
+    cartSource=Object.entries(totals).map(([key,qty])=>{
+      const parts=key.split('||');
+      return[parts[0],parts[1]||'',qty,0,0];
+    });
+  }
   cart=[];
-  (d.cart||[]).forEach(c=>{
-    const [name,size,qty,retail,sp]=c;
+  cartSource.forEach(c=>{
+    const [name,size,qty,retailRaw,spRaw]=c;
+    const retail=(retailRaw>0)?retailRaw:(_lookupRetailPrice(name,size||'')||0);
+    const sp=(spRaw>0)?spRaw:retail;
     const disc=retail>0?Math.round((1-sp/retail)*100):0;
     cart.push({
       i:'rx_'+Date.now()+'_'+Math.random().toString(36).slice(2),
-      name,size,qty:Math.ceil(qty||1),retail:retail||0,
-      disc,sp:sp||0,gift:false,custom:true
+      name,size:size||'',qty:Math.ceil(qty||1),retail,
+      disc,sp,gift:false,custom:true
     });
   });
 
