@@ -786,13 +786,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
-<script src="prescriptionModel.js"></script>
-<script src="productDB.js"></script>
-<script src="productMapper.js"></script>
-<script src="pdfPromptTemplate.js"></script>
-<script src="pdfParser.js"></script>
-<script src="uiController.js"></script>
-<script src="main.js"></script>
+<script src="prescriptionModel.js?v=2"></script>
+<script src="productDB.js?v=2"></script>
+<script src="productMapper.js?v=2"></script>
+<script src="pdfPromptTemplate.js?v=2"></script>
+<script src="pdfParser.js?v=2"></script>
+<script src="uiController.js?v=2"></script>
+<script src="main.js?v=2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -943,7 +943,8 @@ window.addEventListener('pageshow', e => {
   // 날짜는 항상 오늘로 갱신
   const _d=new Date(), _pad=n=>String(n).padStart(2,'0');
   document.getElementById('cDate').value=`${_d.getFullYear()}-${_pad(_d.getMonth()+1)}-${_pad(_d.getDate())}`;
-  document.getElementById('p-date').textContent=`${_d.getFullYear()}년 ${_d.getMonth()+1}월 ${_d.getDate()}일`;
+  const pDateEl=document.getElementById('p-date');
+  if(pDateEl) pDateEl.textContent=`${_d.getFullYear()}년 ${_d.getMonth()+1}월 ${_d.getDate()}일`;
   // bfcache 복원 시에도 rxData 체크
   if (e.persisted) _loadRxDataFromStorage();
 });
