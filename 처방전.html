@@ -524,7 +524,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
             oninput="schedulePreview()">
         </div>
       </div>
-      <div class="f-row col2">
+      <div class="f-row col3">
         <div class="fg"><label>작물 <span style="color:#aaa;font-weight:400;font-size:11px;">(선택)</span></label>
           <select id="bCrop">
             <option value="">-- 선택 --</option>
@@ -539,6 +539,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
           </select></div>
         <div class="fg"><label>고객명</label>
           <input id="bName" placeholder="고객명"></div>
+        <div class="fg"><label>담당자 전화</label>
+          <input id="bManagerPhone" placeholder="010-6317-0021" oninput="onManagerPhoneChange()"></div>
       </div>
     </div>
 
@@ -683,6 +685,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 // ── 데이터 로드 ──────────────────────────
 let rxData = {};
 let stages = [];
+let managerPhone = localStorage.getItem('managerPhone') || '010-6317-0021';
 let stageIdCnt = 0;
 let groupLabels = {};      // { mk: '커스텀 레이블' }
 let stageGroupOrder = [];  // 그룹 표시 순서 (mk 배열)
@@ -739,6 +742,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     } catch(e) {}
   }
+  document.getElementById('bManagerPhone').value = managerPhone;
   renderInventory();
   renderStages();
   // 입력 변경시 실시간 처방전 업데이트
@@ -803,6 +807,12 @@ function schedulePreview() {
   renderToc();
   clearTimeout(previewTimer);
   previewTimer = setTimeout(generatePreview, 300);
+}
+
+function onManagerPhoneChange() {
+  managerPhone = document.getElementById('bManagerPhone').value.trim() || '010-6317-0021';
+  localStorage.setItem('managerPhone', managerPhone);
+  schedulePreview();
 }
 
 function onBAreaTypeChange() {
@@ -1961,7 +1971,7 @@ function generateCostPageHtml(area) {
             </tr>
           </tfoot>
         </table>
-        <div class="page-footer-bar"><img src="logo.png" style="height:22px;vertical-align:middle;margin-right:3px;position:relative;top:-1px;left:16px;"> 천연바이오:010-3704-5963 &nbsp;&nbsp; 담당자:010-3704-5963</div>
+        <div class="page-footer-bar"><img src="logo.png" style="height:22px;vertical-align:middle;margin-right:3px;position:relative;top:-1px;left:16px;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div>
       </div>
     </div>
   </div>`;
@@ -2063,7 +2073,7 @@ function generatePreview() {
           50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
           관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성
         </div>` : ''}
-        <div class="page-footer-bar"><img src="logo.png" style="height:22px;vertical-align:middle;margin-right:3px;position:relative;top:-1px;left:16px;"> 천연바이오:010-3704-5963 &nbsp;&nbsp; 담당자:010-3704-5963</div>
+        <div class="page-footer-bar"><img src="logo.png" style="height:22px;vertical-align:middle;margin-right:3px;position:relative;top:-1px;left:16px;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div>
       </div></div>
     </div>`;
   }
