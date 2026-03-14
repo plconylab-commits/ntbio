@@ -2568,6 +2568,19 @@ function parseRxPdfText(pageTexts) {
         productMap[key].qty += qty;
       }
     }
+    // Pattern A2: 이름(형태) [N평] 반unit  (예: 지오팜(분상) 550평 반통, 옥토팜(펠렛) 반포)
+    const reA2 = /([가-힣A-Za-z0-9+\-]{2,})\s*[\(（]\s*([가-힣A-Za-z0-9\-]{2,})\s*[\)）]\s+(?:\d+\s*평\s+)?반(포|병|봉|개|팩|박스|통)/g;
+    while ((pm = reA2.exec(section)) !== null) {
+      const name = pm[1], size = pm[2], unit = pm[3];
+      if (/[%/]/.test(size)) continue;
+      if (noiseNames.has(name) || noiseNames.has(size)) continue;
+      const key = name + '||' + size;
+      if (!stage.products.find(p => p.key === key)) {
+        stage.products.push({ key, qty: 0.5, unit, desc: defaultDesc || '' });
+        if (!productMap[key]) productMap[key] = { name, size, qty: 0 };
+        productMap[key].qty += 0.5;
+      }
+    }
     const reB = /([가-힣A-Za-z0-9+\-]{2,})\s+(\d+(?:\.\d+)?)\s*(ml|cc|L|g|kg|리터)\s+(\d+(?:\.\d+)?)\s*(포|병|봉|개|팩|박스|통)/gi;
     while ((pm = reB.exec(section)) !== null) {
       let name = pm[1], size = pm[2] + pm[3], qty = parseFloat(pm[4])||1, unit = pm[5];
@@ -2623,7 +2636,19 @@ function parseRxPdfText(pageTexts) {
   // 각 PDF 페이지를 별도로 처리 → 원본 장수 그대로 복원
   // pageTexts 순서: [표지, 기비/내용...페이지, 비용표]
   // 표지(0)는 stage 없음, 비용표(마지막)는 stage 없음 → 자동으로 스킵됨
-  const stageKeyRe = /수확\s*[:\s]\s*후|경운\s*[\u201c"\u201d"]*\s*전[\u201c"\u201d"]*|경운\s*[\u201c"\u201d"]*\s*후[\u201c"\u201d"]*|정식\s*[+＋]?\s*당일|정식\s*[\u201c"\u201d"]*\s*후[\u201c"\u201d"]*\s*(?:\d+\s*일?)?|관주\s*[\(（]\s*\d+\s*[번안]?\s*[\)）]|엽면\s*[\(（]\s*\d+\s*[번안]?\s*[\)）]/g;
+
+  // 단계 키워드 정규식 — 정형 패턴
+  const stageKeyRe = /수확\s*[:\uFF1a]\s*후|수확\s+후(?!\s*기비)|경운\s*[\u201c"\u201d\u2018\u2019]*\s*전[\u201c"\u201d\u2018\u2019]*|경운\s*[\u201c"\u201d\u2018\u2019]*\s*후[\u201c"\u201d\u2018\u2019]*|정식\s*[+＋]?\s*당일|정식\s*[\u201c"\u201d\u2018\u2019]*\s*후[\u201c"\u201d\u2018\u2019]*\s*(?:\d+\s*일?)?|관주\s*[\(（]\s*\d+\s*[번안]?\s*[\)）]|엽면\s*[\(（]\s*\d+\s*[번안]?\s*[\)）]/g;
+
+  // 비정형 단계 키워드 (단독 등장) — 스테이지 분리 없이 타입·라벨 추론에만 사용
+  const inferTypeFromPage = (text) => {
+    const t = text.replace(/\s+/g,'');
+    if (/감사비료|기비(?!용)|밑거름|수확후기비/.test(t)) return { type:'경운후', label:'감사비료' };
+    if (/추비/.test(t)) return { type:'정식후', label:'추비' };
+    if (/엽면/.test(t)) return { type:'엽면', label:'엽면' };
+    if (/관주/.test(t)) return { type:'관주', label:'관주' };
+    return null;
+  };
 
   // 이미 사용된 월 번호 추적 (같은 월이 여러 페이지에 걸쳐 있으면 다른 그룹으로)
   const usedMonths = {};
@@ -2645,9 +2670,37 @@ function parseRxPdfText(pageTexts) {
       else if (/정식.*후/.test(raw)) type = '정식후';
       else if (/관주/.test(raw)) type = '관주';
       else if (/엽면/.test(raw)) type = '엽면';
-      if (type) hits.push({ type, pos: sm.index, end: sm.index + sm[0].length });
+      if (type) {
+        // 키워드 앞 텍스트에서 단계 라벨 힌트 포착 (예: "감사비료 수확:후" → label='감사비료')
+        const before = pg.slice(Math.max(0, sm.index - 20), sm.index).trim();
+        const labelM = before.match(/([가-힣]{2,8})$/);
+        const skipWords = new Set(['및','또는','후에','전에','이며','경운','정식','관주','엽면']);
+        const label = (labelM && !skipWords.has(labelM[1])) ? labelM[1] : '';
+        hits.push({ type, pos: sm.index, end: sm.index + sm[0].length, label });
+      }
     }
-    if (hits.length === 0) return; // 표지/비용표 페이지 → 스킵
+
+    // ── 단계 키워드가 없는 페이지 → 제품 행으로 폴백 ──
+    if (hits.length === 0) {
+      // 제품 패턴 존재 여부 확인 (이름(형태) N포/봉/통 등)
+      const hasProdRows = /[가-힣A-Za-z]{2,}\s*[\(（][가-힣A-Za-z]{2,}[\)）]\s+(?:\d+\s*평\s+)?\d+\s*(포|봉|병|통|개)/.test(pg);
+      if (!hasProdRows) return; // 제품도 없으면 표지/비용표 → 스킵
+      // 단계 타입·라벨 추론
+      const inferred = inferTypeFromPage(pg);
+      if (!inferred) return; // 추론 불가 → 스킵
+      // 월 추출
+      const mm = pg.match(/(\d{1,2})월/);
+      const month = (mm && inferred.type !== '경운후') ? parseInt(mm[1]) : 0;
+      if (usedMonths[month] !== undefined && inferred.type !== '경운후') return;
+      usedMonths[month] = true;
+      const stage = { type: inferred.type, month, products:[], purpose: inferred.label,
+        days:'', dateRange:'', funcTags:[], funcColor:'#ffffff', area:null };
+      result.stages.push(stage);
+      _extractProds(pg, stage, '');
+      const funcMs = pg.match(/[가-힣]{2,}(?:\+[가-힣]{2,})+/g);
+      if (funcMs) stage.funcTags = funcMs.flatMap(m=>m.split('+'));
+      return;
+    }
 
     // 이 페이지의 대표 월 결정
     // 경운전/경운후(기비)는 month=0 고정
@@ -2669,7 +2722,8 @@ function parseRxPdfText(pageTexts) {
       const nextPos = si + 1 < hits.length ? hits[si + 1].pos : pg.length;
       const section = pg.slice(sh.end, nextPos);
 
-      const stage = { type: sh.type, month: pageMonth, products: [], purpose: '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
+      // sh.label이 있으면 purpose로 사용 (없으면 기비 페이지에서 나중에 채워짐)
+      const stage = { type: sh.type, month: pageMonth, products: [], purpose: sh.label || '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
       result.stages.push(stage);
       stagesThisPage.push(stage);
 
@@ -2692,7 +2746,7 @@ function parseRxPdfText(pageTexts) {
 
     // 월 없는 페이지(기비 등): 헤더에서 purpose 추출 → 페이지 타이틀로 사용
     if (pageMonth === 0 && stagesThisPage.length > 0) {
-      const baseKeyM = pg.match(/기비|밑거름|수확\s*후\s*기비|수확후기비|파종\s*전|정식\s*전/);
+      const baseKeyM = pg.match(/감사\s*비료|기비(?!\s*용)|밑거름|수확\s*후\s*기비|수확후기비|파종\s*전|정식\s*전/);
       const purposeText = baseKeyM ? baseKeyM[0].replace(/\s/g,'') : '기비';
       stagesThisPage.forEach(s => { if (!s.purpose) s.purpose = purposeText; });
     }
