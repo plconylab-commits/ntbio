@@ -134,33 +134,48 @@ function buildPrescriptionGroups(rows) {
 
 /**
  * 제품 행 텍스트(여러 열 합산)에서 제품명·수량·단위·기준평수를 추출한다.
+ *
+ * ★ 핵심 규칙
+ *   - 처방 수량 단위: 포|병|봉|통|개  → baseQty 추출 대상
+ *   - 용량/규격 단위: kg|g|L|ml 등   → 절대 baseQty로 착각하지 않음
+ *                                      제품 규격 힌트로만 사용 (originalName에 보존)
+ *   - 반병|반봉|반통|반포|반개       → baseQty = 0.5 (무조건)
+ *   - N평                            → baseArea
+ *
  * @param {string[]} texts - 같은 행의 텍스트 목록
  * @returns {{originalName,mappedId,baseQty,unit,baseArea}}
  */
 function parseProductRow(texts) {
   const line = texts.join(' ');
 
-  // 반병/반포 등 처리 (0.5개)
-  const halfRe = /반\s*(포|병|봉|개|통)/;
+  // ── 1. 처방 수량 단위 목록 (용량·규격 단위 kg/g/L/ml 등은 포함 안 함) ──
+  // 이 단위만 baseQty 추출 대상으로 허용
+  const COUNT_UNITS = '포|병|봉|통|개';
+
+  // ── 2. 반+처방단위 우선 처리 (0.5) ──────────────────────────────
+  const halfRe = new RegExp(`반\\s*(${COUNT_UNITS})`);
   const halfM  = halfRe.exec(line);
 
-  // 숫자+단위 패턴
-  const qtyRe = /(\d+(?:\.\d+)?)\s*(포|병|kg|g|L|l|ml|봉|개|통)/i;
-  const qtyM  = qtyRe.exec(line);
+  // ── 3. 숫자+처방단위 패턴 (kg/g/L/ml 등 용량 단위는 제외) ────────
+  const countRe = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${COUNT_UNITS})`);
+  const countM  = countRe.exec(line);
 
   let baseQty = null, unit = '';
-  if (halfM)      { baseQty = 0.5;              unit = halfM[1]; }
-  else if (qtyM)  { baseQty = Number(qtyM[1]); unit = qtyM[2];  }
+  if (halfM)       { baseQty = 0.5;                unit = halfM[1];  }
+  else if (countM) { baseQty = Number(countM[1]);  unit = countM[2]; }
 
-  // 기준 평수
-  const areaM   = line.match(/(\d+)\s*평/);
+  // ── 4. 기준 평수 추출 ─────────────────────────────────────────────
+  const areaM   = line.match(/(\d+(?:\.\d+)?)\s*평/);
   const baseArea = areaM ? Number(areaM[1]) : null;
 
-  // 제품명 = 수량·단위·평수 패턴 제거 후 나머지
+  // ── 5. 제품명 추출 ────────────────────────────────────────────────
+  // · 처방수량(N포/반병 등)과 평수(N평)는 제거
+  // · kg/g/L/ml 등 용량 규격은 제품명의 일부이므로 절대 제거 안 함
+  //   예: "양자식물에너지(500ml) 3병 200평" → originalName = "양자식물에너지(500ml)"
   const namePart = line
-    .replace(/반\s*(포|병|봉|개|통)/g, '')
-    .replace(/\d+(?:\.\d+)?\s*(포|병|kg|g|L|l|ml|봉|개|통)/gi, '')
-    .replace(/\d+\s*평/g, '')
+    .replace(new RegExp(`반\\s*(${COUNT_UNITS})`, 'g'), '')
+    .replace(new RegExp(`\\d+(?:\\.\\d+)?\\s*(${COUNT_UNITS})`, 'g'), '')
+    .replace(/\d+(?:\.\d+)?\s*평/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
