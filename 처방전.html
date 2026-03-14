@@ -2248,7 +2248,8 @@ function generatePreview() {
       go: stageGroupOrder.length ? stageGroupOrder : undefined
     };
     const rxB64 = btoa(encodeURIComponent(JSON.stringify(rxEmbed)));
-    html += `<div style="position:absolute;overflow:hidden;height:1px;width:1px;opacity:0.01;font-size:0.5px;color:white;">##RX##${rxB64}##RX##</div>`;
+    // overflow:hidden 없이 white 텍스트로 → Chrome print-to-PDF 텍스트 레이어에 완전히 포함
+    html += `<div style="font-size:1pt;color:white;white-space:pre-wrap;word-break:break-all;line-height:1;pointer-events:none;user-select:none;">##RX##${rxB64}##RX##</div>`;
   } catch(e) { console.warn('RX embed error:', e); }
 
   const preview = document.getElementById('previewArea');

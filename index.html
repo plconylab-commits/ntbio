@@ -2261,23 +2261,31 @@ function onPdfSelected(input){
   reader.onload=function(e){
     const data=new Uint8Array(e.target.result);
     extractPdfText(data).then(text=>{
-      // 처방전 PDF 감지 (##RX## 임베드)
+      // 1순위: 처방전 PDF 감지 (##RX## 임베드)
       const compact=text.replace(/\s+/g,'');
       const rxm=compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
       if(rxm){
-        try{
-          const d=JSON.parse(decodeURIComponent(atob(rxm[1])));
+        let d=null;
+        try{d=JSON.parse(decodeURIComponent(atob(rxm[1])));}
+        catch(e){console.error('[PDF] ##RX## JSON 파싱 실패:',e);}
+        if(d){
           console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
-          applyRxPdfEmbed(d);
+          applyRxPdfEmbed(d); // 에러 발생 시 아래 .catch()로 전달
           return;
-        }catch(e){console.error('[PDF] ##RX## 디코딩 실패:',e);}
+        }
       }
-      // 기존 거래명세표 파싱
+      // 2순위: 거래명세표 PDF (##TN## 임베드 or 텍스트 파싱)
+      const tnm=compact.match(/##TN##([A-Za-z0-9+/=%]+)##TN##/);
+      if(!tnm && !text.match(/품목.*규격.*수량|소비자가|지원가/)){
+        // ##RX##도 ##TN##도 없고 invoice 패턴도 없으면 처방전 가능성
+        showToast('처방전 PDF는 처방전 페이지에서 불러오거나, 처방전 앱에서 인쇄 후 업로드하세요.', true);
+        return;
+      }
       const parsed=parsePdfInvoice(text);
       applyParsedInvoice(parsed);
     }).catch(err=>{
-      alert('PDF 읽기 실패: '+err.message);
-      console.error(err);
+      console.error('[PDF] 오류:', err);
+      showToast('PDF 읽기 실패: '+err.message, true);
     });
   };
   reader.readAsArrayBuffer(file);
