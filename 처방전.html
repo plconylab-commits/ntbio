@@ -929,6 +929,10 @@ function onTypeNumOverride(si, val) {
   renderStages();
   schedulePreview();
 }
+function onStageLabelOverride(si, val) {
+  stages[si].stageLabelOverride = val;
+  schedulePreview();
+}
 
 function onTypeNumWord(si, word) {
   stages[si].typeNumWord = word;
@@ -937,6 +941,7 @@ function onTypeNumWord(si, word) {
 }
 
 function getStageLabel(st) {
+  if (st.stageLabelOverride) return st.stageLabelOverride;
   if (st.type === '경운전') return '경운 "전"';
   if (st.type === '경운후') return '경운 "후"';
   if (st.type === '정식당일') return '정식+당일\n(첫물 줄때)';
@@ -1122,6 +1127,14 @@ function renderStages() {
               placeholder="예) 7-10일 간격"
               value="${st.dateRange||''}"
               oninput="onDateRangeChange(${si},this.value)">
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">✏️ 시기 직접입력 <span style="font-size:10px;font-weight:400;">(비우면 자동)</span></label>
+            <textarea rows="2"
+              style="width:100%;font-size:12px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;resize:vertical;font-family:inherit;"
+              placeholder="예) 감사 비료&#10;수확:후 및&#10;3월-4월"
+              oninput="onStageLabelOverride(${si},this.value)"
+            >${st.stageLabelOverride||''}</textarea>
           </div>
           ${(st.type==='관주'||st.type==='엽면') ? `<div style="flex:0 0 110px;">
             <label style="font-size:12px;color:#888;font-weight:700;">번호 &amp; 단위</label>
@@ -2166,6 +2179,7 @@ function generatePreview() {
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
         a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
+        sl: s.stageLabelOverride||''
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined,
@@ -2329,6 +2343,7 @@ function applyRxData(d) {
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0, typeNumWord: s.tw||'',
+    stageLabelOverride: s.sl||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
@@ -2800,7 +2815,9 @@ function _saveRxStages() {
       stages: stages.map(s => ({
         type: s.type, month: s.month||0, days: s.days||'', dateRange: s.dateRange||'',
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
-        products: s.products||[], area: s.area||null
+        products: s.products||[], area: s.area||null,
+        typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',
+        stageLabelOverride: s.stageLabelOverride||''
       })),
       pageOrder, costVisible, priceOverrides,
       groupLabels, stageGroupOrder,
