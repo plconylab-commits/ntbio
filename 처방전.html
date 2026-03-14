@@ -120,6 +120,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;
   font-size:11px;font-weight:700;font-family:inherit;flex-shrink:0;}
 .group-copy-btn:hover{background:rgba(255,255,255,.35);}
+.group-delete-btn{background:rgba(220,60,60,.25);border:1px solid rgba(255,120,120,.5);
+  color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;
+  font-size:11px;font-weight:700;font-family:inherit;flex-shrink:0;}
+.group-delete-btn:hover{background:rgba(220,60,60,.55);}
 .group-toggle-btn{background:none;border:none;color:#fff;cursor:pointer;
   font-size:13px;padding:2px 5px;border-radius:3px;flex-shrink:0;}
 .group-toggle-btn:hover{background:rgba(255,255,255,.2);}
@@ -346,7 +350,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .content-inner{background:#fff;border:3px solid rgba(255,255,255,.6);
   border-radius:4px;flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .page-purpose{background:#fff;color:#111;font-size:22px;font-weight:900;
-  padding:16px 18px;text-align:center;letter-spacing:1px;
+  padding:10px 16px;text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;}
 .rx-table{width:100%;border-collapse:collapse;flex:1;border:3.5px solid var(--teal);}
 .rx-table th{background:#fff;color:#111;border:3.5px solid var(--teal);
@@ -1207,6 +1211,7 @@ function renderStages() {
           ondragstart="event.stopPropagation()">
         <span class="month-group-count">${siList.length}단계</span>
         <button class="group-copy-btn" onclick="event.stopPropagation();copyGroup(${mk})" title="그룹 복사">⎘ 복사</button>
+        <button class="group-delete-btn" onclick="event.stopPropagation();deleteGroup(${mk})" title="그룹 삭제">✕ 삭제</button>
         <button class="group-toggle-btn" onclick="event.stopPropagation();toggleMonthGroup(${mk})">${isCollapsed ? '▼' : '▲'}</button>
       </div>
       <div class="month-group-body${isCollapsed ? ' collapsed' : ''}">
@@ -1270,6 +1275,19 @@ function copyGroup(mk) {
   const mkIdx = stageGroupOrder.indexOf(mk);
   stageGroupOrder.splice(mkIdx + 1, 0, newMk);
   groupLabels[newMk] = (groupLabels[mk] || `${mk}월`) + ' (복사)';
+  renderStages();
+  schedulePreview();
+  _saveRxStages();
+}
+
+// ── 그룹 삭제 ────────────────────────────
+function deleteGroup(mk) {
+  const label = groupLabels[mk] || `${mk}월`;
+  const count = stages.filter(st => (st.month ?? 0) === mk).length;
+  if (!confirm(`"${label}" 카테고리(${count}단계)를 삭제할까요?`)) return;
+  stages = stages.filter(st => (st.month ?? 0) !== mk);
+  stageGroupOrder = stageGroupOrder.filter(k => k !== mk);
+  delete groupLabels[mk];
   renderStages();
   schedulePreview();
   _saveRxStages();
@@ -2050,7 +2068,7 @@ function generatePreview() {
     const funcHeadHtml = allFuncRows.map(r=>
       `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this)"
         style="background:${r.color};color:#111;font-size:var(--rx-fs,17px);font-weight:700;
-        text-align:center;padding:10px 14px;border:1.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;">
+        text-align:center;padding:10px 16px;border:3.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;">
         ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
       </th></tr>`).join('');
     return `<div class="page-card" data-pagekey="group_${monthKey}">
