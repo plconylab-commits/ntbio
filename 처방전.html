@@ -574,7 +574,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <!-- 버튼 -->
     <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;
          border-top:1px solid #f0f0f0;background:#fafafa;">
-      <button class="add-stage-btn" onclick="openStageModal()">＋ 단계 추가</button>
+      <div style="display:flex;gap:6px;">
+        <button class="add-stage-btn" style="flex:1;" onclick="openStageModal()">＋ 단계 추가</button>
+        <button onclick="undoStages()" title="되돌리기 (Ctrl+Z)"
+          style="flex:0 0 auto;font-size:12px;padding:8px 12px;border-radius:6px;border:1.5px solid #bbb;
+                 background:#fff;color:#555;cursor:pointer;font-family:inherit;font-weight:700;">
+          ↩ 되돌리기
+        </button>
+      </div>
       <button class="add-stage-btn" style="background:#E0F5F5;color:var(--teal-dark);border-color:var(--teal);"
         onclick="openCostModal()">＋ 평당가 계산</button>
       <button class="gen-btn" style="background:#1565C0;" onclick="doPrint()">🖨️ 처방전 인쇄 / PDF</button>
@@ -692,6 +699,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 // ── 데이터 로드 ──────────────────────────
 let rxData = {};
 let stages = [];
+let stagesHistory = [];
+const HISTORY_MAX = 30;
 let managerPhone = localStorage.getItem('managerPhone') || '010-3704-5963';
 let stageIdCnt = 0;
 let groupLabels = {};      // { mk: '커스텀 레이블' }
@@ -758,6 +767,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if (el) { el.addEventListener('input', schedulePreview); el.addEventListener('change', schedulePreview); }
   });
   schedulePreview();
+  // Ctrl+Z 되돌리기
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey) {
+      const active = document.activeElement;
+      const isInput = active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.tagName==='SELECT');
+      if (!isInput) { e.preventDefault(); undoStages(); }
+    }
+  });
   // 플로팅 재고 패널 항상 표시
   openInvFloat();
 });
@@ -915,6 +932,7 @@ function recalcTypeNums() {
 }
 
 function onStageTypeChange(si, val) {
+  _pushHistory();
   stages[si].type = val;
   recalcTypeNums();
   renderStages();
@@ -932,6 +950,19 @@ function onTypeNumOverride(si, val) {
 function onStageLabelOverride(si, val) {
   stages[si].stageLabelOverride = val;
   schedulePreview();
+}
+function _pushHistory() {
+  stagesHistory.push(JSON.stringify(stages));
+  if (stagesHistory.length > HISTORY_MAX) stagesHistory.shift();
+}
+function undoStages() {
+  if (!stagesHistory.length) { showToast('되돌릴 내용이 없습니다.'); return; }
+  stages = JSON.parse(stagesHistory.pop());
+  recalcTypeNums();
+  renderStages();
+  schedulePreview();
+  _saveRxStages();
+  showToast('↩ 되돌렸습니다.');
 }
 
 function onTypeNumWord(si, word) {
@@ -1615,6 +1646,7 @@ function formatQty(qty, unit) {
 }
 
 function delStage(si) {
+  _pushHistory();
   stages.splice(si, 1);
   renderStages();
   renderInventory();
@@ -1639,6 +1671,7 @@ function onTypeChange() {
   document.getElementById('daysRow').style.display = t === '정식후' ? '' : 'none';
 }
 function confirmStage() {
+  _pushHistory();
   const month = parseInt(document.getElementById('mMonth').value) || 0;
   const type = document.getElementById('mType').value;
   const days = parseInt(document.getElementById('mDays').value) || null;
@@ -1834,6 +1867,7 @@ function tocDragEnd() {
 // ── 비용 요약 ──────────────────────────────
 let costVisible = false;
 let priceOverrides = {}; // key → {retail, sp}
+const COST_ITEM_RE = /^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/;
 
 function openCostModal() {
   const inv = getInventory();
@@ -1888,11 +1922,25 @@ function openCostModal() {
       <td id="costRow_${r.key.replace(/\|/g,'_')}" style="font-weight:700;">${total.toLocaleString()}원</td>
     </tr>`;
   });
+  // 운임비 등 별도 비용 항목
+  const modalCostRows = (rxData.cart||[]).filter(c => COST_ITEM_RE.test(c.name));
+  const modalHasCost = modalCostRows.length > 0;
+  const modalTotalLabel = modalHasCost ? '합계 (운송비별도)' : '합계';
+  modalCostRows.forEach(c => {
+    tableHtml += `<tr style="color:#1565C0;">
+      <td style="text-align:left;font-weight:700;">${c.name}</td>
+      <td>-</td>
+      <td style="color:#999;background:#f8f8f8;">-</td>
+      <td style="font-weight:900;">${(c.sp||0).toLocaleString()}원 <span style="font-size:11px;">(별도)</span></td>
+      <td>${c.qty||1}</td>
+      <td style="font-weight:700;">${((c.sp||0)*(c.qty||1)).toLocaleString()}원</td>
+    </tr>`;
+  });
   const grandTotal = rows.reduce((s, r) => s + r.sp * r.used, 0);
   const perPyeong = area ? Math.round(grandTotal / area) : 0;
   tableHtml += `</tbody><tfoot>
     <tr class="cost-total-row">
-      <td colspan="5" style="text-align:right;font-size:13px;">합계</td>
+      <td colspan="5" style="text-align:right;font-size:13px;">${modalTotalLabel}</td>
       <td id="costGrandTotal" style="font-size:14px;">${grandTotal.toLocaleString()}원</td>
     </tr>
     <tr class="cost-total-row" style="background:#C8E6C9;">
@@ -1971,6 +2019,19 @@ function generateCostPageHtml(area) {
   const perPyeong = area ? Math.round(grand / area) : 0;
   const title = `${crop||''}${areaType} ${region||''} ${area?'('+area+'평) ':''} ${name||''} 처방전 사용금액`.trim();
 
+  // 운임비 등 별도 비용 항목 (inventory 기반 외 cart 항목)
+  const costRows = (rxData.cart||[]).filter(c => COST_ITEM_RE.test(c.name));
+  const hasCost = costRows.length > 0;
+  const totalLabel = hasCost ? '합계 (운송비별도)' : '합계';
+  const costTrs = costRows.map(c => `<tr>
+    <td style="text-align:left;padding:8px 10px;color:#1565C0;font-weight:700;">${c.name}</td>
+    <td style="padding:8px 6px;color:#1565C0;">-</td>
+    <td style="padding:8px 6px;color:#999;">-</td>
+    <td style="padding:8px 6px;font-weight:900;color:#1565C0;">${(c.sp||0).toLocaleString()}원 <span style="font-size:11px;">(별도)</span></td>
+    <td style="padding:8px 6px;color:#1565C0;">${c.qty||1}</td>
+    <td style="padding:8px 6px;font-weight:700;color:#1565C0;">${((c.sp||0)*(c.qty||1)).toLocaleString()}원</td>
+  </tr>`).join('');
+
   let trs = rows.map(r => `<tr>
     <td style="text-align:left;padding:8px 10px;">${r.name}</td>
     <td style="padding:8px 6px;">${r.size}</td>
@@ -1993,14 +2054,14 @@ function generateCostPageHtml(area) {
             <th>사용량</th>
             <th>계</th>
           </tr></thead>
-          <tbody>${trs}</tbody>
+          <tbody>${trs}${costTrs}</tbody>
           <tfoot>
             <tr style="background:#E0F5F5;">
-              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">합계</td>
+              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">${totalLabel}</td>
               <td style="padding:10px;font-weight:900;font-size:15px;border:3.5px solid var(--teal);">${grand.toLocaleString()}원</td>
             </tr>
             <tr style="background:#E0F5F5;">
-              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">평당 평균 ${area?'('+area+'평)':''}</td>
+              <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">평당 단가 ${area?'('+area+'평)':''}</td>
               <td style="padding:10px;font-weight:900;font-size:16px;color:var(--teal-dark);border:3.5px solid var(--teal);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
             </tr>
           </tfoot>
