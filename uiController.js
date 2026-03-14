@@ -213,22 +213,36 @@ function _applyToCart() {
     if (rows[idx]) rows[idx].finalQty = Number(inp.value) || 0;
   });
 
+  // ── 같은 제품(matchId 기준) 수량 합산 ──
+  const mergedMap = {}; // matchId → 합산 수량
   rows.forEach(r => {
-    if (!r.matchId || r.finalQty <= 0) return; // 미매칭이거나 수량 0이면 건너뜀
-    const prod = PRODUCT_DB.find(p => p.id === r.matchId);
+    if (!r.matchId || r.finalQty <= 0) return;
+    const qty = Math.ceil(r.finalQty); // 0.5 → 1 (반병 등 올림 처리)
+    mergedMap[r.matchId] = (mergedMap[r.matchId] || 0) + qty;
+  });
+
+  // ── 장바구니에 적용 (기존 항목 있으면 수량 더하기, 없으면 신규 추가) ──
+  Object.entries(mergedMap).forEach(([matchId, totalQty]) => {
+    const prod = PRODUCT_DB.find(p => p.id === matchId);
     if (!prod) return;
 
-    cart.push({
-      i: 'rx_' + Date.now() + '_' + Math.random().toString(36).slice(2),
-      name: prod.name,
-      size: prod.size || '',
-      retail: prod.price,
-      disc: 0,
-      sp: prod.price,
-      qty: Math.ceil(r.finalQty),
-      gift: false,
-      custom: true
-    });
+    // 이미 장바구니에 같은 제품이 있으면 수량만 증가
+    const existing = cart.find(c => c.name === prod.name && c.size === (prod.size || ''));
+    if (existing) {
+      existing.qty += totalQty;
+    } else {
+      cart.push({
+        i: 'rx_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        name: prod.name,
+        size: prod.size || '',
+        retail: prod.price,
+        disc: 0,
+        sp: prod.price,
+        qty: totalQty,
+        gift: false,
+        custom: true
+      });
+    }
   });
 
   if (typeof render === 'function') render();
