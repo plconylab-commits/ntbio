@@ -643,6 +643,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <span class="lbl">청구 금액</span>
         <span class="val" id="sSupply">₩0</span>
       </div>
+      <div id="byeoldoNote" style="font-size:11px;color:#1565C0;text-align:right;padding:4px 8px;display:none;">
+        * 운송비 별도 포함
+      </div>
     </div>
 
     <div class="actions">
@@ -711,6 +714,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <input type="number" id="costPrice" value="" placeholder="예) 50000 또는 -30000 (차감)"
           style="font-size:20px;font-weight:900;text-align:center;"
           oninput="" onkeydown="if(event.key==='Enter')addCostConfirm()"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0;">
+        <span style="font-size:13px;color:#555;">합계 포함</span>
+        <button id="costByeoldoBtn" type="button" onclick="toggleCostByeoldo()"
+          style="font-size:12px;padding:5px 14px;border-radius:20px;border:1.5px solid #bbb;
+                 background:#fff;color:#888;cursor:pointer;font-family:inherit;font-weight:700;">별도</button>
+      </div>
       <button class="add-btn" onclick="addCostConfirm()">✓ 추가</button>
     </div>
   </div>
@@ -1117,8 +1126,23 @@ function openCustomModal(){
   setTimeout(()=>document.getElementById('cItemName').focus(),50);
 }
 let _costName='';
+let _costByeoldo=false;
+function toggleCostByeoldo(){
+  _costByeoldo=!_costByeoldo;
+  const btn=document.getElementById('costByeoldoBtn');
+  btn.style.background=_costByeoldo?'#1565C0':'#fff';
+  btn.style.color=_costByeoldo?'#fff':'#888';
+  btn.style.borderColor=_costByeoldo?'#1565C0':'#bbb';
+}
+function toggleByeoldoItem(i){
+  cart[i].byeoldo=!cart[i].byeoldo;
+  render();
+}
 function addCostItem(name){
   _costName=name;
+  _costByeoldo=false;
+  const btn=document.getElementById('costByeoldoBtn');
+  if(btn){btn.style.background='#fff';btn.style.color='#888';btn.style.borderColor='#bbb';}
   document.getElementById('costTitle').textContent=name;
   document.getElementById('costPrice').value='';
   document.getElementById('costOverlay').classList.add('on');
@@ -1126,10 +1150,10 @@ function addCostItem(name){
 }
 function addCostConfirm(){
   const price=parseInt(document.getElementById('costPrice').value)||0;
-  cart.push({i:'cost_'+Date.now(),name:_costName,size:'-',retail:price,disc:0,sp:price,qty:1,gift:false,custom:true});
+  cart.push({i:'cost_'+Date.now(),name:_costName,size:'-',retail:price,disc:0,sp:price,qty:1,gift:false,custom:true,byeoldo:_costByeoldo});
   sortCart();
   render();
-  showToast(name+' 추가 — 지원가에서 금액을 입력하세요');
+  showToast(_costName+' 추가'+ (_costByeoldo?' — 별도 (합계 미포함)':''));
 }
 function closeCostModal(){document.getElementById('costOverlay').classList.remove('on');}
 function closeCostOut(e){if(e.target===document.getElementById('costOverlay'))closeCostModal();}
@@ -1297,7 +1321,13 @@ function render(){
       </div><span class="gift-tag">본사지원</span></div>`;
     const lt=it.sp*it.qty;
     const dateDisp=it.date?it.date.slice(5).replace('-','/'):'';
-    return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()">
+    const isCost=it.i&&it.i.startsWith('cost_');
+    const byeoldoBorder=isCost&&it.byeoldo?'border:2px solid #1565C0;':'';
+    const byeoldoBadge=isCost?`<button onclick="toggleByeoldoItem(${i})"
+      style="font-size:11px;padding:3px 10px;border-radius:20px;border:1.5px solid ${it.byeoldo?'#1565C0':'#bbb'};
+             background:${it.byeoldo?'#1565C0':'#fff'};color:${it.byeoldo?'#fff':'#888'};
+             cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">별도</button>`:'';
+    return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()" style="${byeoldoBorder}">
       <div class="ord-top">
         <div><input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
         <span class="ord-size">${it.size}</span></div>
@@ -1336,6 +1366,8 @@ function render(){
         ${it.disc>0?`<span class="disc-tag">${it.disc}%↓</span>`:''}
         <span>×${it.qty} =</span>
         <span class="line-tot" style="${lt<0?'color:var(--blue)':''}">${lt<0?'−'+won(-lt):won(lt)}</span>
+        ${byeoldoBadge}
+        ${isCost&&it.byeoldo?`<span style="color:#1565C0;font-weight:700;font-size:12px;">(합계미포함)</span>`:''}
       </div></div>`;
   }).join('');
 
@@ -1417,8 +1449,8 @@ function applyGlobalDisc(){
 function clearAll(){if(!cart.length)return;if(confirm('전체 초기화하시겠습니까?')){cart=[];render();}}
 
 function updateSummary(){
-  const retail=cart.filter(c=>!c.gift).reduce((s,c)=>s+c.retail*c.qty,0);
-  const supply=cart.filter(c=>!c.gift).reduce((s,c)=>s+c.sp*c.qty,0);
+  const retail=cart.filter(c=>!c.gift&&!c.byeoldo).reduce((s,c)=>s+c.retail*c.qty,0);
+  const supply=cart.filter(c=>!c.gift&&!c.byeoldo).reduce((s,c)=>s+c.sp*c.qty,0);
   const disc=retail-supply;
   const vm=vatMult();
   const vatAmt=vm>1?Math.round(supply*0.1):0;
@@ -1432,6 +1464,8 @@ function updateSummary(){
     if(vatAmt>0){vr.style.display='flex';document.getElementById('sVatAmt').textContent=`+${won(vatAmt)}`;}
     else vr.style.display='none';
   }
+  const bn=document.getElementById('byeoldoNote');
+  if(bn){bn.style.display=cart.some(c=>c.byeoldo)?'block':'none';}
 }
 
 // ─── 인쇄 문서 동기화 ────────────────────
