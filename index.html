@@ -2368,14 +2368,14 @@ function onPdfSelected(input){
           return;
         }
       }
-      // 2순위: 처방전 PDF → Vision AI 플로우로 처리
-      if(compact.includes('처방전') && !compact.includes('##TN##')){
-        handlePrescriptionUpload(file);
+      // 2순위: 거래명세표 PDF (##TN## 마커 있을 때만 텍스트 파싱)
+      if(compact.includes('##TN##')){
+        const parsed=parsePdfInvoice(text);
+        applyParsedInvoice(parsed);
         return;
       }
-      // 3순위: 거래명세표 PDF 텍스트 파싱
-      const parsed=parsePdfInvoice(text);
-      applyParsedInvoice(parsed);
+      // 3순위: 나머지 모든 PDF → Vision AI (스캔 처방전 포함)
+      handlePrescriptionUpload(file);
     }).catch(err=>{
       console.error('[PDF] 오류:', err);
       showToast('PDF 읽기 실패: '+err.message, true);

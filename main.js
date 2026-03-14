@@ -20,8 +20,11 @@ async function handlePrescriptionUpload(pdfFile) {
     // 1. PDF → Base64 이미지 변환 후 Vision API 호출 → 표준 JSON
     const prescriptionJSON = await parsePdfToJSON(pdfFile);
 
-    if (!prescriptionJSON || !prescriptionJSON.prescriptions) {
-      alert('처방전 데이터를 변환할 수 없습니다.');
+    // parsePdfToJSON이 null 반환 시 → 이미 에러 알림을 보여줬으므로 조용히 종료
+    if (!prescriptionJSON) return;
+
+    if (!prescriptionJSON.prescriptions || prescriptionJSON.prescriptions.length === 0) {
+      alert('처방전에서 처방 항목을 찾을 수 없습니다.\nAI가 처방 그룹을 인식하지 못했을 수 있습니다.');
       return;
     }
 
