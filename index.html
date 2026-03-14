@@ -1751,8 +1751,6 @@ function goToPrescription(){
     cart:cart
   };
   localStorage.setItem('rxData',JSON.stringify(data));
-  // 새 세션으로 처방전 작성 → 이전 PDF 단계 초기화
-  localStorage.removeItem('rxStages');
   window.location.href='처방전.html';
 }
 
