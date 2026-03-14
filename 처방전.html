@@ -686,6 +686,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
           </div>
         </div>
       </div>
+      <div class="f-row">
+        <div class="fg">
+          <label>제목 직접 입력 <span style="font-size:10px;color:#999;">(stageLabel · AI가 읽어온 원본 텍스트)</span></label>
+          <input id="mStageLabel" type="text" placeholder="예) 감사비료 수확:후 및 3월 4월">
+        </div>
+      </div>
       <div class="f-row" id="dateRangeRow">
         <div class="fg"><label>날짜 간격 <span style="font-size:10px;color:#999;">(선택)</span></label>
           <input id="mDateRange" placeholder="예) 7-10일 간격"></div>
@@ -1026,20 +1032,27 @@ function onTypeNumWord(si, word) {
 }
 
 function getStageLabel(st) {
+  // 자유 입력 텍스트 우선, 없으면 구버전 type 필드 폴백
   if (st.stageLabelOverride) return st.stageLabelOverride;
-  if (st.type === '경운전') return '경운 "전"';
-  if (st.type === '경운후') return '경운 "후"';
-  if (st.type === '정식당일') return '정식+당일\n(첫물 줄때)';
-  if (st.type === '정식후') return `정식 "후"\n${st.days || ''}일`;
-  if (st.type === '관주') return `관주(${st.typeNum || 1}${st.typeNumWord || '번'})`;
-  if (st.type === '엽면') return `엽면(${st.typeNum || 1}${st.typeNumWord || '번'})`;
-  return st.type;
+  if (st.stageLabel)         return st.stageLabel;
+  if (st.type === '경운전')  return '경운 "전"';
+  if (st.type === '경운후')  return '경운 "후"';
+  if (st.type === '정식당일') return '정식+당일';
+  if (st.type === '정식후')  return `정식 "후" ${st.days || ''}일`;
+  if (st.type === '관주')    return `관주(${st.typeNum || 1}${st.typeNumWord || '번'})`;
+  if (st.type === '엽면')    return `엽면(${st.typeNum || 1}${st.typeNumWord || '번'})`;
+  return st.type || '(단계명 입력)';
+}
+
+function getStageLabelHtml(st) {
+  return `<strong>${getStageLabel(st)}</strong>`;
 }
 
 function getStageBadge(st) {
   const month = st.month ? `${st.month}월 ` : '';
-  const label = getStageLabel(st).replace('\n', ' ');
-  const date = st.dateRange ? ` · ${st.dateRange}` : '';
+  // 줄바꿈을 공백으로 치환해 뱃지 한 줄 표시
+  const label = getStageLabel(st).replace(/\n/g, ' ');
+  const date  = st.dateRange ? ` · ${st.dateRange}` : '';
   return month + label + date;
 }
 
@@ -1182,30 +1195,14 @@ function renderStages() {
       </div>
       <div class="stage-body">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          <div style="flex:0 0 110px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">📋 단계 종류</label>
-            <select style="width:100%;font-size:12px;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);font-weight:700;font-family:inherit;"
-              onchange="onStageTypeChange(${si},this.value)">
-              <option value="경운전"  ${st.type==='경운전' ?'selected':''}>경운 "전"</option>
-              <option value="경운후"  ${st.type==='경운후' ?'selected':''}>경운 "후"</option>
-              <option value="정식당일"${st.type==='정식당일'?'selected':''}>정식+당일</option>
-              <option value="정식후"  ${st.type==='정식후' ?'selected':''}>정식 "후"</option>
-              <option value="관주"    ${st.type==='관주'   ?'selected':''}>관주</option>
-              <option value="엽면"    ${st.type==='엽면'   ?'selected':''}>엽면</option>
-            </select>
+          <div style="flex:2;min-width:160px;">
+            <label style="font-size:12px;color:#888;font-weight:700;">📋 처방 단계명 <span style="font-size:10px;font-weight:400;">(줄바꿈 자유 입력)</span></label>
+            <textarea rows="3"
+              style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;"
+              placeholder="예) 감사 비료&#10;수확:후 및&#10;3월-4월"
+              oninput="onStageLabelOverride(${si},this.value)"
+            >${st.stageLabelOverride||''}</textarea>
           </div>
-          ${st.type === '정식후' ? `
-          <div style="flex:0 0 90px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">📆 정식 후 며칠</label>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <input type="number" min="1"
-                style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid var(--teal);border-radius:5px;font-weight:700;text-align:center;"
-                placeholder="일수"
-                value="${st.days||''}"
-                oninput="onDaysChange(${si},this.value)">
-              <span style="font-size:12px;color:#555;font-weight:700;white-space:nowrap;">일 후</span>
-            </div>
-          </div>` : ''}
           <div style="flex:1;min-width:80px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📅 날짜 간격</label>
             <input style="width:100%;font-size:13px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;"
@@ -1213,31 +1210,6 @@ function renderStages() {
               value="${st.dateRange||''}"
               oninput="onDateRangeChange(${si},this.value)">
           </div>
-          <div style="flex:1;min-width:120px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">✏️ 시기 직접입력 <span style="font-size:10px;font-weight:400;">(비우면 자동)</span></label>
-            <textarea rows="2"
-              style="width:100%;font-size:12px;padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;resize:vertical;font-family:inherit;"
-              placeholder="예) 감사 비료&#10;수확:후 및&#10;3월-4월"
-              oninput="onStageLabelOverride(${si},this.value)"
-            >${st.stageLabelOverride||''}</textarea>
-          </div>
-          ${(st.type==='관주'||st.type==='엽면') ? `<div style="flex:0 0 110px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">번호 &amp; 단위</label>
-            <div style="display:flex;gap:4px;align-items:center;">
-              <input type="number" min="1" max="9"
-                style="width:48px;font-size:15px;font-weight:900;text-align:center;padding:5px 4px;border:1.5px solid var(--teal);border-radius:5px;color:var(--teal-dark);"
-                value="${st.typeNumOverride || st.typeNum || 1}"
-                oninput="onTypeNumOverride(${si},this.value)">
-              <div style="display:flex;flex-direction:column;gap:2px;">
-                <button type="button"
-                  style="font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;cursor:pointer;border:1.5px solid var(--teal);font-family:inherit;${(st.typeNumWord||'번')==='번'?'background:var(--teal);color:#fff;':'background:#fff;color:var(--teal);'}"
-                  onclick="onTypeNumWord(${si},'번')">번</button>
-                <button type="button"
-                  style="font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;cursor:pointer;border:1.5px solid var(--teal);font-family:inherit;${(st.typeNumWord||'번')==='안'?'background:var(--teal);color:#fff;':'background:#fff;color:var(--teal);'}"
-                  onclick="onTypeNumWord(${si},'안')">안</button>
-              </div>
-            </div>
-          </div>` : ''}
         </div>
 
         <div class="func-row">
@@ -1731,7 +1703,9 @@ function confirmStage() {
   const type = document.getElementById('mType').value;
   const days = parseInt(document.getElementById('mDays').value) || null;
   const dateRange = document.getElementById('mDateRange').value.trim();
-  stages.push({ id: ++stageIdCnt, month, type, days, dateRange, purpose: '', funcTags: [], funcColor: '#ffffff', products: [] });
+  const stageLabel = document.getElementById('mStageLabel').value.trim();
+  stages.push({ id: ++stageIdCnt, month, type, days, dateRange, purpose: '', funcTags: [], funcColor: '#ffffff', products: [], stageLabel });
+  document.getElementById('mStageLabel').value = '';
   closeStageModal();
   renderStages();
   renderInventory();
@@ -2163,7 +2137,7 @@ function generatePreview() {
       const areaInfo = st.area ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.area}평)</span>` : '';
       const stBase = `class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" onclick="openRxEdit(this)"`;
       if (!prods.length) {
-        rows += `<tr><td ${stBase}>${getStageLabel(st)}${dateInfo}${areaInfo}</td>
+        rows += `<tr><td ${stBase}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>
           <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
         return;
       }
@@ -2189,7 +2163,7 @@ function generatePreview() {
           descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
         }
         if (rowIdx === 0) {
-          rows += `<tr><td ${stBase} rowspan="${prods.length}">${getStageLabel(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+          rows += `<tr><td ${stBase} rowspan="${prods.length}">${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
           rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         }
@@ -2295,7 +2269,7 @@ function generatePreview() {
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
         a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
-        sl: s.stageLabelOverride||''
+        sl: s.stageLabelOverride||'', lb: s.stageLabel||''
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined,
@@ -2379,7 +2353,7 @@ function showRxToast(msg) {
   t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
 
-// 페이지별 텍스트 배열 반환
+// ── 페이지별 텍스트 배열 반환 (##RX## 감지용) ──
 function extractRxPdfText(data) {
   return pdfjsLib.getDocument({ data }).promise.then(pdf => {
     const pages = [];
@@ -2390,6 +2364,113 @@ function extractRxPdfText(data) {
   });
 }
 
+// ── 좌표 기반 텍스트 추출 (처방 단계 자동 인식) ──────────────────
+const RX_LEFT_X_MAX  = 160;   // 좌측 열 X 임계값 (scale=1.0)
+const RX_ROW_Y_MERGE = 10;    // 같은 행 Y 허용 오차 (px)
+const RX_STAGE_Y_GAP = 28;    // 좌측 그룹 사이 간격 (px)
+
+async function extractRxPdfCoords(pdfDoc) {
+  const allItems = [];
+  for (let p = 1; p <= Math.min(pdfDoc.numPages, 8); p++) {
+    const page = await pdfDoc.getPage(p);
+    const vp   = page.getViewport({ scale: 1.0 });
+    const tc   = await page.getTextContent();
+    tc.items.forEach(it => {
+      if (!it.str.trim()) return;
+      const [,,,, x, y] = pdfjsLib.Util.transform(vp.transform, it.transform);
+      allItems.push({ text: it.str.trim(), x: Math.round(x), y: Math.round(y), page: p });
+    });
+  }
+  allItems.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+  return allItems;
+}
+
+function parseRxPdfCoords(items) {
+  // 행으로 묶기
+  const rows = [];
+  for (const it of items) {
+    const last = rows[rows.length - 1];
+    if (last && last.page === it.page && Math.abs(it.y - last.y) <= RX_ROW_Y_MERGE) {
+      last.items.push(it);
+    } else {
+      rows.push({ y: it.y, page: it.page, items: [it] });
+    }
+  }
+
+  // 좌/우 분리
+  const leftItems = [], rightItems = [];
+  for (const row of rows) {
+    for (const it of row.items) {
+      (it.x < RX_LEFT_X_MAX ? leftItems : rightItems).push({ y: row.y, page: row.page, text: it.text });
+    }
+  }
+
+  // 좌측 덩어리(= stage 그룹) 묶기
+  const stageBlocks = [];
+  let cur = null;
+  for (const li of leftItems) {
+    if (!cur || li.page !== cur.page || (li.y - cur.yMax) > RX_STAGE_Y_GAP) {
+      cur = { texts: [], yMin: li.y, yMax: li.y, page: li.page };
+      stageBlocks.push(cur);
+    }
+    cur.texts.push(li.text);
+    cur.yMax = li.y;
+  }
+
+  // 각 블록에 우측 행 매핑 → stage 생성
+  const stages = [];
+  stageBlocks.forEach((sb, idx) => {
+    const nextSb = stageBlocks[idx + 1];
+    const yEnd   = (nextSb && nextSb.page === sb.page) ? nextSb.yMin : Infinity;
+
+    const matched = rightItems.filter(
+      ri => ri.page === sb.page && ri.y >= sb.yMin - RX_ROW_Y_MERGE && ri.y < yEnd
+    );
+    if (!matched.length) return;
+
+    // 우측 아이템을 행 단위로 묶어 제품 정보 추출
+    const rightRows = [];
+    let lastRR = null;
+    for (const ri of matched) {
+      if (!lastRR || Math.abs(ri.y - lastRR.y) > RX_ROW_Y_MERGE) {
+        lastRR = { y: ri.y, texts: [] };
+        rightRows.push(lastRR);
+      }
+      lastRR.texts.push(ri.text);
+    }
+
+    const products = [];
+    rightRows.forEach(rr => {
+      const line = rr.texts.join(' ');
+      // 제품명(규격) N단위 형태 추출
+      const m = line.match(/^(.+?)\s+(\d+(?:\.\d+)?|반)\s*(포|병|kg|g|L|ml|봉|개|통)/i);
+      if (m) {
+        const qty  = m[2] === '반' ? 0.5 : Number(m[2]);
+        const unit = m[3];
+        // key: "이름||규격" or "이름||"
+        const nameRaw = m[1].trim();
+        const sizeM   = nameRaw.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
+        const key     = sizeM ? `${sizeM[1]}||${sizeM[2]}` : `${nameRaw}||`;
+        products.push({ key, qty, unit, desc: '' });
+      }
+    });
+
+    stages.push({
+      stageLabelOverride: sb.texts.join('\n'),  // 원문 그대로
+      stageLabel: '',
+      type: '',
+      month: 0,
+      days: '', dateRange: '', purpose: '',
+      funcTags: [], funcColor: '#ffffff',
+      typeNumOverride: 0, typeNumWord: '',
+      area: null,
+      products
+    });
+  });
+
+  return stages;
+}
+
 async function onRxPdfSelected(input) {
   const file = input.files[0];
   if (!file) return;
@@ -2397,12 +2478,12 @@ async function onRxPdfSelected(input) {
   showRxToast('PDF 분석 중...');
 
   try {
-    const data = new Uint8Array(await file.arrayBuffer());
-    const pages = await extractRxPdfText(data); // string[]
+    const data    = new Uint8Array(await file.arrayBuffer());
+    const pages   = await extractRxPdfText(data);
 
-    // 1순위: ##RX## 인코딩 데이터 (전체 텍스트에서 검색)
+    // 1순위: ##RX## 인코딩 데이터 (자체 처방전 PDF)
     const compact = pages.join(' ').replace(/\s+/g, '');
-    const rxm = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
+    const rxm     = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
     if (rxm) {
       const d = JSON.parse(decodeURIComponent(atob(rxm[1])));
       applyRxData(d);
@@ -2410,13 +2491,21 @@ async function onRxPdfSelected(input) {
       return;
     }
 
-    // 2순위: 페이지별 텍스트 파싱 (외부 PDF)
-    const parsed = parseRxPdfText(pages);
-    if (parsed.stages.length > 0) {
-      applyParsedRx(parsed);
-      showRxToast('처방전 파싱 완료 (' + parsed.stages.length + '단계)');
+    // 2순위: 좌표 기반 파싱 (외부 처방전 PDF)
+    const pdfDoc  = await pdfjsLib.getDocument({ data }).promise;
+    const items   = await extractRxPdfCoords(pdfDoc);
+    const parsed  = parseRxPdfCoords(items);
+
+    if (parsed.length > 0) {
+      stageIdCnt = 0;
+      stages = parsed.map(s => ({ ...s, id: ++stageIdCnt }));
+      syncGroupOrder();
+      renderStages();
+      schedulePreview();
+      _saveRxStages();
+      showRxToast(`처방전 파싱 완료 — ${parsed.length}단계 인식`);
     } else {
-      alert('처방전 데이터를 인식할 수 없습니다.');
+      alert('처방 단계를 인식하지 못했습니다.\n텍스트 레이어가 없는 스캔 PDF는 지원되지 않습니다.');
     }
   } catch (e) {
     console.error('RX PDF 오류:', e);
@@ -2460,7 +2549,7 @@ function applyRxData(d) {
     id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0, typeNumWord: s.tw||'',
-    stageLabelOverride: s.sl||'',
+    stageLabelOverride: s.sl||'', stageLabel: s.lb||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
@@ -3016,7 +3105,7 @@ function _saveRxStages() {
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null,
         typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',
-        stageLabelOverride: s.stageLabelOverride||''
+        stageLabelOverride: s.stageLabelOverride||'', stageLabel: s.stageLabel||''
       })),
       pageOrder, costVisible, priceOverrides,
       groupLabels, stageGroupOrder,

@@ -131,14 +131,17 @@ function openValidationModal(rx) {
       r.matchId ? `value="${r.matchId}"` : 'value=""',
       (r.matchId ? `value="${r.matchId}"` : 'value=""') + ' selected'
     );
-    const stageDisplay = r.stageLabel
-      ? `<strong>${r.stageLabel}</strong><br><small style="color:#888;">(${r.stageType})</small>`
-      : r.stageType;
+    // stageLabel을 편집 가능한 textarea로 표시 (줄바꿈 보존)
+    const labelVal = (r.stageLabel || r.stageType || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const stageCell = `<textarea class="vld-stage-label" data-idx="${i}"
+      rows="2" style="width:100%;min-width:90px;font-size:12px;padding:3px 5px;
+      border:1px solid #ddd;border-radius:4px;resize:vertical;font-family:inherit;
+      line-height:1.4;">${labelVal}</textarea>`;
     return `<tr class="${r.rowClass}" data-idx="${i}">
-      <td>${stageDisplay}</td>
+      <td>${stageCell}</td>
       <td>${r.originalName}</td>
       <td><select class="vld-sel" data-idx="${i}">${selHTML}</select></td>
-      <td style="text-align:right">${r.baseQty} ${r.unit}</td>
+      <td style="text-align:right">${r.baseQty != null ? r.baseQty : '-'} ${r.unit}</td>
       <td><input type="number" class="vld-qty" data-idx="${i}" value="${r.finalQty}" min="0"></td>
       <td class="vld-price" data-idx="${i}" style="text-align:right">₩${(r.price||0).toLocaleString()}</td>
     </tr>`;
