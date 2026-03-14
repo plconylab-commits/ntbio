@@ -2338,6 +2338,8 @@ function applyParsedPrescription(info) {
     });
     sortCart(); render(); syncPrint();
   }
+  // 구버전 처방전 PDF → 단계 데이터 없음: 처방전에 낡은 rxStages가 남지 않도록 초기화
+  localStorage.removeItem('rxStages');
   const prodTxt = info.products.length>0 ? `${info.products.length}개 제품` : '제품 인식 불가 (수동 입력 필요)';
   showToast(`처방전 불러옴 ✓ — ${info.name||'?'} ${info.crop||''}${info.area?info.area+'평':''} / ${prodTxt}\n수량은 확인 후 조정해주세요`);
 }
