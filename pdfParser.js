@@ -69,21 +69,25 @@ async function callVisionAPI(base64Images) {
     { type: 'text', text: buildPdfUserPrompt() }
   ];
 
+  const requestBody = JSON.stringify({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: PDF_SYSTEM_PROMPT },
+      { role: 'user',   content: userContent }
+    ],
+    max_tokens: 4096,
+    temperature: 0
+  });
+
+  console.log('[Vision] 요청 바디 크기:', (requestBody.length / 1024 / 1024).toFixed(2), 'MB');
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: PDF_SYSTEM_PROMPT },
-        { role: 'user',   content: userContent }
-      ],
-      max_tokens: 4096,
-      temperature: 0
-    })
+    body: requestBody
   });
 
   console.log('[Vision] 응답 상태:', response.status);
