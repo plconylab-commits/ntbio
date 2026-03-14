@@ -141,9 +141,9 @@ function openValidationModal(rx) {
   (rx.prescriptions || []).forEach(entry => {
     (entry.items || []).forEach(item => {
       const match = findProduct(item.originalName);
-      // Math.ceil: 반개(0.5) → 1 등 실제 주문 가능한 정수로 올림
-      // 모달 "최종 수량" 입력란이 실제 장바구니에 담길 수량을 그대로 보여주도록
-      const finalQty = Math.ceil(calcRequiredQty(totalArea, item.baseArea, item.baseQty) || 0);
+      // 소수점 그대로 보존 (반병=0.5) — 같은 제품이 여러 처방 단계에 걸쳐 있으면
+      // _applyToCart()에서 합산 후 Math.ceil 1회 적용 (0.5×7=3.5 → 4)
+      const finalQty = calcRequiredQty(totalArea, item.baseArea, item.baseQty) || 0;
 
       // 하이라이트 판별
       let rowClass = '';
@@ -276,16 +276,17 @@ function _applyToCart() {
     if (rows[idx]) rows[idx].finalQty = Number(inp.value) || 0;
   });
 
-  // ── 같은 제품(matchId 기준) 수량 합산 ──
-  const mergedMap = {}; // matchId → 합산 수량
+  // ── 같은 제품(matchId 기준) 수량 합산: 소수점 그대로 더한 뒤 마지막에 올림 ──
+  // ★ 반병×7 = 0.5×7 = 3.5 → Math.ceil → 4병  (행마다 올림하면 1×7=7이 되므로 안 됨)
+  const mergedMap = {}; // matchId → float 합산
   rows.forEach(r => {
     if (!r.matchId || r.finalQty <= 0) return;
-    const qty = Math.ceil(r.finalQty); // 0.5 → 1 (반병 등 올림 처리)
-    mergedMap[r.matchId] = (mergedMap[r.matchId] || 0) + qty;
+    mergedMap[r.matchId] = (mergedMap[r.matchId] || 0) + r.finalQty; // 소수점 합산
   });
 
-  // ── 장바구니에 적용 (기존 항목 있으면 수량 더하기, 없으면 신규 추가) ──
-  Object.entries(mergedMap).forEach(([matchId, totalQty]) => {
+  // ── 장바구니에 적용: 합산값을 Math.ceil 1회 적용 후 담기 ──
+  Object.entries(mergedMap).forEach(([matchId, totalRaw]) => {
+    const totalQty = Math.ceil(totalRaw); // 전체 합산 후 올림
     const prod = PRODUCT_DB.find(p => p.id === matchId);
     if (!prod) return;
 
