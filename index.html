@@ -2274,13 +2274,7 @@ function onPdfSelected(input){
           return;
         }
       }
-      // 2순위: 거래명세표 PDF (##TN## 임베드 or 텍스트 파싱)
-      const tnm=compact.match(/##TN##([A-Za-z0-9+/=%]+)##TN##/);
-      if(!tnm && !text.match(/품목.*규격.*수량|소비자가|지원가/)){
-        // ##RX##도 ##TN##도 없고 invoice 패턴도 없으면 처방전 가능성
-        showToast('처방전 PDF는 처방전 페이지에서 불러오거나, 처방전 앱에서 인쇄 후 업로드하세요.', true);
-        return;
-      }
+      // 2순위: 거래명세표 PDF 텍스트 파싱
       const parsed=parsePdfInvoice(text);
       applyParsedInvoice(parsed);
     }).catch(err=>{
