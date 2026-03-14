@@ -350,7 +350,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .content-inner{background:#fff;border:3px solid rgba(255,255,255,.6);
   border-radius:4px;flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .page-purpose{background:#fff;color:#111;font-size:22px;font-weight:900;
-  padding:0 16px;height:46px;box-sizing:border-box;
+  padding:0 16px;height:49px;box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;}
@@ -368,7 +368,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .rx-table .desc-td{font-size:var(--rx-fs,17px);color:#111;font-weight:600;text-align:center;}
 .rx-table tbody tr:hover td{background:#f0fbfb;}
 .page-footer-bar{background:#fff;color:#111;padding:0 16px;
-  height:46px;box-sizing:border-box;
+  height:49px;box-sizing:border-box;
   font-size:22px;font-weight:700;text-align:center;letter-spacing:1px;
   display:flex;align-items:center;justify-content:center;gap:16px;
   border:3.5px solid var(--teal);border-top:none;}
@@ -2071,7 +2071,7 @@ function generatePreview() {
     const funcHeadHtml = allFuncRows.map(r=>
       `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this)"
         style="background:${r.color};color:#111;font-size:22px;font-weight:700;
-        text-align:center;padding:0 16px;height:46px;border:3.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;vertical-align:middle;">
+        text-align:center;padding:0 16px;height:49px;border:3.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;vertical-align:middle;">
         ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
       </th></tr>`).join('');
     return `<div class="page-card" data-pagekey="group_${monthKey}">
