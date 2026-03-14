@@ -489,7 +489,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <div class="app-header">
   <button class="back-btn" onclick="goBackToCart()">← 거래명세표</button>
   <h1>📋 처방전 작성</h1>
-  <label class="back-btn" style="cursor:pointer;margin-left:auto;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
+  <div style="display:flex;gap:5px;margin-left:auto;align-items:center;">
+    <button id="undoBtn" onclick="undoStages()" title="되돌리기 (Ctrl+Z)" class="back-btn">↩</button>
+    <button id="redoBtn" onclick="redoStages()" title="다시하기 (Ctrl+Y)" class="back-btn">↪</button>
+    <button onclick="confirmResetPrescription()" class="back-btn" style="color:#c0392b;">🗑️ 초기화</button>
+    <label class="back-btn" style="cursor:pointer;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
+  </div>
 </div>
 
 <!-- 모바일 하단 탭 바 -->
@@ -576,11 +581,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
          border-top:1px solid #f0f0f0;background:#fafafa;">
       <div style="display:flex;gap:6px;">
         <button class="add-stage-btn" style="flex:1;" onclick="openStageModal()">＋ 단계 추가</button>
-        <button onclick="undoStages()" title="되돌리기 (Ctrl+Z)"
-          style="flex:0 0 auto;font-size:12px;padding:8px 12px;border-radius:6px;border:1.5px solid #bbb;
-                 background:#fff;color:#555;cursor:pointer;font-family:inherit;font-weight:700;">
-          ↩ 되돌리기
-        </button>
       </div>
       <button class="add-stage-btn" style="background:#E0F5F5;color:var(--teal-dark);border-color:var(--teal);"
         onclick="openCostModal()">＋ 평당가 계산</button>
@@ -700,6 +700,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 let rxData = {};
 let stages = [];
 let stagesHistory = [];
+let redoStack = [];
 const HISTORY_MAX = 30;
 let managerPhone = localStorage.getItem('managerPhone') || '010-3704-5963';
 let stageIdCnt = 0;
@@ -767,12 +768,15 @@ window.addEventListener('DOMContentLoaded', () => {
     if (el) { el.addEventListener('input', schedulePreview); el.addEventListener('change', schedulePreview); }
   });
   schedulePreview();
-  // Ctrl+Z 되돌리기
+  // Ctrl+Z 되돌리기 / Ctrl+Y·Ctrl+Shift+Z 다시하기
   document.addEventListener('keydown', e => {
+    const active = document.activeElement;
+    const isInput = active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.tagName==='SELECT');
     if ((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey) {
-      const active = document.activeElement;
-      const isInput = active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.tagName==='SELECT');
       if (!isInput) { e.preventDefault(); undoStages(); }
+    }
+    if ((e.ctrlKey||e.metaKey) && (e.key==='y' || (e.key==='z' && e.shiftKey))) {
+      if (!isInput) { e.preventDefault(); redoStages(); }
     }
   });
   // 플로팅 재고 패널 항상 표시
@@ -951,18 +955,39 @@ function onStageLabelOverride(si, val) {
   stages[si].stageLabelOverride = val;
   schedulePreview();
 }
+function _getHistoryState() {
+  return JSON.stringify({ stages, groupLabels, stageGroupOrder });
+}
 function _pushHistory() {
-  stagesHistory.push(JSON.stringify(stages));
+  stagesHistory.push(_getHistoryState());
+  redoStack = [];
   if (stagesHistory.length > HISTORY_MAX) stagesHistory.shift();
 }
+function _applyHistoryState(snapshot) {
+  const s = JSON.parse(snapshot);
+  stages = s.stages;
+  groupLabels = s.groupLabels;
+  stageGroupOrder = s.stageGroupOrder;
+  recalcTypeNums(); renderStages(); schedulePreview(); _saveRxStages();
+}
 function undoStages() {
-  if (!stagesHistory.length) { showToast('되돌릴 내용이 없습니다.'); return; }
-  stages = JSON.parse(stagesHistory.pop());
-  recalcTypeNums();
-  renderStages();
-  schedulePreview();
-  _saveRxStages();
-  showToast('↩ 되돌렸습니다.');
+  if (!stagesHistory.length) { showRxToast('되돌릴 내용이 없습니다.'); return; }
+  redoStack.push(_getHistoryState());
+  _applyHistoryState(stagesHistory.pop());
+  showRxToast('↩ 되돌렸습니다.');
+}
+function redoStages() {
+  if (!redoStack.length) { showRxToast('다시 할 내용이 없습니다.'); return; }
+  stagesHistory.push(_getHistoryState());
+  _applyHistoryState(redoStack.pop());
+  showRxToast('↪ 다시 했습니다.');
+}
+function confirmResetPrescription() {
+  if (!confirm('처방전 전체를 초기화합니다.\n모든 단계와 카테고리가 삭제됩니다. 계속하시겠습니까?')) return;
+  _pushHistory();
+  stages = []; groupLabels = {}; stageGroupOrder = [];
+  recalcTypeNums(); renderStages(); schedulePreview(); _saveRxStages();
+  showRxToast('처방전이 초기화되었습니다.');
 }
 
 function onTypeNumWord(si, word) {
@@ -1332,6 +1357,7 @@ function deleteGroup(mk) {
   const label = groupLabels[mk] || `${mk}월`;
   const count = stages.filter(st => (st.month ?? 0) === mk).length;
   if (!confirm(`"${label}" 카테고리(${count}단계)를 삭제할까요?`)) return;
+  _pushHistory();
   stages = stages.filter(st => (st.month ?? 0) !== mk);
   stageGroupOrder = stageGroupOrder.filter(k => k !== mk);
   delete groupLabels[mk];

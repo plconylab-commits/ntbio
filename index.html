@@ -2243,15 +2243,20 @@ function parsePrescriptionText(text) {
     const normt = norm(tokens[i]);
     if(!findProd(normt)){ i++; continue; }
 
-    // ── 선독(peek): 연속 PRODS 토큰 개수 세고, area 스킵 후 size가 오면 열 모드 ──
+    // ── 선독(peek): 연속 PRODS 토큰 개수 세고, area 스킵 후 size/qty가 오면 열 모드 ──
     let peekJ=i, peekCnt=0;
     while(peekJ<tokens.length && findProd(norm(tokens[peekJ]))){ peekCnt++; peekJ++; }
     let peekK=peekJ;
     while(peekK<tokens.length && isAreaTok(tokens[peekK])) peekK++;
-    const isColMode = peekCnt>1 && peekK<tokens.length && isSz(tokens[peekK]);
+    const areaCount = peekK - peekJ;
+    // 열 모드 1: [이름들] → [size들] — 일정관리 페이지(pages 4-6)
+    const isColModeWithSizes = peekCnt>1 && peekK<tokens.length && isSz(tokens[peekK]);
+    // 열 모드 2: [이름들] → [평수들×N] → [수량들] — 기비 페이지(page 2, 열 우선 추출 시)
+    const isColModeWithAreas = peekCnt>1 && areaCount>=peekCnt && peekK<tokens.length && isQt(tokens[peekK]);
+    const isColMode = isColModeWithSizes || isColModeWithAreas;
 
-    if(isColMode){
-      // 열 순서 모드: [이름×N] → [규격×N] → [수량×N]
+    if(isColModeWithSizes){
+      // 열 순서 모드 1: [이름×N] → [규격×N] → [수량×N]
       const nameBlock=[], szBlock=[], qtBlock=[];
       let j=i;
       while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
@@ -2259,6 +2264,15 @@ function parsePrescriptionText(text) {
       while(j<tokens.length && isSz(tokens[j])) szBlock.push(tokens[j++]);
       while(j<tokens.length && isQt(tokens[j])) qtBlock.push(tokens[j++]);
       for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k], szBlock[k]||null, parseQt(qtBlock[k]||null));
+      i=j;
+    } else if(isColModeWithAreas){
+      // 열 순서 모드 2: [이름×N] → [평수×N 스킵] → [수량×N] — 기비 페이지
+      const nameBlock=[], qtBlock=[];
+      let j=i;
+      while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
+      for(let a=0;a<nameBlock.length;a++){ if(j<tokens.length && isAreaTok(tokens[j])) j++; }
+      while(j<tokens.length && isQt(tokens[j])) qtBlock.push(tokens[j++]);
+      for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k], null, parseQt(qtBlock[k]||null));
       i=j;
     } else {
       // 행 순서 모드: 한 토큰씩 처리 (헤더 혼재 방지)
