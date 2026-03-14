@@ -13,31 +13,68 @@
   const style = document.createElement('style');
   style.id = 'vld-css';
   style.textContent = `
+    /* ── 모달 컨테이너: 높이 85vh 제한 + flexbox 수직 구조 ── */
     #validationOverlay .modal {
       width: 95vw;
       max-width: 900px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;          /* 자식이 삐져나오지 않도록 */
+    }
+    /* 헤더: 스크롤 안 됨 */
+    #validationOverlay .modal-hdr {
+      flex-shrink: 0;
+    }
+    /* 본문: 남은 공간 차지 + 내부 스크롤 */
+    #validationOverlay .modal-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 16px;             /* 기존 패딩 유지 */
+      display: flex;
+      flex-direction: column;
+    }
+    /* 버튼 푸터: 스크롤 안 됨, 항상 하단 고정 */
+    #validationOverlay .vld-footer {
+      flex-shrink: 0;
+      padding: 12px 16px 16px;
+      border-top: 1px solid #eee;
+      background: #fff;
     }
     .vld-info {
       display: flex; gap: 16px; flex-wrap: wrap;
       margin-bottom: 14px; font-size: 14px; color: #555;
+      flex-shrink: 0;
     }
     .vld-info b { color: #222; }
+    /* 테이블 래퍼: 남은 세로 공간 채우되 가로 넘치면 스크롤 */
+    .vld-table-wrap {
+      flex: 1 1 auto;
+      overflow: auto;
+      border: 1px solid #eee;
+      border-radius: 6px;
+    }
     .vld-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
     }
-    .vld-table th {
+    .vld-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
       background: #f5f5f5;
+    }
+    .vld-table th {
       padding: 8px 6px;
       border-bottom: 2px solid #ddd;
       text-align: left;
       white-space: nowrap;
     }
     .vld-table td {
-      padding: 7px 6px;
+      padding: 6px 6px;
       border-bottom: 1px solid #eee;
-      vertical-align: middle;
+      vertical-align: top;
     }
     .vld-row-red    { background: #fff0f0 !important; }
     .vld-row-yellow { background: #fffbe6 !important; }
@@ -51,15 +88,27 @@
       width: 70px; padding: 4px; text-align: right;
       border: 1px solid #ccc; border-radius: 4px; font-size: 13px;
     }
+    /* textarea: rows=2 기본, 세로만 리사이즈 */
+    .vld-stage-label {
+      width: 100%; min-width: 90px;
+      font-size: 12px; padding: 3px 5px;
+      border: 1px solid #ddd; border-radius: 4px;
+      resize: vertical; font-family: inherit;
+      line-height: 1.4;
+      min-height: 38px;    /* rows=2 상당 */
+      max-height: 120px;   /* 너무 커지지 않게 제한 */
+      overflow-y: auto;
+    }
     .vld-apply-btn {
-      display: block; width: 100%; margin-top: 16px;
+      display: block; width: 100%;
       padding: 14px; font-size: 16px; font-weight: 700;
       color: #fff; background: var(--g-dark, #2A8A88);
       border: none; border-radius: 8px; cursor: pointer;
     }
     .vld-apply-btn:active { opacity: .85; }
     .vld-legend {
-      display: flex; gap: 14px; margin-top: 10px; font-size: 12px; color: #777;
+      display: flex; gap: 14px; margin-bottom: 10px; font-size: 12px; color: #777;
+      flex-shrink: 0;
     }
     .vld-legend span::before {
       content: ''; display: inline-block;
@@ -147,21 +196,25 @@ function openValidationModal(rx) {
     </tr>`;
   }).join('');
 
-  // ── 모달 HTML ──
+  // ── 모달 HTML (헤더 고정 / 본문 스크롤 / 버튼 푸터 고정) ──
   const html = `
     <div class="overlay on" id="validationOverlay" onclick="_vldCloseOut(event)">
       <div class="modal">
-        <div class="modal-hdr">
+
+        <!-- 헤더: 항상 상단 고정 -->
+        <div class="modal-hdr" style="flex-shrink:0;">
           <h2>처방전 검증</h2>
           <button class="modal-x" onclick="closeValidationModal()">✕</button>
         </div>
+
+        <!-- 본문: 내부 스크롤 영역 -->
         <div class="modal-body">
           <div class="vld-info">
             <span>농가명: <b>${fi.farmName || '-'}</b></span>
             <span>작물: <b>${fi.cropName || '-'}</b></span>
             <span>전체 평수: <b>${totalArea ? totalArea + '평' : '-'}</b></span>
           </div>
-          <div style="overflow-x:auto">
+          <div class="vld-table-wrap">
             <table class="vld-table">
               <thead><tr>
                 <th>시기/목적</th><th>원본 제품명</th><th>매칭 제품</th>
@@ -170,12 +223,17 @@ function openValidationModal(rx) {
               <tbody>${tbodyHTML}</tbody>
             </table>
           </div>
+        </div>
+
+        <!-- 푸터: 항상 하단 고정 -->
+        <div class="vld-footer">
           <div class="vld-legend">
             <span class="lg-red">매칭 실패</span>
             <span class="lg-yellow">확인 필요</span>
           </div>
           <button class="vld-apply-btn" onclick="_applyToCart()">명세표에 적용하기</button>
         </div>
+
       </div>
     </div>`;
 
