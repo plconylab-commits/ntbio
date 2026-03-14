@@ -10,10 +10,11 @@
  *   4) Y 간격이 STAGE_Y_GAP 이상 벌어진 좌측 텍스트 덩어리 = 새 처방 그룹
  */
 
-const MAX_PAGES   = 8;
-const LEFT_X_MAX  = 160;  // A4 scale=1.0 기준 좌측 열 최대 X (px)
-const ROW_Y_MERGE = 10;   // 같은 행으로 간주할 Y 허용 오차 (px)
-const STAGE_Y_GAP = 28;   // 좌측 텍스트 그룹 사이 최소 Y 간격 (px)
+const MAX_PAGES      = 8;
+const LEFT_X_MAX     = 160;  // A4 scale=1.0 기준 좌측 열 최대 X (px)
+const ROW_Y_MERGE    = 10;   // 같은 행으로 간주할 Y 허용 오차 (px)
+const STAGE_Y_GAP    = 50;   // 좌측 텍스트 그룹 사이 최소 Y 간격 (px) — 32~35px 내부간격, 82px+ 그룹간격 기준
+const COUNT_UNITS_RE = /포|병|봉|통|개/;  // 처방 수량 단위만 (kg·g·L·ml 등 용량 단위 제외)
 
 /* ─── 1. PDF → 좌표 아이템 배열 ──────────────────────────────────── */
 
@@ -77,13 +78,23 @@ function groupByRows(items) {
  */
 function buildPrescriptionGroups(rows) {
   // 좌측/우측 아이템 분리
+  // ★ 우측 행: 처방 수량 단위(포·병·봉·통·개)를 포함하는 행만 수집
   const leftItems  = [];
   const rightItems = [];
 
   for (const row of rows) {
-    for (const it of row.items) {
-      const bucket = it.x < LEFT_X_MAX ? leftItems : rightItems;
-      bucket.push({ y: row.y, page: row.page, text: it.text });
+    const leftRow  = row.items.filter(it => it.x <  LEFT_X_MAX);
+    const rightRow = row.items.filter(it => it.x >= LEFT_X_MAX);
+
+    leftRow.forEach(it =>
+      leftItems.push({ y: row.y, page: row.page, text: it.text })
+    );
+
+    if (rightRow.length > 0 &&
+        COUNT_UNITS_RE.test(rightRow.map(i => i.text).join(' '))) {
+      rightRow.forEach(it =>
+        rightItems.push({ y: row.y, page: row.page, text: it.text })
+      );
     }
   }
 
@@ -101,31 +112,39 @@ function buildPrescriptionGroups(rows) {
 
   console.log('[Parser] 감지된 좌측 stage 블록 수:', stageBlocks.length);
 
-  // 각 stage block에 우측 행 매핑 (다음 블록 시작 Y 미만까지)
-  const groups = stageBlocks.map((sb, idx) => {
-    const nextSb = stageBlocks[idx + 1];
-    const yEnd   = (nextSb && nextSb.page === sb.page) ? nextSb.yMin : Infinity;
+  if (stageBlocks.length === 0) return [];
 
-    const matched = rightItems.filter(
-      ri => ri.page === sb.page && ri.y >= sb.yMin - ROW_Y_MERGE && ri.y < yEnd
-    );
-
-    // 우측 아이템을 같은 Y끼리 다시 묶기(= 하나의 제품 행)
-    const rightRows = [];
-    let lastRR = null;
-    for (const ri of matched) {
-      if (!lastRR || Math.abs(ri.y - lastRR.y) > ROW_Y_MERGE) {
-        lastRR = { y: ri.y, texts: [] };
-        rightRows.push(lastRR);
-      }
-      lastRR.texts.push(ri.text);
+  // 우측 아이템을 행 단위로 재그룹화
+  const rightRows = [];
+  let lastRR = null;
+  for (const ri of rightItems) {
+    if (!lastRR || lastRR.page !== ri.page || Math.abs(ri.y - lastRR.y) > ROW_Y_MERGE) {
+      lastRR = { y: ri.y, page: ri.page, texts: [] };
+      rightRows.push(lastRR);
     }
+    lastRR.texts.push(ri.text);
+  }
 
-    return {
-      stageLabel: sb.texts.join('\n'),   // 줄바꿈 그대로 보존
-      rightRows:  rightRows.map(r => r.texts)
-    };
+  // 각 stageBlock에 배정될 제품 행 배열 초기화
+  const blockProducts = stageBlocks.map(() => []);
+
+  // ★ 각 우측 행을 같은 페이지 내 Y 중간점이 가장 가까운 stageBlock에 배정
+  //   (기존 forward Y-range 방식 → 양방향 nearest-midpoint 방식으로 교체)
+  rightRows.forEach(rr => {
+    let bestIdx = -1, bestDist = Infinity;
+    stageBlocks.forEach((sb, idx) => {
+      if (sb.page !== rr.page) return;
+      const mid  = (sb.yMin + sb.yMax) / 2;
+      const dist = Math.abs(rr.y - mid);
+      if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+    });
+    if (bestIdx >= 0) blockProducts[bestIdx].push(rr.texts);
   });
+
+  const groups = stageBlocks.map((sb, idx) => ({
+    stageLabel: sb.texts.join('\n'),   // 줄바꿈 그대로 보존
+    rightRows:  blockProducts[idx]
+  }));
 
   return groups.filter(g => g.rightRows.length > 0);
 }

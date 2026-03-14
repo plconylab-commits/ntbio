@@ -2365,9 +2365,10 @@ function extractRxPdfText(data) {
 }
 
 // ── 좌표 기반 텍스트 추출 (처방 단계 자동 인식) ──────────────────
-const RX_LEFT_X_MAX  = 160;   // 좌측 열 X 임계값 (scale=1.0)
-const RX_ROW_Y_MERGE = 10;    // 같은 행 Y 허용 오차 (px)
-const RX_STAGE_Y_GAP = 28;    // 좌측 그룹 사이 간격 (px)
+const RX_LEFT_X_MAX     = 160;   // 좌측 열 X 임계값 (scale=1.0)
+const RX_ROW_Y_MERGE    = 10;    // 같은 행 Y 허용 오차 (px)
+const RX_STAGE_Y_GAP    = 50;    // 좌측 그룹 사이 간격 (px) — 32~35px 내부간격, 82px+ 그룹간격 기준
+const RX_COUNT_UNITS_RE = /포|병|봉|통|개/;  // 처방 수량 단위만 (kg·g·L·ml 등 용량 단위 제외)
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
@@ -2397,11 +2398,21 @@ function parseRxPdfCoords(items) {
     }
   }
 
-  // 좌/우 분리
+  // 좌/우 분리 — 우측 행은 처방 수량 단위(포·병·봉·통·개) 포함 행만 수집
   const leftItems = [], rightItems = [];
   for (const row of rows) {
-    for (const it of row.items) {
-      (it.x < RX_LEFT_X_MAX ? leftItems : rightItems).push({ y: row.y, page: row.page, text: it.text });
+    const leftRow  = row.items.filter(it => it.x <  RX_LEFT_X_MAX);
+    const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
+
+    leftRow.forEach(it =>
+      leftItems.push({ y: row.y, page: row.page, text: it.text })
+    );
+
+    if (rightRow.length > 0 &&
+        RX_COUNT_UNITS_RE.test(rightRow.map(i => i.text).join(' '))) {
+      rightRow.forEach(it =>
+        rightItems.push({ y: row.y, page: row.page, text: it.text })
+      );
     }
   }
 
@@ -2417,42 +2428,67 @@ function parseRxPdfCoords(items) {
     cur.yMax = li.y;
   }
 
-  // 각 블록에 우측 행 매핑 → stage 생성
+  if (stageBlocks.length === 0) return [];
+
+  // 우측 아이템을 행 단위로 재그룹화
+  const rightRows = [];
+  let lastRR = null;
+  for (const ri of rightItems) {
+    if (!lastRR || lastRR.page !== ri.page || Math.abs(ri.y - lastRR.y) > RX_ROW_Y_MERGE) {
+      lastRR = { y: ri.y, page: ri.page, texts: [] };
+      rightRows.push(lastRR);
+    }
+    lastRR.texts.push(ri.text);
+  }
+
+  // 각 stageBlock에 배정될 제품 행 배열 초기화
+  const blockProducts = stageBlocks.map(() => []);
+
+  // ★ 각 우측 행을 같은 페이지 내 Y 중간점이 가장 가까운 stageBlock에 배정
+  rightRows.forEach(rr => {
+    let bestIdx = -1, bestDist = Infinity;
+    stageBlocks.forEach((sb, idx) => {
+      if (sb.page !== rr.page) return;
+      const mid  = (sb.yMin + sb.yMax) / 2;
+      const dist = Math.abs(rr.y - mid);
+      if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+    });
+    if (bestIdx >= 0) blockProducts[bestIdx].push(rr);
+  });
+
+  // stages 생성
   const stages = [];
   stageBlocks.forEach((sb, idx) => {
-    const nextSb = stageBlocks[idx + 1];
-    const yEnd   = (nextSb && nextSb.page === sb.page) ? nextSb.yMin : Infinity;
-
-    const matched = rightItems.filter(
-      ri => ri.page === sb.page && ri.y >= sb.yMin - RX_ROW_Y_MERGE && ri.y < yEnd
-    );
-    if (!matched.length) return;
-
-    // 우측 아이템을 행 단위로 묶어 제품 정보 추출
-    const rightRows = [];
-    let lastRR = null;
-    for (const ri of matched) {
-      if (!lastRR || Math.abs(ri.y - lastRR.y) > RX_ROW_Y_MERGE) {
-        lastRR = { y: ri.y, texts: [] };
-        rightRows.push(lastRR);
-      }
-      lastRR.texts.push(ri.text);
-    }
+    const assigned = blockProducts[idx];
+    if (!assigned.length) return;
 
     const products = [];
-    rightRows.forEach(rr => {
+    assigned.forEach(rr => {
       const line = rr.texts.join(' ');
-      // 제품명(규격) N단위 형태 추출
-      const m = line.match(/^(.+?)\s+(\d+(?:\.\d+)?|반)\s*(포|병|kg|g|L|ml|봉|개|통)/i);
-      if (m) {
-        const qty  = m[2] === '반' ? 0.5 : Number(m[2]);
-        const unit = m[3];
-        // key: "이름||규격" or "이름||"
-        const nameRaw = m[1].trim();
-        const sizeM   = nameRaw.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
-        const key     = sizeM ? `${sizeM[1]}||${sizeM[2]}` : `${nameRaw}||`;
-        products.push({ key, qty, unit, desc: '' });
-      }
+      // ★ 처방 수량 단위만 사용 (포·병·봉·통·개) — kg·g·L·ml 등 용량 단위는 제품명의 일부
+      const halfM  = line.match(/반\s*(포|병|봉|통|개)/);
+      const countM = line.match(/(\d+(?:\.\d+)?)\s*(포|병|봉|통|개)/);
+      if (!halfM && !countM) return;  // 처방 수량 단위 없는 행은 건너뜀
+
+      const qty  = halfM ? 0.5 : Number(countM[1]);
+      const unit = halfM ? halfM[1] : countM[2];
+
+      // 처방수량 및 평수 표기 제거 → 제품명만 남기기
+      const namePart = line
+        .replace(/반\s*(포|병|봉|통|개)/g, '')
+        .replace(/\d+(?:\.\d+)?\s*(포|병|봉|통|개)/g, '')
+        .replace(/\d+(?:\.\d+)?\s*평/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (namePart.length <= 1) return;
+
+      // key: "이름||규격" or "이름||"
+      const sizeM = namePart.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
+      const key   = sizeM
+        ? `${sizeM[1].trim()}||${sizeM[2].trim()}`
+        : `${namePart}||`;
+      products.push({ key, qty, unit, desc: '' });
     });
 
     stages.push({
@@ -2468,7 +2504,7 @@ function parseRxPdfCoords(items) {
     });
   });
 
-  return stages;
+  return stages.filter(s => s.products.length > 0);
 }
 
 async function onRxPdfSelected(input) {
