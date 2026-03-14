@@ -2205,9 +2205,9 @@ function parsePrescriptionText(text) {
   const nameM = clean.match(/처방전[:\s]*([가-힣]+?(?:님|장로|집사|목사|선생|사장|여사|대표|원장|교수|이사|장))/)
               || clean.match(/처방전[:\s]*([가-힣]{2,5})/);
   if(nameM) name = nameM[1];
-  const cropM = clean.match(/([가-힣a-zA-Z]+)\((\d+)평\)농사/);
+  const cropM = clean.match(/([가-힣a-zA-Z]+)\s*\(\s*(\d+)\s*평\s*\)\s*농사/);
   if(cropM){ crop=cropM[1]; area=cropM[2]; }
-  const regionM = clean.match(/\d+평\)농사\s+([가-힣+\s]+?)\s+[가-힣]{2,}(?:님|장로|집사|목사)\s+사용금액/);
+  const regionM = clean.match(/\d+\s*평\s*\)\s*농사\s+([가-힣+\s]+?)\s+[가-힣]{2,}(?:님|장로|집사|목사)\s+사용금액/);
   if(regionM) region = regionM[1].trim();
 
   // 제품 파싱 헬퍼
@@ -2237,7 +2237,20 @@ function parsePrescriptionText(text) {
     else totals[key]={name:sp.name,size:sp.size,rawQty,retail:sp.price};
   };
 
-  const tokens = clean.split(/\s+/).filter(Boolean);
+  const rawToks = clean.split(/\s+/).filter(Boolean);
+  // ── pdfjs 토큰 재결합: 브라우저 pdfjs가 분리한 토큰 합치기 ──
+  // "word","(","내용",")" → "word(내용)"  |  "N","평" → "N평"  |  "N","단위" → "N단위"
+  const tokens = [];
+  for (let ti=0; ti<rawToks.length; ) {
+    const t0=rawToks[ti], t1=rawToks[ti+1]||'', t2=rawToks[ti+2]||'', t3=rawToks[ti+3]||'';
+    if (t1==='(' && t3===')' && t2 && !/^\d/.test(t2)) {
+      tokens.push(t0+'('+t2+')'); ti+=4;
+    } else if (/^\d+$/.test(t0) && t1==='평') {
+      tokens.push(t0+'평'); ti+=2;
+    } else if (/^\d+(?:\.\d+)?$/.test(t0) && /^(?:봉|병|통|포|개|캔)$/.test(t1)) {
+      tokens.push(t0+t1); ti+=2;
+    } else { tokens.push(t0); ti++; }
+  }
   let i = 0;
   while(i < tokens.length) {
     const normt = norm(tokens[i]);
@@ -2437,7 +2450,6 @@ function extractPdfText(data){
     for(let i=1;i<=pdf.numPages;i++) pages.push(
       pdf.getPage(i).then(p=>p.getTextContent()).then(tc=>{
         const strs=tc.items.map(it=>it.str);
-        console.log('[PDF] p'+i+' items='+strs.length+' preview='+strs.slice(0,4).join('|'));
         return strs.join(' ');
       })
     );
