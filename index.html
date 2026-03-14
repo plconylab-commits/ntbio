@@ -2205,36 +2205,29 @@ function parsePrescriptionText(text) {
   const nameM = clean.match(/처방전[:\s]*([가-힣]+?(?:님|장로|집사|목사|선생|사장|여사|대표|원장|교수|이사|장))/)
               || clean.match(/처방전[:\s]*([가-힣]{2,5})/);
   if(nameM) name = nameM[1];
-
   const cropM = clean.match(/([가-힣a-zA-Z]+)\((\d+)평\)농사/);
   if(cropM){ crop=cropM[1]; area=cropM[2]; }
-
-  // 마지막 페이지 요약: "N평)농사 지역명 이름님 사용금액"
   const regionM = clean.match(/\d+평\)농사\s+([가-힣+\s]+?)\s+[가-힣]{2,}(?:님|장로|집사|목사)\s+사용금액/);
   if(regionM) region = regionM[1].trim();
 
-  // 제품 파싱
+  // 제품 파싱 헬퍼
   const norm = s => s.toLowerCase().replace(/\s+/g,'').replace(/[（(][^)）]*[)）]/g,'').replace(/쎄/g,'세').replace(/-/g,'');
   const isSz = t => /^\d+(?:\.\d+)?(kg|g|ml|L)$/i.test(t);
   const isQt = t => /^반/.test(t) || /^[\d.]+(?:봉|병|통|포|개|캔)$/.test(t);
   const parseQt = t => { if(!t) return 1; if(t.startsWith('반')) return 0.5; const n=parseFloat(t); return isNaN(n)?1:n; };
   const isAreaTok = t => /^\d+평$/.test(t);
-
+  // 제품명이 토큰을 포함하는 방향만 허용 (역방향은 설명 텍스트 오매칭 방지)
   const findProd = normt => {
     if(normt.length < 2) return null;
-    let p = PRODS.find(p2 => norm(p2.name) === normt);
-    // 제품명이 토큰을 포함하는 방향만 허용 (역방향은 설명 텍스트 오매칭 방지)
-    if(!p && normt.length >= 3) p = PRODS.find(p2 => norm(p2.name).includes(normt));
-    return p || null;
+    return PRODS.find(p=>norm(p.name)===normt) || (normt.length>=3 ? PRODS.find(p=>norm(p.name).includes(normt)) : null);
   };
   const bestProd = (normt, normSz) => {
-    if(normSz) {
-      const e = PRODS.find(p=>norm(p.name)===normt && norm(p.size)===normSz); if(e) return e;
-      const pe = PRODS.find(p=>norm(p.name).includes(normt)&&norm(p.size)===normSz); if(pe) return pe;
+    if(normSz){
+      const e=PRODS.find(p=>norm(p.name)===normt&&norm(p.size)===normSz); if(e) return e;
+      const pe=PRODS.find(p=>norm(p.name).includes(normt)&&norm(p.size)===normSz); if(pe) return pe;
     }
     return findProd(normt);
   };
-
   const totals = {};
   const addItem = (nameStr, sizeStr, rawQty) => {
     const normt=norm(nameStr), normSz=sizeStr?norm(sizeStr):'';
@@ -2250,34 +2243,31 @@ function parsePrescriptionText(text) {
     const normt = norm(tokens[i]);
     if(!findProd(normt)){ i++; continue; }
 
-    // 연속 제품명 수집
-    const nameBlock=[];
-    let j=i;
-    while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
-    while(j<tokens.length && isAreaTok(tokens[j])) j++; // 평수 스킵
+    // ── 선독(peek): 연속 PRODS 토큰 개수 세고, area 스킵 후 size가 오면 열 모드 ──
+    let peekJ=i, peekCnt=0;
+    while(peekJ<tokens.length && findProd(norm(tokens[peekJ]))){ peekCnt++; peekJ++; }
+    let peekK=peekJ;
+    while(peekK<tokens.length && isAreaTok(tokens[peekK])) peekK++;
+    const isColMode = peekCnt>1 && peekK<tokens.length && isSz(tokens[peekK]);
 
-    if(nameBlock.length>1 && j<tokens.length && isSz(tokens[j])) {
-      // 열 순서 모드: 이름들→규격들→수량들
-      const szBlock=[], qtBlock=[];
+    if(isColMode){
+      // 열 순서 모드: [이름×N] → [규격×N] → [수량×N]
+      const nameBlock=[], szBlock=[], qtBlock=[];
+      let j=i;
+      while(j<tokens.length && findProd(norm(tokens[j]))) nameBlock.push(tokens[j++]);
+      while(j<tokens.length && isAreaTok(tokens[j])) j++;
       while(j<tokens.length && isSz(tokens[j])) szBlock.push(tokens[j++]);
       while(j<tokens.length && isQt(tokens[j])) qtBlock.push(tokens[j++]);
-      for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k],szBlock[k]||null,parseQt(qtBlock[k]||null));
-      i=j;
-    } else if(nameBlock.length>1 && j<tokens.length && isQt(tokens[j])) {
-      // 규격 없이 수량만 있는 열 모드
-      const qtBlock=[];
-      while(j<tokens.length && isQt(tokens[j])) qtBlock.push(tokens[j++]);
-      for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k],null,parseQt(qtBlock[k]||null));
-      i=j;
-    } else if(nameBlock.length>1) {
-      // 규격·수량 모두 없음 → 헤더 텍스트, 건너뜀
+      for(let k=0;k<nameBlock.length;k++) addItem(nameBlock[k], szBlock[k]||null, parseQt(qtBlock[k]||null));
       i=j;
     } else {
-      // 단일 제품, 행 순서 모드
+      // 행 순서 모드: 한 토큰씩 처리 (헤더 혼재 방지)
+      let j=i+1;
+      while(j<tokens.length && isAreaTok(tokens[j])) j++;
       let sizeStr=null, rawQty=1, foundQty=false;
       if(j<tokens.length && isSz(tokens[j])){ sizeStr=tokens[j++]; if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; } }
       else if(j<tokens.length && isQt(tokens[j])){ rawQty=parseQt(tokens[j++]); foundQty=true; }
-      // 규격이나 수량이 없으면 헤더/설명 텍스트로 간주, 추가 안 함
+      // 규격 또는 수량이 있을 때만 추가 (없으면 헤더/설명)
       if(sizeStr || foundQty) addItem(tokens[i], sizeStr, rawQty);
       i=j;
     }
