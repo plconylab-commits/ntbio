@@ -40,6 +40,8 @@ async function callVisionAPI(base64Images) {
     return null;
   }
 
+  console.log('[Vision] API 호출 시작 — 이미지 수:', base64Images.length);
+
   // 이미지 파트 구성 (페이지마다 image_url 메시지 추가)
   const imageContents = base64Images.map(b64 => ({
     type: 'image_url',
@@ -69,6 +71,8 @@ async function callVisionAPI(base64Images) {
     })
   });
 
+  console.log('[Vision] 응답 상태:', response.status);
+
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(`OpenAI API 오류 (${response.status}): ${err?.error?.message || response.statusText}`);
@@ -77,11 +81,19 @@ async function callVisionAPI(base64Images) {
   const data = await response.json();
   const raw = data.choices?.[0]?.message?.content || '';
 
+  console.log('[Vision] 원본 응답 (첫 300자):', raw.substring(0, 300));
+
   // 마크다운 코드 블록 제거 (```json ... ``` 또는 ``` ... ```)
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
 
-  return JSON.parse(cleaned);
+  console.log('[Vision] 파싱 시도 (첫 300자):', cleaned.substring(0, 300));
+
+  const parsed = JSON.parse(cleaned);
+  console.log('[Vision] 파싱 성공 — prescriptions 수:', parsed?.prescriptions?.length);
+  return parsed;
 }
+
+
 
 /**
  * PDF File 객체를 처방전 표준 JSON으로 변환 (메인 진입점)
@@ -90,11 +102,19 @@ async function callVisionAPI(base64Images) {
  */
 async function parsePdfToJSON(pdfFile) {
   try {
+    console.log('[Parser] 시작 — 파일 타입:', typeof pdfFile, pdfFile instanceof File ? '(File 객체 ✓)' : '(File 아님 ✗)');
+    console.log('[Parser] pdfFile:', pdfFile);
+
     const images = await pdfToBase64Images(pdfFile, 2.0);
+    console.log('[Parser] 이미지 변환 완료 — 페이지 수:', images.length);
+
     const result = await callVisionAPI(images);
+    console.log('[Parser] 최종 결과:', result);
     return result;
   } catch (e) {
-    alert(`처방전 분석 중 오류가 발생했습니다.\n\n${e.message}`);
+    console.error('[Parser] ❌ 오류 전체:', e);
+    console.error('[Parser] 오류 위치(stack):', e.stack);
+    alert(`처방전 분석 중 오류가 발생했습니다.\n\n${e.name}: ${e.message}`);
     return null;
   }
 }
