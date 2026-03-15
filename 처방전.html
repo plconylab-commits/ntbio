@@ -712,6 +712,12 @@ let managerPhone = localStorage.getItem('managerPhone') || '010-3704-5963';
 let stageIdCnt = 0;
 let groupLabels = {};      // { mk: '커스텀 레이블' }
 let stageGroupOrder = [];  // 그룹 표시 순서 (mk 배열)
+
+function getStageGroupKey(st) {
+  if (st && st.pageGroup !== undefined && st.pageGroup !== null && st.pageGroup !== '') return Number(st.pageGroup);
+  if (st && st.sourcePage !== undefined && st.sourcePage !== null && st.sourcePage !== '') return 1000 + Number(st.sourcePage);
+  return Number((st && st.month) || 0);
+}
 let _dragGroupMk = null;
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -750,7 +756,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const saved = JSON.parse(rawStages);
       if (saved.stages && saved.stages.length > 0) {
         stageIdCnt = 0;
-        stages = saved.stages.map(s => ({ ...s, id: ++stageIdCnt }));
+        stages = saved.stages.map(s => ({ ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '' }));
         pageOrder = saved.pageOrder || [];
         costVisible = saved.costVisible || false;
         priceOverrides = saved.priceOverrides || {};
@@ -1049,7 +1055,7 @@ function getStageLabelHtml(st) {
 }
 
 function getStageBadge(st) {
-  const month = st.month ? `${st.month}월 ` : '';
+  const month = st.pageGroup && st.pageGroup >= 1001 ? `${st.pageGroup - 1000}페이지 ` : (st.month ? `${st.month}월 ` : '');
   // 줄바꿈을 공백으로 치환해 뱃지 한 줄 표시
   const label = getStageLabel(st).replace(/\n/g, ' ');
   const date  = st.dateRange ? ` · ${st.dateRange}` : '';
@@ -1075,7 +1081,7 @@ function renderStages() {
   // 월별 그룹으로 묶기
   const groupMap = {};
   stages.forEach((st, si) => {
-    const mk = st.month ?? 0;
+    const mk = getStageGroupKey(st);
     if (!groupMap[mk]) groupMap[mk] = [];
     groupMap[mk].push(si);
   });
@@ -1267,7 +1273,7 @@ function renderStages() {
 
   list.innerHTML = stageGroupOrder.filter(mk => groupMap[mk]).map(mk => {
     const siList = groupMap[mk];
-    const label = groupLabels[mk] || (mk === 0 ? '기비 (기본시비)' : `${mk}월`);
+    const label = groupLabels[mk] || (mk >= 1001 ? `${mk - 1000}페이지 처방` : (mk === 0 ? '기비 (기본시비)' : `${mk}월`));
     const isCollapsed = !!window._monthGroupCollapsed[mk];
     const cardsHtml = siList.map(si => makeCard(stages[si], si)).join('');
     return `<div class="month-group" id="monthGrp_${mk}"
@@ -1304,7 +1310,7 @@ function toggleMonthGroup(mk) {
 function syncGroupOrder() {
   const seen = [];
   stages.forEach(st => {
-    const mk = st.month ?? 0;
+    const mk = getStageGroupKey(st);
     if (!seen.includes(mk)) seen.push(mk);
   });
   // 신규 그룹 추가 (뒤에 붙이기)
@@ -1312,8 +1318,8 @@ function syncGroupOrder() {
     if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
     if (!groupLabels[mk]) {
       // 기존 purpose를 초기 레이블로 (구형 PDF 호환)
-      const firstPurpose = stages.filter(s => (s.month ?? 0) === mk).map(s => s.purpose).filter(Boolean)[0];
-      groupLabels[mk] = firstPurpose || (mk === 0 ? '기비 (기본시비)' : `${mk}월`);
+      const firstPurpose = stages.filter(s => getStageGroupKey(s) === mk).map(s => s.purpose).filter(Boolean)[0];
+      groupLabels[mk] = firstPurpose || (mk >= 1001 ? `${mk - 1000}페이지 처방` : (mk === 0 ? '기비 (기본시비)' : `${mk}월`));
     }
   });
   // 없어진 그룹 제거
@@ -1329,20 +1335,23 @@ function setGroupLabel(mk, val) {
 
 // ── 그룹 복사 ────────────────────────────
 function copyGroup(mk) {
-  const newMk = Math.max(0, ...stages.map(s => s.month ?? 0), ...stageGroupOrder) + 1;
-  const srcStages = stages.filter(st => (st.month ?? 0) === mk);
+  const newMk = Math.max(0, ...stages.map(s => getStageGroupKey(s)), ...stageGroupOrder) + 1;
+  const srcStages = stages.filter(st => getStageGroupKey(st) === mk);
   if (!srcStages.length) return;
   const copies = srcStages.map(st => ({
     ...st,
     id: ++stageIdCnt,
     month: newMk,
+    pageGroup: newMk,
+    sourcePage: st.sourcePage ?? null,
+    pageType: st.pageType || '',
     products: (st.products || []).map(p => ({...p})),
     funcTags: [...(st.funcTags || [])],
   }));
   // 원본 그룹의 마지막 stage 바로 뒤에 삽입
   let insertIdx = stages.length;
   for (let i = stages.length - 1; i >= 0; i--) {
-    if ((stages[i].month ?? 0) === mk) { insertIdx = i + 1; break; }
+    if (getStageGroupKey(stages[i]) === mk) { insertIdx = i + 1; break; }
   }
   stages.splice(insertIdx, 0, ...copies);
   const mkIdx = stageGroupOrder.indexOf(mk);
@@ -1356,10 +1365,10 @@ function copyGroup(mk) {
 // ── 그룹 삭제 ────────────────────────────
 function deleteGroup(mk) {
   const label = groupLabels[mk] || `${mk}월`;
-  const count = stages.filter(st => (st.month ?? 0) === mk).length;
+  const count = stages.filter(st => getStageGroupKey(st) === mk).length;
   if (!confirm(`"${label}" 카테고리(${count}단계)를 삭제할까요?`)) return;
   _pushHistory();
-  stages = stages.filter(st => (st.month ?? 0) !== mk);
+  stages = stages.filter(st => getStageGroupKey(st) !== mk);
   stageGroupOrder = stageGroupOrder.filter(k => k !== mk);
   delete groupLabels[mk];
   renderStages();
@@ -1402,7 +1411,7 @@ function groupDrop(e, mk) {
   // stages 배열도 그룹 순서에 맞춰 재정렬
   const newStages = [];
   stageGroupOrder.forEach(gmk => {
-    stages.forEach(st => { if ((st.month ?? 0) === gmk) newStages.push(st); });
+    stages.forEach(st => { if (getStageGroupKey(st) === gmk) newStages.push(st); });
   });
   stages = newStages;
   // pageOrder의 group_ 키도 stageGroupOrder 순서에 맞춰 재정렬
@@ -1721,7 +1730,8 @@ function getPageLabel(key) {
   if (key === 'cost')  return '💰 비용 요약';
   if (key.startsWith('group_')) {
     const month = parseInt(key.replace('group_', ''));
-    const lbl = groupLabels[month] || (month ? `${month}월 처방` : '기본 처방');
+    const fallback = month >= 1001 ? `${month - 1000}페이지 처방` : (month ? `${month}월 처방` : '기본 처방');
+    const lbl = groupLabels[month] || fallback;
     return lbl.slice(0, 14);
   }
   return key;
@@ -1731,7 +1741,7 @@ function syncPageOrder() {
   const current = ['cover'];
   const seen = {};
   stages.forEach(st => {
-    const k = 'group_' + (st.month || 0);
+    const k = 'group_' + getStageGroupKey(st);
     if (!seen[k]) { seen[k] = true; current.push(k); }
   });
   if (costVisible) current.push('cost');
@@ -1757,7 +1767,7 @@ function getTocPreview(key) {
   }
   if (key.startsWith('group_')) {
     const month = parseInt(key.replace('group_', ''));
-    const grp = stages.filter(s => (s.month || 0) === month);
+    const grp = stages.filter(s => getStageGroupKey(s) === month);
     if (!grp.length) return '';
     const rows = grp.map(st => {
       const prods = (st.products || []).filter(p => p.key);
@@ -2112,7 +2122,7 @@ function generatePreview() {
   // ── 월별 그룹 미리 빌드 ──
   const groups = {};
   stages.forEach(st => {
-    const k = st.month || 0;
+    const k = getStageGroupKey(st);
     if (!groups[k]) groups[k] = [];
     groups[k].push(st);
   });
@@ -2128,7 +2138,7 @@ function generatePreview() {
 
   function buildGroupPage(monthKey) {
     const stagesInGroup = groups[monthKey] || [];
-    const pageTitle = groupLabels[monthKey] || (monthKey ? `${monthKey}월 처방` : '기본 처방');
+    const pageTitle = groupLabels[monthKey] || (monthKey >= 1001 ? `${monthKey - 1000}페이지 처방` : (monthKey ? `${monthKey}월 처방` : '기본 처방'));
     let rows = '';
     stagesInGroup.forEach(st => {
       const si = stages.indexOf(st);
@@ -2265,7 +2275,7 @@ function generatePreview() {
       n: name, rg: region, ar: area, cr: crop, at: areaType,
       cart: (rxData.cart||[]).map(c => [c.name, c.size, c.qty, c.retail, c.sp]),
       st: stages.map(s => ({
-        m: s.month, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
+        m: s.month, pg: s.pageGroup ?? undefined, sp: s.sourcePage ?? undefined, pt: s.pageType || undefined, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
         a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
@@ -2386,6 +2396,17 @@ async function extractRxPdfCoords(pdfDoc) {
   return allItems;
 }
 
+
+function detectTypeFromParsedLabel(label, products) {
+  const text = [label || '', ...(products || []).map(p => p.key || ''), ...(products || []).map(p => p.desc || '')].join(' ');
+  if (/엽면/.test(text)) return '엽면';
+  if (/관주/.test(text)) return '관주';
+  if (/감사|수확/.test(text)) return '감사비료';
+  if (/기비|밑거름|기본시비|토양|경운/.test(text)) return '기비';
+  if (/추비/.test(text)) return '추비';
+  return '';
+}
+
 function parseRxPdfCoords(items) {
   // 행으로 묶기
   const rows = [];
@@ -2491,11 +2512,16 @@ function parseRxPdfCoords(items) {
       products.push({ key, qty, unit, desc: '' });
     });
 
+    const rawLabel = sb.texts.join('\n').trim();
+    const inferredType = detectTypeFromParsedLabel(rawLabel, products);
     stages.push({
-      stageLabelOverride: sb.texts.join('\n'),  // 원문 그대로
+      stageLabelOverride: rawLabel,  // 원문 그대로
       stageLabel: '',
-      type: '',
+      type: inferredType,
       month: 0,
+      sourcePage: sb.page,
+      pageGroup: 1000 + sb.page,
+      pageType: inferredType,
       days: '', dateRange: '', purpose: '',
       funcTags: [], funcColor: '#ffffff',
       typeNumOverride: 0, typeNumWord: '',
@@ -2589,7 +2615,7 @@ function applyRxData(d) {
   // stages 복원
   stageIdCnt = 0;
   stages = (d.st||[]).map(s => ({
-    id: ++stageIdCnt, month: s.m||0, type: s.t||'', days: s.d||'',
+    id: ++stageIdCnt, month: s.m||0, pageGroup: s.pg ?? null, sourcePage: s.sp ?? null, pageType: s.pt || '', type: s.t||'', days: s.d||'',
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0, typeNumWord: s.tw||'',
     stageLabelOverride: s.sl||'', stageLabel: s.lb||'',
@@ -3144,7 +3170,7 @@ function _saveRxStages() {
   try {
     localStorage.setItem('rxStages', JSON.stringify({
       stages: stages.map(s => ({
-        type: s.type, month: s.month||0, days: s.days||'', dateRange: s.dateRange||'',
+        type: s.type, month: s.month||0, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType||'', days: s.days||'', dateRange: s.dateRange||'',
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null,
         typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',

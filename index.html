@@ -2314,7 +2314,7 @@ function applyRxPdfEmbed(d){
   // rxStages 저장 → 처방전 이동 시 단계 복원
   const stagesData={
     stages:(d.st||[]).map(s=>({
-      type:s.t||'',month:s.m||0,days:s.d||'',dateRange:s.dr||'',
+      type:s.t||'',month:s.m||0,pageGroup:s.pg??null,sourcePage:s.sp??null,pageType:s.pt||'',days:s.d||'',dateRange:s.dr||'',
       purpose:s.p||'',funcTags:s.ft||[],funcColor:s.fc||'#ffffff',
       products:(s.pr||[]).map(pr=>({
         key:pr[0],qty:pr[1],unit:pr[2]||'개',desc:pr[3]||'',prodArea:pr[4]||null
