@@ -328,9 +328,14 @@ function normalizeUsage(rawText) {
     waterAmountRaw: '',
     waterAmountValue: null,
     waterAmountUnit: '',
+    // v14: 물량 범위 (waterMin === waterMax이면 단일값)
+    waterMin: null,
+    waterMax: null,
+    waterUnit: '',
     baseArea: null,
     applicationMethod: '',
     note: '',
+    usageDisplayText: '',
     warnings,
     parseLog
   };
@@ -342,44 +347,94 @@ function normalizeUsage(rawText) {
 
   let remaining = rawText.trim();
 
-  // ── 1단계: 물 희석량 추출 ─────────────────────────────────────────
-  const waterM = RX_WATER_RE.exec(remaining);
-  if (waterM) {
-    result.waterAmountRaw   = waterM[0];
-    result.waterAmountValue = Number(waterM[1]);
-    result.waterAmountUnit  = waterM[2];
-    parseLog.push(`물 희석량: "${waterM[0]}" → ${waterM[1]}${waterM[2]}`);
-    // 추출된 부분 제거 (물 + 앞의 "물" 문자도 함께 제거)
-    remaining = remaining.replace(/물\s*/.source + waterM[0], '').replace(waterM[0], '').trim();
+  // ── 1단계: 물 희석량 추출 (범위 지원) ──────────────────────────────
+  // 1-a: 물(25말-50말) 또는 물(25말~50말) 범위 패턴
+  const rangeM = remaining.match(/물\s*\(?\s*(\d+(?:\.\d+)?)\s*(말|통|L|ℓ|리터)\s*[-~]\s*(\d+(?:\.\d+)?)\s*(?:말|통|L|ℓ|리터)?\s*\)?/);
+  if (rangeM) {
+    result.waterMin = Number(rangeM[1]);
+    result.waterMax = Number(rangeM[3]);
+    result.waterUnit = rangeM[2];
+    result.waterAmountRaw = rangeM[0];
+    result.waterAmountValue = result.waterMin;
+    result.waterAmountUnit = result.waterUnit;
+    remaining = remaining.replace(rangeM[0], '').trim();
+    parseLog.push(`물 희석량(범위): ${result.waterMin}-${result.waterMax}${result.waterUnit}`);
+  }
+  // 1-b: 물(25말) 또는 물25말 단일 패턴
+  if (result.waterMin === null) {
+    const singleM = remaining.match(/물\s*\(?\s*(\d+(?:\.\d+)?)\s*(말|통|L|ℓ|리터)\s*\)?/);
+    if (singleM) {
+      result.waterMin = Number(singleM[1]);
+      result.waterMax = result.waterMin;
+      result.waterUnit = singleM[2];
+      result.waterAmountRaw = singleM[0];
+      result.waterAmountValue = result.waterMin;
+      result.waterAmountUnit = result.waterUnit;
+      remaining = remaining.replace(singleM[0], '').trim();
+      parseLog.push(`물 희석량: ${result.waterMin}${result.waterUnit}`);
+    }
+  }
+  // 1-c: 기존 RX_WATER_RE 폴백 (물 키워드 없이 숫자+단위만)
+  if (result.waterMin === null) {
+    const waterM = RX_WATER_RE.exec(remaining);
+    if (waterM) {
+      result.waterMin = Number(waterM[1]);
+      result.waterMax = result.waterMin;
+      result.waterUnit = waterM[2];
+      result.waterAmountRaw = waterM[0];
+      result.waterAmountValue = result.waterMin;
+      result.waterAmountUnit = waterM[2];
+      remaining = remaining.replace(/물\s*/, '').replace(waterM[0], '').trim();
+      parseLog.push(`물 희석량(폴백): ${waterM[1]}${waterM[2]}`);
+    }
   }
 
-  // ── 2단계: 기준 평수 추출 ─────────────────────────────────────────
-  const areaM = RX_AREA_RE.exec(remaining);
-  if (areaM) {
-    result.baseArea = Number(areaM[1]);
-    parseLog.push(`기준 평수: "${areaM[0]}" → ${areaM[1]}평`);
-    remaining = remaining.replace(areaM[0], '').trim();
+  // ── 2단계: 방법+평수 복합 패턴 우선 추출 ──────────────────────────
+  // 관주방법(550평), 엽면시비(1000평), 관주시(1000평), 엽면시(1000평)
+  const methodAreaM = remaining.match(/(관주방법|엽면방법|관주시비|엽면시비|관주시|엽면시|엽면시비|관주|엽면)\s*\(?\s*(\d+(?:\.\d+)?)\s*평\s*\)?/);
+  if (methodAreaM) {
+    const raw = methodAreaM[1];
+    result.applicationMethod = /관주/.test(raw) ? '관주' : /엽면/.test(raw) ? '엽면' : '토양';
+    result.baseArea = Number(methodAreaM[2]);
+    remaining = remaining.replace(methodAreaM[0], '').trim();
+    parseLog.push(`방법+평수: ${result.applicationMethod}(${result.baseArea}평)`);
   }
 
-  // ── 3단계: 시용방법 감지 ──────────────────────────────────────────
-  if (/관주/.test(remaining)) {
-    result.applicationMethod = '관주';
-    parseLog.push('시용방법: 관주');
-  } else if (/엽면/.test(remaining)) {
-    result.applicationMethod = '엽면';
-    parseLog.push('시용방법: 엽면');
-  } else if (/토양/.test(remaining)) {
-    result.applicationMethod = '토양';
-    parseLog.push('시용방법: 토양');
+  // 2-b: 평수만 (방법 없이)
+  if (result.baseArea === null) {
+    const areaM = RX_AREA_RE.exec(remaining);
+    if (areaM) {
+      result.baseArea = Number(areaM[1]);
+      parseLog.push(`기준 평수: "${areaM[0]}" → ${areaM[1]}평`);
+      remaining = remaining.replace(areaM[0], '').trim();
+    }
+  }
+
+  // ── 3단계: 시용방법 감지 (아직 미설정인 경우) ──────────────────────
+  if (!result.applicationMethod) {
+    if (/관주/.test(remaining))      { result.applicationMethod = '관주'; parseLog.push('시용방법: 관주'); }
+    else if (/엽면/.test(remaining)) { result.applicationMethod = '엽면'; parseLog.push('시용방법: 엽면'); }
+    else if (/토양/.test(remaining)) { result.applicationMethod = '토양'; parseLog.push('시용방법: 토양'); }
   }
 
   // ── 4단계: 나머지 → note ──────────────────────────────────────────
-  // 괄호 안 빈 내용 정리 후 공백 정규화
   const cleaned = remaining
-    .replace(/\(\s*\)/g, '')       // 빈 괄호 제거
+    .replace(/\(\s*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   result.note = cleaned;
+
+  // ── 5단계: usageDisplayText 생성 ──────────────────────────────────
+  const parts = [];
+  if (result.waterMin !== null) {
+    parts.push(result.waterMin === result.waterMax
+      ? `물 ${result.waterMin}${result.waterUnit}`
+      : `물 ${result.waterMin}-${result.waterMax}${result.waterUnit}`);
+  }
+  if (result.applicationMethod) parts.push(result.applicationMethod);
+  if (result.baseArea !== null) parts.push(`${result.baseArea}평`);
+  if (cleaned) parts.push(cleaned);
+  result.usageDisplayText = parts.join(' / ') || rawText;
 
   return result;
 }
@@ -653,8 +708,12 @@ function classifyRightRow(text) {
     return 'product';
   }
 
-  // 물 희석량 또는 관주방법/엽면방법/희석/배율 포함 → 사용방법 행
-  if (RX_WATER_RE.test(t) || /관주방법|엽면방법|희석|배율/.test(t)) {
+  // 물 희석량 또는 관주방법/엽면방법/엽면시비/관주시/엽면시/희석/배율 포함 → 사용방법 행
+  if (RX_WATER_RE.test(t) || /관주방법|엽면방법|엽면시비|관주시비|관주시\s*\(|엽면시\s*\(|희석|배율/.test(t)) {
+    return 'usage';
+  }
+  // 물(숫자) 또는 물숫자말 패턴도 사용방법
+  if (/물\s*[\(\d]\s*\d+\s*(말|통|L|ℓ|리터)/.test(t)) {
     return 'usage';
   }
 
@@ -664,6 +723,48 @@ function classifyRightRow(text) {
   }
 
   return 'description';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * SECTION 8.5: splitCompositeRow(text)   — v14 추가
+ * 한 줄에 제품+사용법이 복합으로 붙어 있으면 분리한다.
+ * 예: "딥루트 10L 1통 물(25말)" → product:"딥루트 10L 1통" + usage:"물(25말)"
+ * ═══════════════════════════════════════════════════════════════════════ */
+function splitCompositeRow(text) {
+  if (!text || !text.trim()) return { parts: [], originalText: text || '' };
+  const t = text.trim();
+
+  // 사용법 시작 마커 패턴 (제품 데이터 뒤에 올 수 있는 사용법 시작점)
+  const usageMarkers = [
+    /\s+(물\s*\(\s*\d)/,                            // "물(25말)"
+    /\s+(물\s*\d+\s*(?:말|통|L|ℓ|리터))/,            // "물25말"
+    /\s+(관주방법|엽면방법|관주시비|엽면시비)\s*\(?/,   // "관주방법(550평)"
+    /\s+(관주시|엽면시)\s*\(/,                        // "관주시(1000평)"
+    /\s+(\d+평)\s+(관주|엽면|토양)/,                  // "550평 관주"
+    /\s+(물\s*\(\s*\d+\s*(?:말|통|L|ℓ|리터)\s*[-~]\s*\d+)/, // "물(25말-50말)"
+  ];
+
+  for (const re of usageMarkers) {
+    const m = t.match(re);
+    if (m && m.index > 0) {
+      const productPart = t.slice(0, m.index).trim();
+      const usagePart   = t.slice(m.index).trim();
+      // 제품 부분이 최소 길이 있어야 (빈 분리 방지)
+      if (productPart.length >= 2) {
+        return {
+          originalText: t,
+          parts: [
+            { type: 'product', text: productPart },
+            { type: 'usage',   text: usagePart }
+          ]
+        };
+      }
+    }
+  }
+
+  // 분리 불필요 → 단일 분류
+  const kind = classifyRightRow(t);
+  return { parts: [{ type: kind, text: t }], originalText: t };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -725,7 +826,8 @@ function classifyRightRow(text) {
  *   parseLog: string[]
  * }}
  */
-function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackArea, usageContext }) {
+function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackArea, usageContext,
+                      inlineUsageRaw, blockUsageRaw }) {
   const warnings = [];
   const parseLog = [];
 
@@ -734,20 +836,50 @@ function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackAre
   warnings.push(...stage.warnings);
   parseLog.push(...stage.parseLog.map(l => `[stage] ${l}`));
 
-  // ── 제품 행 분해 ────────────────────────────────────────────────────
-  const decomp = decomposeProductText(productRaw || '');
+  // ── v14: 인라인 사용법 분리 (제품 행 안에 사용법이 붙어 있으면 분리) ──
+  let effectiveProductRaw = productRaw || '';
+  let effectiveInlineUsage = inlineUsageRaw || null;
+  if (!effectiveInlineUsage && effectiveProductRaw) {
+    const split = splitCompositeRow(effectiveProductRaw);
+    if (split.parts.length > 1) {
+      effectiveProductRaw = split.parts.find(p => p.type === 'product')?.text || effectiveProductRaw;
+      const usagePart = split.parts.find(p => p.type === 'usage');
+      if (usagePart) {
+        effectiveInlineUsage = usagePart.text;
+        parseLog.push(`[split] 복합행 분리: 제품="${effectiveProductRaw}" / 사용법="${effectiveInlineUsage}"`);
+      }
+    }
+  }
+
+  // ── 제품 행 분해 (사용법 분리 후 순수 제품 텍스트만) ────────────────
+  const decomp = decomposeProductText(effectiveProductRaw);
   warnings.push(...decomp.warnings);
   parseLog.push(...decomp.parseLog.map(l => `[decomp] ${l}`));
 
+  // ── v14: 사용법 결정 (우선순위: 인라인 > usageContext > 블록 > stage.type) ──
+  // baseArea 결정보다 먼저 실행해야 effectiveUsage.baseArea를 폴백으로 사용 가능
+  let effectiveUsage = usageContext;
+  if (effectiveInlineUsage) {
+    const inlineParsed = normalizeUsage(effectiveInlineUsage);
+    if (inlineParsed.waterAmountValue || inlineParsed.baseArea || inlineParsed.applicationMethod) {
+      effectiveUsage = inlineParsed;
+      parseLog.push(`[usage] 인라인 사용법 적용: "${effectiveInlineUsage}"`);
+    }
+  }
+  if (!effectiveUsage && blockUsageRaw) {
+    effectiveUsage = normalizeUsage(blockUsageRaw);
+    parseLog.push(`[usage] 블록 사용법 적용: "${blockUsageRaw}"`);
+  }
+
   // ── 기준 평수 결정 ────────────────────────────────────────────────
-  // 우선순위: 제품 행 평수 > usageContext 평수 > fallbackArea
+  // 우선순위: 제품 행 평수 > effectiveUsage 평수 > fallbackArea
   let baseArea    = decomp.baseArea;
   let baseAreaRaw = decomp.baseAreaRaw;
 
-  if (baseArea === null && usageContext && usageContext.baseArea !== null) {
-    baseArea    = usageContext.baseArea;
-    baseAreaRaw = `(usage: ${usageContext.baseArea}평)`;
-    parseLog.push(`[area] usageContext 폴백: ${usageContext.baseArea}평`);
+  if (baseArea === null && effectiveUsage && effectiveUsage.baseArea !== null) {
+    baseArea    = effectiveUsage.baseArea;
+    baseAreaRaw = `(usage: ${effectiveUsage.baseArea}평)`;
+    parseLog.push(`[area] usage 폴백: ${effectiveUsage.baseArea}평`);
   }
   if (baseArea === null && fallbackArea !== null) {
     baseArea    = fallbackArea;
@@ -758,11 +890,10 @@ function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackAre
     warnings.push('기준 평수 없음 — 별도 입력 필요');
   }
 
-  // ── 시용방법 결정 ─────────────────────────────────────────────────
-  // usageContext 우선, 없으면 stage.type 으로 기본값
+  // 시용방법 결정
   let applicationMethod = '';
-  if (usageContext && usageContext.applicationMethod) {
-    applicationMethod = usageContext.applicationMethod;
+  if (effectiveUsage && effectiveUsage.applicationMethod) {
+    applicationMethod = effectiveUsage.applicationMethod;
   } else if (stage.type === '관주') {
     applicationMethod = '관주';
   } else if (stage.type === '엽면') {
@@ -828,13 +959,20 @@ function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackAre
     baseAreaRaw,
     baseArea,
 
-    // 사용방법 (usage 행에서 추출)
-    usageRaw:          usageContext ? (usageContext.usageRaw         || '') : '',
-    waterAmountRaw:    usageContext ? (usageContext.waterAmountRaw   || '') : '',
-    waterAmountValue:  usageContext ? (usageContext.waterAmountValue || null) : null,
-    waterAmountUnit:   usageContext ? (usageContext.waterAmountUnit  || '') : '',
+    // 사용방법 (인라인 > usageContext > 블록 폴백)
+    usageRaw:          effectiveUsage ? (effectiveUsage.usageRaw         || '') : '',
+    waterAmountRaw:    effectiveUsage ? (effectiveUsage.waterAmountRaw   || '') : '',
+    waterAmountValue:  effectiveUsage ? (effectiveUsage.waterAmountValue || null) : null,
+    waterAmountUnit:   effectiveUsage ? (effectiveUsage.waterAmountUnit  || '') : '',
     applicationMethod,
-    note:              usageContext ? (usageContext.note             || '') : '',
+    note:              effectiveUsage ? (effectiveUsage.note             || '') : '',
+    // v14: 확장 사용법 필드
+    waterMin:          effectiveUsage ? (effectiveUsage.waterMin         || null) : null,
+    waterMax:          effectiveUsage ? (effectiveUsage.waterMax         || null) : null,
+    waterUnit:         effectiveUsage ? (effectiveUsage.waterUnit        || '') : '',
+    usageDisplayText:  effectiveUsage ? (effectiveUsage.usageDisplayText || '') : '',
+    inlineUsageRaw:    effectiveInlineUsage || '',
+    blockUsageRaw:     blockUsageRaw || '',
 
     // 품질 지표
     confidence,

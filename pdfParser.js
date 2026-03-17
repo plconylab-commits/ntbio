@@ -1,5 +1,5 @@
 /**
- * pdfParser.js  v13 — 절대 규칙: stageLabel = 좌측 셀 전체 텍스트(최상단 우선), 제품 Y 정렬 제거
+ * pdfParser.js  v14 — pageTitle/stageLabel 분리 + splitCompositeRow 연동 + blockUsage 구조화
  * pdf.js 좌표 기반 처방전 텍스트 추출 — Vision AI 미사용, 브라우저에서 즉시 처리
  * 의존: prescriptionModel.js (calcRequiredQty), productMapper.js (findProduct),
  *       rxNormalizer.js (classifyRightRow, buildRxRow, inferTotalArea, normalizeUsage)
@@ -374,6 +374,36 @@ async function parsePdfToJSON(pdfFile) {
         }
       }
 
+      // ── v14: pageTitle 분리 (전체 폭을 차지하는 상단 행 감지) ──────
+      // 페이지 상단에서 좌측+우측 열 모두를 가로지르는 긴 텍스트 = pageTitle
+      // (예: "천혜향 뿌리활착+뿌리활력+작물활성 영양생장+생식생장")
+      let pageTitle = '';
+      const pageTitleRows = [];
+      if (rows.length > 0) {
+        // 상단 3행까지 검사
+        for (let ri = 0; ri < Math.min(3, rows.length); ri++) {
+          const r = rows[ri];
+          const xMin = Math.min(...r.items.map(it => it.x));
+          const xMax = Math.max(...r.items.map(it => it.x + it.w));
+          // 좌측 열 시작(x<50) ~ 우측 열(x>effectiveLeftXMax+50) 을 모두 포함하면 전체 폭 행
+          if (xMin < 50 && xMax > effectiveLeftXMax + 50) {
+            const titleText = joinRowText(r.items).trim();
+            // 제품 행(수량+단위)이나 헤더(품목/규격)가 아닌지 확인
+            if (titleText.length > 3 && !COUNT_UNITS_RE.test(titleText) && !/^(품\s*목|규\s*격|월\s*\/?\s*일)/.test(titleText)) {
+              pageTitleRows.push(ri);
+              pageTitle = pageTitle ? pageTitle + ' ' + titleText : titleText;
+            }
+          } else {
+            break; // 전체폭이 아닌 행이 나오면 타이틀 탐색 중단
+          }
+        }
+      }
+      // pageTitle 행은 leftRows/rightRows에서 제외
+      const filteredRows = rows.filter((_, ri) => !pageTitleRows.includes(ri));
+      if (pageTitle) {
+        console.log(`[Parser v14] page ${p} pageTitle: "${pageTitle}"`);
+      }
+
       const leftRows  = [];  // { y, text } — 시기/목적 열 (stage 라벨)
 
       // v7: 우측 행을 COUNT_UNITS_RE 필터 없이 모두 수집한다.
@@ -382,7 +412,7 @@ async function parsePdfToJSON(pdfFile) {
       const rightRowsAll    = [];  // v7: 모든 우측 행 { y, text, kind }
       const rightRowsLegacy = [];  // 하위 호환: COUNT_UNITS_RE 통과한 행만
 
-      for (const row of rows) {
+      for (const row of filteredRows) {
         const leftItems  = row.items.filter(it => it.x <  effectiveLeftXMax);
         const rightItems = row.items.filter(it => it.x >= effectiveLeftXMax);
         const lt = joinRowText(leftItems);
@@ -408,11 +438,25 @@ async function parsePdfToJSON(pdfFile) {
 
         if (lt) leftRows.push({ y: row.y, text: lt });
         if (rt) {
-          const kind = classifyRightRow(rt);
-          if (kind !== 'skip') {
-            rightRowsAll.push({ y: row.y, text: rt, kind });
+          // v14: splitCompositeRow로 복합 행 분리 (제품+사용법 동시 포함 행)
+          const split = splitCompositeRow(rt);
+          if (split.parts.length > 1) {
+            // 복합 행: 각 파트를 별도 행으로 등록
+            for (const part of split.parts) {
+              if (part.type !== 'skip') {
+                rightRowsAll.push({ y: row.y, text: part.text, kind: part.type, splitFrom: rt });
+              }
+            }
+            // 레거시: 원본 텍스트로 등록
+            if (COUNT_UNITS_RE.test(rt)) rightRowsLegacy.push({ y: row.y, text: rt });
+          } else {
+            // 단일 행: 기존 로직
+            const kind = classifyRightRow(rt);
+            if (kind !== 'skip') {
+              rightRowsAll.push({ y: row.y, text: rt, kind });
+            }
+            if (COUNT_UNITS_RE.test(rt)) rightRowsLegacy.push({ y: row.y, text: rt });
           }
-          if (COUNT_UNITS_RE.test(rt)) rightRowsLegacy.push({ y: row.y, text: rt });
         }
       }
 
@@ -522,36 +566,45 @@ async function parsePdfToJSON(pdfFile) {
       // nearest-midpoint 대신 사용: 동일 Y 행 경계에서 오배정 방지
       const blockProducts = stageBlocks.map(() => []);  // 하위 호환 (레거시 행)
       const blockProductsV7 = stageBlocks.map(() => []); // v7 product 행
-      const blockUsage    = stageBlocks.map(() => []);   // v7 usage 행
-      // v12: 블록별 첫 번째 제품 행 Y (stageLabel Y 정렬에 사용)
+      // v14: usage 행을 row-level map으로 관리 (제품별 인라인 사용법 매핑 가능)
+      const blockUsage    = stageBlocks.map(() => []);   // {y, text, splitFrom?}[]
       const blockFirstProductY = stageBlocks.map(() => null);
+      // v14: 제품 행에서 분리된 인라인 사용법 → 해당 제품과 1:1 연결
+      const blockInlineUsage = stageBlocks.map(() => ({})); // { productText: usageText }
+
+      // 선행 블록 찾기 헬퍼
+      function findBlockIdx(y) {
+        let best = 0;
+        for (let i = 0; i < stageBlocks.length; i++) {
+          if (stageBlocks[i].yMin <= y) best = i;
+        }
+        return best;
+      }
 
       // 하위 호환: rightRowsLegacy 배정
       for (const rr of rightRowsLegacy) {
-        let bestIdx = 0;
-        for (let i = 0; i < stageBlocks.length; i++) {
-          if (stageBlocks[i].yMin <= rr.y) bestIdx = i;
-        }
-        blockProducts[bestIdx].push(rr.text);
+        blockProducts[findBlockIdx(rr.y)].push(rr.text);
       }
 
-      // v7: product 행 배정 + v12: 첫 제품 Y 기록
-      for (const rr of productRowsAll) {
-        let bestIdx = 0;
-        for (let i = 0; i < stageBlocks.length; i++) {
-          if (stageBlocks[i].yMin <= rr.y) bestIdx = i;
+      // v14: product/usage 행 배정 (splitFrom 있으면 인라인 연결)
+      for (const rr of rightRowsAll) {
+        const bIdx = findBlockIdx(rr.y);
+        if (rr.kind === 'product') {
+          blockProductsV7[bIdx].push(rr.text);
+          if (blockFirstProductY[bIdx] === null) blockFirstProductY[bIdx] = rr.y;
+          // splitFrom이 있으면 인라인 사용법 연결
+          if (rr.splitFrom) {
+            // 같은 splitFrom에서 온 usage 파트 찾기
+            const usageSibling = rightRowsAll.find(
+              r => r.splitFrom === rr.splitFrom && r.kind === 'usage' && r.y === rr.y
+            );
+            if (usageSibling) {
+              blockInlineUsage[bIdx][rr.text] = usageSibling.text;
+            }
+          }
+        } else if (rr.kind === 'usage') {
+          blockUsage[bIdx].push({ y: rr.y, text: rr.text, splitFrom: rr.splitFrom || null });
         }
-        blockProductsV7[bestIdx].push(rr.text);
-        if (blockFirstProductY[bestIdx] === null) blockFirstProductY[bestIdx] = rr.y; // v12
-      }
-
-      // v7: usage 행 배정
-      for (const rr of usageRowsAll) {
-        let bestIdx = 0;
-        for (let i = 0; i < stageBlocks.length; i++) {
-          if (stageBlocks[i].yMin <= rr.y) bestIdx = i;
-        }
-        blockUsage[bestIdx].push(rr.text);
       }
 
       // ── 블록 → prescription 변환 ─────────────────────────────────
@@ -600,10 +653,13 @@ async function parsePdfToJSON(pdfFile) {
         const labelAreaM    = label.match(/(\d+(?:\.\d+)?)\s*평/);
         const labelBaseArea = labelAreaM ? Number(labelAreaM[1]) : null;
 
-        // v7: usage 행에서 첫 번째 사용방법 파싱 (폴백 평수 추가 확보)
+        // v14: usage 행에서 사용방법 파싱 (row-level map)
         let usageContext = null;
-        if (usageTexts.length > 0) {
-          usageContext = normalizeUsage(usageTexts[0]);
+        const usageEntries = usageTexts;  // [{y, text, splitFrom}]
+        if (usageEntries.length > 0) {
+          // 첫 번째 usage 행 파싱 (블록 레벨 폴백)
+          const firstUsageText = typeof usageEntries[0] === 'string' ? usageEntries[0] : usageEntries[0].text;
+          usageContext = normalizeUsage(firstUsageText);
         }
 
         // v7: fallbackArea 결정 — stage 라벨 평수 우선, 없으면 usage 평수
@@ -644,18 +700,26 @@ async function parsePdfToJSON(pdfFile) {
           parseTrace:     sb.trace       || [],
           // v11: leftCell 원문 및 정제 텍스트
           leftCellLines:  sb.lines       || [],
-          leftCellClean:  label
+          leftCellClean:  label,
+          // v14: 페이지 상단 타이틀 (stageLabel과 분리)
+          pageTitle:      pageTitle || ''
         });
 
-        // ── v7: RxRow 생성 (정규화 파이프라인) ───────────────────────
+        // ── v14: RxRow 생성 (정규화 파이프라인 + 인라인/블록 사용법) ──
+        const inlineMap = blockInlineUsage[idx] || {};
+        const blockUsageRaw = usageEntries.length > 0
+          ? (typeof usageEntries[0] === 'string' ? usageEntries[0] : usageEntries[0].text)
+          : null;
         prodsV7.forEach((productRaw, productIdx) => {
           const rxRow = buildRxRow({
-            stageRaw:    label,
+            stageRaw:       label,
             productRaw,
-            sourcePage:  p,
-            sourceBlock: idx,
+            sourcePage:     p,
+            sourceBlock:    idx,
             fallbackArea,
-            usageContext
+            usageContext,
+            inlineUsageRaw: inlineMap[productRaw] || null,
+            blockUsageRaw:  blockUsageRaw
           });
           // v8: trace 붙이기
           rxRow.parseTrace = sb.trace || [];
@@ -692,6 +756,7 @@ async function parsePdfToJSON(pdfFile) {
             curRxGroup = {
               groupHeader:    label,
               groupType:      detectGroupType(label),
+              pageTitle:      pageTitle || '',    // v14: 페이지 상단 타이틀 (stageLabel과 분리)
               sourcePage:     p,
               pageGroup:      1000 + p,
               parseTrace:     sb.trace || [],

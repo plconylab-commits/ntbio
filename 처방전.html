@@ -1406,12 +1406,14 @@ function syncGroupOrder() {
   seen.forEach(mk => {
     if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
     if (!groupLabels[mk]) {
-      // 초기 레이블 우선순위: purpose → stageLabelOverride → stageLabel → 페이지/월 fallback
+      // 초기 레이블 우선순위: pageTitle(v14) → purpose → stageLabelOverride → stageLabel → fallback
       const groupStages = stages.filter(s => getStageGroupKey(s) === mk);
+      const firstPageTitle = groupStages.map(s => s.pageTitle).filter(Boolean)[0];
       const firstPurpose = groupStages.map(s => s.purpose).filter(Boolean)[0];
       const firstOverride = groupStages.map(s => s.stageLabelOverride).filter(Boolean)[0];
       const firstLabel   = groupStages.map(s => s.stageLabel).filter(Boolean)[0];
-      groupLabels[mk] = firstPurpose
+      groupLabels[mk] = firstPageTitle
+        || firstPurpose
         || firstOverride
         || firstLabel
         || (mk >= 1001 ? `${mk - 1000}페이지 처방` : (mk === 0 ? '기비 (기본시비)' : `${mk}월`));
@@ -2686,15 +2688,17 @@ function generatePreview() {
         const sizeTd = `<td class="size-td" data-row="${rowNum}" data-col="2">${prodSize}</td>`;
         const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
         // 관주/엽면: 첫 행에만 desc 셀 출력 (rowspan으로 통합)
+        // v14: usageDisplayText 우선 표시, 없으면 desc 폴백
         let descTd = '';
+        const descText = p.usageDisplayText || p.desc || '';
         if (isMergedDesc) {
           if (rowIdx === 0) {
-            const allDescs = [...new Set(prods.map(({p:pp}) => pp.desc||'').filter(Boolean))];
+            const allDescs = [...new Set(prods.map(({p:pp}) => pp.usageDisplayText || pp.desc || '').filter(Boolean))];
             const descHtml = allDescs.length ? allDescs.join('<br>') : '<span style="color:#ccc;font-size:11px;">+</span>';
             descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}" style="vertical-align:middle;">${descHtml}</td>`;
           }
         } else {
-          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${descText||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
         }
         if (rowIdx === 0) {
           // 첫 행: stage-td 포함 (_vis.hidden이면 display:none, span 적용)
