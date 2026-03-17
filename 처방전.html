@@ -2650,28 +2650,31 @@ function generatePreview() {
     let rows = '';
     let rowOffset = 0; // 논리 행 인덱스 (data-row 부여 기준)
 
+    // ── 그룹 전체 행 수 계산 → 페이지 제목 셀 rowspan ─────────────────
+    const totalGroupRows = stagesInGroup.reduce((sum, st) => {
+      const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
+      return sum + (prods.length || 1) + ((st._vis||{}).rowspanBonus || 0);
+    }, 0) || 1;
+    let groupCellRendered = false; // 페이지 제목 셀은 그룹당 한 번만 렌더링
+
     stagesInGroup.forEach(st => {
       const si = stages.indexOf(st);
       const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
-      const dateInfo = st.dateRange ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.dateRange})</span>` : '';
-      const areaInfo = st.area ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.area}평)</span>` : '';
 
       // ── _vis 병합 상태 ──────────────────────────────────────────────
       const vis         = st._vis || {};
       const isHidden    = !!vis.hidden;
       const rowspanBonus = vis.rowspanBonus || 0;
-      const colspanBonus = vis.colspanBonus || 0;
-      const stageRowspan = (prods.length || 1) + rowspanBonus;
-      const stageColspan = 1 + colspanBonus;
-
-      // stage-td 공통 속성 (data-row, data-col 포함)
-      const stBase = `class="stage-td rx-editable" data-edit="stage-date"` +
-        ` data-si="${si}" data-row="${rowOffset}" data-col="0" onclick="openRxEdit(this,event)"`;
 
       if (!prods.length) {
         const hiddenStyle = isHidden ? ' style="display:none"' : '';
-        rows += `<tr><td ${stBase} rowspan="${stageRowspan}"${colspanBonus?` colspan="${stageColspan}"`:''}${hiddenStyle}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>` +
-          `<td colspan="4" data-row="${rowOffset}" data-col="1" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        const titleTd = groupCellRendered ? '' :
+          `<td class="stage-td rx-editable" data-edit="page-title" data-monthkey="${monthKey}" ` +
+          `rowspan="${totalGroupRows}" data-row="0" data-col="0" ` +
+          `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
+          `<strong>${pageTitle}</strong></td>`;
+        groupCellRendered = true;
+        rows += `<tr>${titleTd}<td colspan="4" data-row="${rowOffset}" data-col="1"${hiddenStyle} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
         rowOffset += 1;
         return;
       }
@@ -2687,7 +2690,6 @@ function generatePreview() {
         const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${prodAreaLine}</td>`;
         const sizeTd = `<td class="size-td" data-row="${rowNum}" data-col="2">${prodSize}</td>`;
         const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
-        // 관주/엽면: 첫 행에만 desc 셀 출력 (rowspan으로 통합)
         // v14: usageDisplayText 우선 표시, 없으면 desc 폴백
         let descTd = '';
         const descText = p.usageDisplayText || p.desc || '';
@@ -2700,11 +2702,13 @@ function generatePreview() {
         } else {
           descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${descText||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
         }
-        if (rowIdx === 0) {
-          // 첫 행: stage-td 포함 (_vis.hidden이면 display:none, span 적용)
-          const hiddenStyle = isHidden ? ' style="display:none"' : '';
-          const spanAttrs   = ` rowspan="${stageRowspan}"${colspanBonus ? ` colspan="${stageColspan}"` : ''}`;
-          rows += `<tr><td ${stBase}${spanAttrs}${hiddenStyle}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+        if (rowIdx === 0 && !groupCellRendered) {
+          // 그룹 첫 행: 페이지 제목 셀 (전체 rowspan)
+          groupCellRendered = true;
+          rows += `<tr><td class="stage-td rx-editable" data-edit="page-title" data-monthkey="${monthKey}" ` +
+            `rowspan="${totalGroupRows}" data-row="0" data-col="0" ` +
+            `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
+            `<strong>${pageTitle}</strong></td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
           rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         }
