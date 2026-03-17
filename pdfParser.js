@@ -41,6 +41,10 @@ const WORD_GAP_MIN       = 3;     // 이 px 이상 간격이면 공백 삽입
 // v7: COUNT_UNITS_RE 는 하위 호환 목적으로만 유지 (우측 행 수집 필터로는 미사용)
 const COUNT_UNITS_RE = /(\d|반)\s*(포|병|봉|통|개)/;
 
+// v15: 좌측 열에서 완전히 제거할 테이블 헤더/구조 텍스트 패턴
+// 이런 텍스트는 단계명이 아니라 PDF 표 구조 행에서 온 것
+const LEFT_TABLE_HEADER_RE = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단계명?|시기명?|품\s*목|규\s*격|수\s*량|제품명?|용\s*량|사용량|물량\s*[\/\/]?\s*평수|합\s*계|소\s*계|비\s*고|구\s*분|내\s*용|번호|No\.)$/i;
+
 /* ─── 1. 행 아이템 → 자연스러운 텍스트 조합 ─────────────────────── */
 
 /**
@@ -436,7 +440,14 @@ async function parsePdfToJSON(pdfFile) {
           }
         }
 
-        if (lt) leftRows.push({ y: row.y, text: lt });
+        // v15: 테이블 헤더/구조 텍스트는 단계명 후보에서 완전히 제거
+        if (lt) {
+          if (LEFT_TABLE_HEADER_RE.test(lt.trim())) {
+            console.log(`[Parser v15] 좌측 헤더 행 제거: "${lt}" (y=${row.y})`);
+          } else {
+            leftRows.push({ y: row.y, text: lt });
+          }
+        }
         if (rt) {
           // v14: splitCompositeRow로 복합 행 분리 (제품+사용법 동시 포함 행)
           const split = splitCompositeRow(rt);
@@ -510,8 +521,11 @@ async function parsePdfToJSON(pdfFile) {
         let startNew = !curBlock;
         if (!startNew) {
           if (rowType === 'stage_core') {
-            // stage_core 는 STAGE_Y_GAP 초과 시 새 블록
-            startNew = gap > STAGE_Y_GAP;
+            // v15: 현재 블록에 stage_core가 아직 없으면 무조건 새 블록 시작
+            // 이유: 페이지 제목·헤더 등 pre-stage 노이즈 행이 gap < STAGE_Y_GAP으로
+            //       첫 stage_core와 잘못 병합되는 것을 방지
+            const curHasCore = curBlock && curBlock.rowTypes.includes('stage_core');
+            startNew = !curHasCore || gap > STAGE_Y_GAP;
           } else {
             // note / date / connector 는 LEFT_CELL_MAX_GAP 초과 시만 강제 분리
             // 그 이내면 같은 셀의 연속 텍스트로 병합
@@ -553,6 +567,21 @@ async function parsePdfToJSON(pdfFile) {
           prev.trace.push(`  [orphan-merge] 직전 블록에 병합 (y=${sb.yMin}~${sb.yMax})`);
           prev.trace.push(...sb.trace);
           stageBlocks.splice(i, 1);
+        }
+      }
+
+      // v15: stage_core 없는 첫 번째 블록 → pageTitle 보충으로 활용 후 제거
+      // Fix 3에 의해 첫 stage_core가 항상 새 블록을 시작하므로, stageBlocks[0]이
+      // note/date만으로 구성된 경우 = 페이지 제목 또는 표 구조 행
+      if (stageBlocks.length >= 1 && !stageBlocks[0].rowTypes.includes('stage_core')) {
+        const orphan = stageBlocks.shift(); // blockProducts 선언 전이므로 안전하게 제거
+        const orphanText = orphan.lines.filter(t => t.trim()).join(' ').trim();
+        if (orphanText && !LEFT_TABLE_HEADER_RE.test(orphanText)) {
+          // 테이블 헤더가 아닌 텍스트(페이지 제목 등)는 pageTitle 보충으로 활용
+          pageTitle = pageTitle ? pageTitle + ' ' + orphanText : orphanText;
+          console.log(`[Parser v15] 고아 첫 블록 → pageTitle 보충: "${orphanText}"`);
+        } else {
+          console.log(`[Parser v15] 고아 첫 블록 → 테이블 헤더로 판단, 폐기: "${orphanText}"`);
         }
       }
 
