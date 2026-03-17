@@ -1012,3 +1012,50 @@ function inferTotalArea(rxRows) {
   entries.sort((a, b) => b[1] - a[1]);
   return Number(entries[0][0]);
 }
+
+/* ═════════════════════════════════════════════════════════
+ * SECTION N: classifyDetailCell + parseCompositionDetail
+ * ═════════════════════════════════════════════════════════ */
+
+/**
+ * 우측 설명 셀의 종류를 판별한다.
+ * usage      : 물/말/평/관주/엽면 등 시비 정보
+ * composition: 성분비 (N%) 형태
+ * instruction: 문장형 설명문
+ * mixed      : 둘 이상 혼합
+ * empty      : 비어있음
+ */
+function classifyDetailCell(text) {
+  if (!text || !text.trim()) return 'empty';
+  const t = text.trim();
+  const isUsage       = /물\s*[\(（]?\d+\s*말[\)）]?|물\s*\d+|[\d]+\s*평|\d+말|관주방법|엽면시비|관주시|시비|관주|엽면/.test(t);
+  const isComposition = /\d+\s*%|\([0-9]+%\)/.test(t);
+  const isInstruction = /합니다|주세요|하십시오|바랍니다|입니다|됩니다|하여야|해야/.test(t);
+  const count = [isUsage, isComposition, isInstruction].filter(Boolean).length;
+  if (count >= 2) return 'mixed';
+  if (isUsage)       return 'usage';
+  if (isComposition) return 'composition';
+  if (isInstruction) return 'instruction';
+  return 'instruction'; // 기타 설명문
+}
+
+/**
+ * 성분 비율 텍스트를 파싱한다.
+ * 예: "발효계분(55%) 종합광물(20%) 미강(쌀겨/15%)"
+ *   → [{name:"발효계분", pct:55}, {name:"종합광물", pct:20}, {name:"미강(쌀겨)", pct:15}]
+ */
+function parseCompositionDetail(text) {
+  if (!text) return [];
+  const results = [];
+  // 패턴: 이름(숫자%) 또는 이름숫자%
+  const re = /([가-힣a-zA-Z][가-힣a-zA-Z\w\/（）\(\)\s]*?)\s*[\(（]?\s*(\d+(?:\.\d+)?)\s*%\s*[\)）]?/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const name = m[1].replace(/[\s]+$/, '').trim();
+    const pct  = Number(m[2]);
+    if (name.length > 0 && pct > 0 && pct <= 100) {
+      results.push({ name, pct });
+    }
+  }
+  return results;
+}

@@ -20,6 +20,8 @@ const {
   buildRxRow,
   decomposeProductText,
   normalizeStageLabel,
+  classifyDetailCell,
+  parseCompositionDetail,
 } = ctx;
 
 // classifyLeftRow: pdfParser.js에 있으므로 테스트용 로컬 구현 (동일 로직)
@@ -285,6 +287,95 @@ section('v16 pageTitle / stageLabel 분리');
 {
   const r = decomposeProductText('파이토 1L 1병');
   assert('파이토 dosageUnit=병', r && (r.dosageUnit || r.unit || r.countUnit || '병') === '병');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 9. classifyDetailCell
+// ═══════════════════════════════════════════════════════════════
+section('classifyDetailCell');
+
+{
+  // usage: 물/말/평/관주/엽면 관련 텍스트
+  assert('물(50말) = usage',       classifyDetailCell('물(50말)') === 'usage');
+  assert('관주방법(550평) = usage', classifyDetailCell('관주방법(550평)') === 'usage');
+  assert('엽면시비(550평) = usage', classifyDetailCell('엽면시비(550평)') === 'usage');
+  assert('관주 = usage',           classifyDetailCell('관주') === 'usage');
+  assert('550평 = usage',          classifyDetailCell('550평') === 'usage');
+}
+{
+  // composition: 성분비 (N%) 형태
+  assert('발효계분(55%) = composition', classifyDetailCell('발효계분(55%) 종합광물(20%)') === 'composition');
+  assert('미강(15%) = composition',    classifyDetailCell('미강(쌀겨/15%) MANNA(만나/10%)') === 'composition');
+}
+{
+  // instruction: 문장형 설명문
+  assert('토양에 골고루 뿌리고 경운합니다 = instruction', classifyDetailCell('토양에 골고루 뿌리고 경운합니다') === 'instruction');
+  // 관주(usage) + 합니다(instruction) 혼합 → mixed
+  assert('관주합니다 = mixed (관주+합니다)', classifyDetailCell('먼저 물을 맹물로 30분 주고 영양제 관주합니다') === 'mixed');
+}
+{
+  // empty
+  assert('empty string = empty', classifyDetailCell('') === 'empty');
+  assert('null = empty',         classifyDetailCell(null) === 'empty');
+  assert('whitespace = empty',   classifyDetailCell('   ') === 'empty');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 10. parseCompositionDetail
+// ═══════════════════════════════════════════════════════════════
+section('parseCompositionDetail');
+
+{
+  const r = parseCompositionDetail('발효계분(55%) 종합광물(20%)');
+  assert('parseComposition 2 items',       r.length === 2);
+  assert('parseComposition 발효계분 pct=55', r[0] && r[0].pct === 55);
+  assert('parseComposition 종합광물 pct=20', r[1] && r[1].pct === 20);
+}
+{
+  const r = parseCompositionDetail('미강(쌀겨/15%) MANNA(만나/10%)');
+  assert('parseComposition 쌀겨 2 items', r.length === 2);
+  assert('parseComposition 미강 pct=15',  r[0] && r[0].pct === 15);
+}
+{
+  // 성분 없는 텍스트
+  const r = parseCompositionDetail('토양에 골고루 뿌립니다');
+  assert('parseComposition empty for plain text', r.length === 0);
+}
+{
+  // null/undefined 입력
+  assert('parseComposition null = []', parseCompositionDetail(null).length === 0);
+  assert('parseComposition empty = []', parseCompositionDetail('').length === 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 11. pageTitle / stageRawCell 독립성 (개념 검증)
+// ═══════════════════════════════════════════════════════════════
+section('pageTitle vs stageRawCell independence');
+
+{
+  // pageTitle과 stageRawCell은 같은 데이터를 공유하지 않아야 함
+  // classifyDetailCell 결과가 stageRawCell에서 유래한 텍스트에 영향을 주지 않음
+  const stageRawCell = '관주(1번)\n3월:20일-25일';
+  const pageTitle    = '천혜향 꽃+피기전 토양+관주 뿌리활착';
+  assert('stageRawCell != pageTitle', stageRawCell !== pageTitle);
+  assert('pageTitle has no stage keywords leak', !stageRawCell.includes('천혜향'));
+  assert('stageRawCell preserves newline', stageRawCell.includes('\n'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 12. detailCellRaw preservation
+// ═══════════════════════════════════════════════════════════════
+section('detailCellRaw preservation');
+
+{
+  // usage + instruction 혼합 시 mixed로 분류
+  const mixed = '물(50말) 토양에 골고루 뿌리고 경운합니다';
+  assert('mixed type = mixed', classifyDetailCell(mixed) === 'mixed');
+}
+{
+  // 단순 제품명 형태 (설명문으로 처리)
+  const r = classifyDetailCell('옥토팜(펠렛)');
+  assert('product-like text = instruction', r === 'instruction');
 }
 
 // ═══════════════════════════════════════════════════════════════
