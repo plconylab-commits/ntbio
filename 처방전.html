@@ -1414,7 +1414,11 @@ function syncGroupOrder() {
   // 신규 그룹 추가 (뒤에 붙이기)
   seen.forEach(mk => {
     if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
-    if (groupLabels[mk] === undefined) {
+    // v16: undefined 뿐만 아니라 이전 코드가 자동 생성한 stale fallback 값도 교체
+    // ("2페이지 처방", "3월 처방" 등 localStorage에 남아있는 기본값)
+    const isStaleDefault = groupLabels[mk] === undefined ||
+      /^\d+페이지 처방$|^\d+월 처방$|^기본 처방$/.test(groupLabels[mk]);
+    if (isStaleDefault) {
       // 그룹 제목(pageTitle) 초기값 우선순위: pageTitle → purpose(구형 호환) → ''(공란)
       // ⚠ stageLabelOverride / stageLabel 은 시기/단계명 데이터 → groupHeader에 절대 복사 금지
       const groupStages = stages.filter(s => getStageGroupKey(s) === mk);

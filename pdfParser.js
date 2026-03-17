@@ -34,6 +34,7 @@ const LEFT_X_MAX         = 160;   // A4 scale=1.0 기준 좌측 열 최대 X (px
 const ROW_Y_MERGE        = 8;     // 같은 행으로 간주할 Y 허용 오차 (px)
 const STAGE_Y_GAP        = 60;    // stage_core 행이 새 블록을 시작하는 Y 간격 (px) — v11: 50→60 (+20%)
 const LEFT_CELL_MAX_GAP  = 120;   // non-core 행(note/date 등)을 현재 블록에 병합하는 최대 Y 간격 (px)
+const PAGE_TITLE_Y_GAP   = 60;    // v16: 첫 좌측 아이템이 다음 좌측 아이템과 이 px 이상 떨어지면 pageTitle 후보
 const WORD_GAP_MIN       = 3;     // 이 px 이상 간격이면 공백 삽입
 
 // 처방 수량 단위: 반드시 숫자 또는 "반" 뒤에 오는 포|병|봉|통|개 만 인식
@@ -402,6 +403,41 @@ async function parsePdfToJSON(pdfFile) {
           }
         }
       }
+
+      // v16: Y-gap 기반 pageTitle 감지 (xMin/xMax 방식 실패 시 fallback)
+      // 문제: extractRxPdfCoords가 it.w를 저장하지 않아 xMax 계산이 항상 NaN
+      // 해결: 페이지 첫 번째 좌측 아이템이 두 번째 좌측 아이템과 PAGE_TITLE_Y_GAP 이상
+      //       떨어져 있으면 페이지 제목으로 인식 (예: "천혜향 꽃+피기전 토양+관주...")
+      if (!pageTitle && rows.length >= 2) {
+        const leftItemsSorted = rows
+          .flatMap(r => r.items.filter(it => it.x < effectiveLeftXMax))
+          .sort((a, b) => a.y - b.y);
+        if (leftItemsSorted.length >= 2) {
+          const firstY    = leftItemsSorted[0].y;
+          const gapToNext = leftItemsSorted[1].y - firstY;
+          if (gapToNext > PAGE_TITLE_Y_GAP) {
+            const candidateRowIdx = rows.findIndex(r =>
+              r.items.some(it => it.x < effectiveLeftXMax && Math.abs(it.y - firstY) < ROW_Y_MERGE)
+            );
+            if (candidateRowIdx >= 0 && !pageTitleRows.includes(candidateRowIdx)) {
+              const candidateRow = rows[candidateRowIdx];
+              // 우측 아이템이 없어야 pageTitle (제품 행과 구별)
+              const hasRightItems = candidateRow.items.some(it => it.x >= effectiveLeftXMax);
+              if (!hasRightItems) {
+                const candidateText = joinRowText(candidateRow.items).trim();
+                // 10자 이상 + 수량 단위 없음 = pageTitle 후보
+                // ("관주(1번)" 같은 짧은 단계명 제외, 긴 설명 텍스트만 포함)
+                if (candidateText.length > 10 && !COUNT_UNITS_RE.test(candidateText)) {
+                  pageTitleRows.push(candidateRowIdx);
+                  pageTitle = candidateText;
+                  console.log(`[Parser v16] page ${p} pageTitle (Y-gap방식): "${pageTitle}" (gap=${gapToNext}px)`);
+                }
+              }
+            }
+          }
+        }
+      }
+
       // pageTitle 행은 leftRows/rightRows에서 제외
       const filteredRows = rows.filter((_, ri) => !pageTitleRows.includes(ri));
       if (pageTitle) {
