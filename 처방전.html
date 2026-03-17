@@ -2925,10 +2925,13 @@ function extractRxPdfText(data) {
 }
 
 // ── 좌표 기반 텍스트 추출 (처방 단계 자동 인식) ──────────────────
-const RX_LEFT_X_MAX     = 160;   // 좌측 열 X 임계값 (scale=1.0)
-const RX_ROW_Y_MERGE    = 10;    // 같은 행 Y 허용 오차 (px)
-const RX_STAGE_Y_GAP    = 50;    // 좌측 그룹 사이 간격 (px) — 32~35px 내부간격, 82px+ 그룹간격 기준
-const RX_COUNT_UNITS_RE = /포|병|봉|통|개/;  // 처방 수량 단위만 (kg·g·L·ml 등 용량 단위 제외)
+const RX_LEFT_X_MAX         = 160;  // 좌측 열 X 임계값 (scale=1.0)
+const RX_ROW_Y_MERGE        = 10;   // 같은 행 Y 허용 오차 (px)
+const RX_STAGE_Y_GAP        = 50;   // 좌측 그룹 사이 간격 (px)
+const RX_COUNT_UNITS_RE     = /포|병|봉|통|개/;
+const RX_PAGE_TITLE_Y_GAP   = 60;   // v16: 첫 좌측 아이템 ↔ 다음 좌측 아이템 gap > 이 값 → pageTitle 후보
+// v16: 좌측 열 테이블 헤더/구조 텍스트 필터 (단계명 오염 방지)
+const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단계명?|시기명?|품\s*목|규\s*격|수\s*량|제품명?|용\s*량|사용량|물량\s*[\/\/]?\s*평수|합\s*계|소\s*계|비\s*고|구\s*분|내\s*용|번호|No\.)$/i;
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
@@ -2939,7 +2942,9 @@ async function extractRxPdfCoords(pdfDoc) {
     tc.items.forEach(it => {
       if (!it.str.trim()) return;
       const [,,,, x, y] = pdfjsLib.Util.transform(vp.transform, it.transform);
-      allItems.push({ text: it.str.trim(), x: Math.round(x), y: Math.round(y), page: p });
+      // v16: it.width = 폰트 유닛 advance width; transform[0] = font size scale
+      const w = Math.abs((it.width || 0) * (it.transform ? Math.abs(it.transform[0]) : 1));
+      allItems.push({ text: it.str.trim(), x: Math.round(x), y: Math.round(y), w: Math.round(w), page: p });
     });
   }
   allItems.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
@@ -2957,8 +2962,21 @@ function detectTypeFromParsedLabel(label, products) {
   return '';
 }
 
+// ── v16 헬퍼: 좌측 행 분류 (pdfParser.js의 classifyLeftRow와 동일 로직) ──
+function rxClassifyLeftRow(text) {
+  const t = text.trim();
+  if (!t) return 'empty';
+  // stage_core: 단계 시작 키워드 (관주/엽면 등 전체 단어 포함 여부)
+  if (typeof classifyLeftRow === 'function') return classifyLeftRow(t);
+  // fallback: rxNormalizer.js 미로드 시 자체 판정
+  if (/관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확/.test(t)) return 'stage_core';
+  if (/\d+\s*월|\d+\s*[-~]\s*\d+\s*월/.test(t)) return 'date';
+  if (/^(및|and|or|또는|그리고|after|before)$/i.test(t)) return 'connector';
+  return 'note';
+}
+
 function parseRxPdfCoords(items) {
-  // 행으로 묶기 — 러닝 평균 Y 사용 (고정 Y 드리프트 방지)
+  // ── 1. 행으로 묶기 (러닝 평균 Y) ──────────────────────────────────
   const rows = [];
   for (const it of items) {
     const last = rows[rows.length - 1];
@@ -2971,52 +2989,81 @@ function parseRxPdfCoords(items) {
     }
   }
 
-  // ── 페이지 상단 전체폭 행 = pageTitle 추출 (stageLabel 오염 방지) ──
-  // 좌(x<RX_LEFT_X_MAX) 와 우(x>=RX_LEFT_X_MAX+50) 양쪽에 아이템이 있으면 전체폭 행
-  const pageTitles = {};           // { pageNum: 'title text' }
-  const titleRowSet = new Set();   // 전체폭 행 인덱스 — leftItems에서 제외
-  const pageTopY = {};             // { pageNum: 첫번째 행 y }
+  // ── 2. pageTitle 감지 ─────────────────────────────────────────────
+  // 방법 A: xMin < RX_LEFT_X_MAX && xMax(with w) > RX_LEFT_X_MAX+50 → 전체폭 행
+  // 방법 B (v16 fallback): 첫 좌측 아이템과 다음 좌측 아이템의 Y gap > RX_PAGE_TITLE_Y_GAP
+  // pageTitle과 stageLabel은 절대 같은 데이터를 공유하지 않음
+  const pageTitles  = {};           // { pageNum: 'title text' }
+  const titleRowSet = new Set();    // 제외할 행 인덱스
 
+  // 방법 A
+  const pageTopY = {};
   rows.forEach((row, ri) => {
     const pg = row.page;
     if (pageTopY[pg] === undefined) pageTopY[pg] = row.yAvg;
-    // 페이지 상단 80px 이내 행만 검사 (타이틀은 항상 최상단에 위치)
-    if (row.yAvg - pageTopY[pg] > 80) return;
+    if (row.yAvg - pageTopY[pg] > 80) return; // 상단 80px만
 
     const xMin = Math.min(...row.items.map(it => it.x));
-    const xMax = Math.max(...row.items.map(it => it.x));
+    // v16: w 포함한 xMax (it.w가 없으면 텍스트 길이 기반 fallback)
+    const xMax = Math.max(...row.items.map(it => it.x + (it.w || it.text.length * 7)));
     if (xMin < RX_LEFT_X_MAX && xMax > RX_LEFT_X_MAX + 50) {
-      // 전체폭 행 → pageTitle로 수집, leftItems에서 제외
       const titleText = row.items.map(it => it.text).join(' ').trim();
-      if (titleText.length > 3) {
+      if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText)) {
         pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + titleText : titleText;
         titleRowSet.add(ri);
+        console.log(`[Parser v16] page ${pg} pageTitle (방법A): "${titleText}"`);
       }
     }
   });
 
-  // 좌/우 분리 — 우측 행은 처방 수량 단위(포·병·봉·통·개) 포함 행만 수집
-  // 전체폭 pageTitle 행은 leftItems에 포함하지 않음
-  const leftItems = [], rightItems = [];
+  // 방법 B (v16): Y-gap 기반 fallback — 방법A가 놓친 경우 처리
+  // "천혜향 꽃+피기전 토양+관주..." 처럼 단일 아이템인 제목 행을 감지
+  const pageLeftRows = {}; // { page: [{y, rowIdx, row}] }
   rows.forEach((row, ri) => {
-    if (titleRowSet.has(ri)) return; // 전체폭 타이틀 행 제외
-
-    const leftRow  = row.items.filter(it => it.x <  RX_LEFT_X_MAX);
-    const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
-
-    leftRow.forEach(it =>
-      leftItems.push({ y: row.yAvg, page: row.page, text: it.text })
-    );
-
-    if (rightRow.length > 0 &&
-        RX_COUNT_UNITS_RE.test(rightRow.map(i => i.text).join(' '))) {
-      rightRow.forEach(it =>
-        rightItems.push({ y: row.yAvg, page: row.page, text: it.text })
-      );
+    if (titleRowSet.has(ri)) return;
+    const pg = row.page;
+    const hasLeft = row.items.some(it => it.x < RX_LEFT_X_MAX);
+    if (!hasLeft) return;
+    if (!pageLeftRows[pg]) pageLeftRows[pg] = [];
+    pageLeftRows[pg].push({ y: row.yAvg, rowIdx: ri, row });
+  });
+  Object.entries(pageLeftRows).forEach(([pgStr, entries]) => {
+    if (entries.length < 2) return;
+    const pg  = parseInt(pgStr);
+    const gap = entries[1].y - entries[0].y;
+    if (gap <= RX_PAGE_TITLE_Y_GAP) return; // gap이 작으면 같은 셀 내 줄바꿈
+    const { rowIdx, row } = entries[0];
+    if (titleRowSet.has(rowIdx)) return;
+    // 우측 아이템 없어야 함 (제품 행과 구별)
+    if (row.items.some(it => it.x >= RX_LEFT_X_MAX)) return;
+    const candidateText = row.items.map(it => it.text).join(' ').trim();
+    // 10자 이상 + 수량 단위 없음 → pageTitle 후보
+    // (짧은 단계명 "관주(1번)" 제외, 긴 설명 텍스트만 포함)
+    if (candidateText.length > 10 && !RX_COUNT_UNITS_RE.test(candidateText) &&
+        !RX_LEFT_TABLE_HDR_RE.test(candidateText)) {
+      pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + candidateText : candidateText;
+      titleRowSet.add(rowIdx);
+      console.log(`[Parser v16] page ${pg} pageTitle (방법B Y-gap=${gap}px): "${candidateText}"`);
     }
   });
 
-  // 좌측 덩어리(= stage 그룹) 묶기
+  // ── 3. 좌/우 분리 (pageTitle 행 제외) ────────────────────────────
+  const leftItems = [], rightItems = [];
+  rows.forEach((row, ri) => {
+    if (titleRowSet.has(ri)) return;
+    const leftRow  = row.items.filter(it => it.x <  RX_LEFT_X_MAX);
+    const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
+    leftRow.forEach(it => {
+      // 테이블 헤더 행 제거 (시기/단계, 품목 등)
+      if (!RX_LEFT_TABLE_HDR_RE.test(it.text.trim()))
+        leftItems.push({ y: row.yAvg, page: row.page, text: it.text });
+    });
+    if (rightRow.length > 0 && RX_COUNT_UNITS_RE.test(rightRow.map(i => i.text).join(' '))) {
+      rightRow.forEach(it => rightItems.push({ y: row.yAvg, page: row.page, text: it.text }));
+    }
+  });
+
+  // ── 4. 좌측 덩어리(stage 그룹) 묶기 ─────────────────────────────
   const stageBlocks = [];
   let cur = null;
   for (const li of leftItems) {
@@ -3028,7 +3075,7 @@ function parseRxPdfCoords(items) {
     cur.yMax = li.y;
   }
 
-  // 좌측 열 없는 페이지(제품만 있는 속지 등) → 페이지별 더미 블록 생성
+  // ── 4b. 좌측 열 없는 페이지 → 더미 블록 ────────────────────────
   if (stageBlocks.length === 0) {
     const pageSet = [...new Set(rightItems.map(i => i.page))].sort((a, b) => a - b);
     if (pageSet.length === 0) return [];
@@ -3039,7 +3086,29 @@ function parseRxPdfCoords(items) {
     });
   }
 
-  // 우측 아이템을 행 단위로 재그룹화 (러닝 평균 Y)
+  // ── 4c. 첫 블록이 stage_core 없는 orphan이면 pageTitle로 승격 ────
+  // (방법 A/B가 놓쳤을 때 최후 방어선)
+  // 페이지별로 첫 블록이 stage_core를 포함하지 않고 products도 없으면 pageTitle 보충
+  const orphanPromoted = new Set();
+  const pageFirstBlock = {};
+  stageBlocks.forEach((sb, idx) => {
+    if (pageFirstBlock[sb.page] === undefined) pageFirstBlock[sb.page] = idx;
+  });
+  Object.values(pageFirstBlock).forEach(idx => {
+    const sb = stageBlocks[idx];
+    const hasCore = sb.texts.some(t => rxClassifyLeftRow(t) === 'stage_core');
+    if (!hasCore && sb.texts.length > 0) {
+      const orphanText = sb.texts.filter(t => t.trim() && !RX_LEFT_TABLE_HDR_RE.test(t)).join(' ').trim();
+      if (orphanText.length > 5) {
+        const pg = sb.page;
+        pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + orphanText : orphanText;
+        orphanPromoted.add(idx);
+        console.log(`[Parser v16] page ${pg} pageTitle (orphan승격): "${orphanText}"`);
+      }
+    }
+  });
+
+  // ── 5. 우측 행 재그룹화 ──────────────────────────────────────────
   const rightRows = [];
   let lastRR = null;
   for (const ri of rightItems) {
@@ -3055,43 +3124,51 @@ function parseRxPdfCoords(items) {
     lastRR.texts.push(ri.text);
   }
 
-  // 각 stageBlock에 배정될 제품 행 배열 초기화
+  // ── 6. 우측 행 → stageBlock 배정 ─────────────────────────────────
   const blockProducts = stageBlocks.map(() => []);
-
-  // ★ 각 우측 행을 "마지막 선행 stageBlock(yMin ≤ 제품 Y)" 에 배정
-  // nearest-midpoint 대신 사용: 동일 Y 경계에서 오배정 방지
   rightRows.forEach(rr => {
     let bestIdx = -1;
     stageBlocks.forEach((sb, idx) => {
+      if (orphanPromoted.has(idx)) return; // 승격된 orphan 블록은 제품 받지 않음
       if (sb.page !== rr.page) return;
       if (sb.yMin <= rr.yAvg) bestIdx = idx;
     });
-    // 현재 페이지에 선행 블록이 없으면(제품이 블록보다 위에 있는 경우) 첫 블록에 배정
+    // 선행 블록 없음 → 현재 페이지 첫 유효 블록에 배정 (제품이 단계명보다 위인 경우)
     if (bestIdx < 0) {
-      const firstOnPage = stageBlocks.findIndex(sb => sb.page === rr.page);
-      if (firstOnPage >= 0) bestIdx = firstOnPage;
+      const firstValid = stageBlocks.findIndex((sb, i) => sb.page === rr.page && !orphanPromoted.has(i));
+      if (firstValid >= 0) bestIdx = firstValid;
     }
     if (bestIdx >= 0) blockProducts[bestIdx].push(rr);
   });
 
-  // stages 생성
+  // ── 7. pageTitles에서 평수 추출 (farmInfo.totalArea 후보) ─────────
+  const pageTitleAreas = {};
+  Object.entries(pageTitles).forEach(([pg, title]) => {
+    const m = title.match(/[（\(](\d+)\s*평[）\)]/);
+    if (m) pageTitleAreas[parseInt(pg)] = Number(m[1]);
+  });
+
+  // ── 8. stage 생성 ──────────────────────────────────────────────────
   const stages = [];
   stageBlocks.forEach((sb, idx) => {
+    if (orphanPromoted.has(idx)) return; // pageTitle로 승격된 블록 스킵
     const assigned = blockProducts[idx];
     if (!assigned.length) return;
 
     const products = [];
     assigned.forEach(rr => {
       const line = rr.texts.join(' ');
-      // ★ 처방 수량 단위만 사용 (포·병·봉·통·개) — kg·g·L·ml 등 용량 단위는 제품명의 일부
       const halfM  = line.match(/반\s*(포|병|봉|통|개)/);
       const countM = line.match(/(\d+(?:\.\d+)?)\s*(포|병|봉|통|개)/);
-      if (!halfM && !countM) return;  // 처방 수량 단위 없는 행은 건너뜀
+      if (!halfM && !countM) return;
 
       const qty  = halfM ? 0.5 : Number(countM[1]);
       const unit = halfM ? halfM[1] : countM[2];
 
-      // 처방수량 및 평수 표기 제거 → 제품명만 남기기
+      // v16: prodArea 추출 (N평 패턴 — 제거 전에 먼저 저장)
+      const prodAreaM = line.match(/(\d+(?:\.\d+)?)\s*평/);
+      const prodArea  = prodAreaM ? Number(prodAreaM[1]) : null;
+
       const namePart = line
         .replace(/반\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*(포|병|봉|통|개)/g, '')
@@ -3101,22 +3178,45 @@ function parseRxPdfCoords(items) {
 
       if (namePart.length <= 1) return;
 
-      // key: "이름||규격" or "이름||"
       const sizeM = namePart.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
       const key   = sizeM
         ? `${sizeM[1].trim()}||${sizeM[2].trim()}`
         : `${namePart}||`;
-      products.push({ key, qty, unit, desc: '' });
+      products.push({ key, qty, unit, desc: '', prodArea });
     });
 
-    // 연속 중복 줄 제거 후 라벨 조합 (pdf.js 파편화로 같은 텍스트 여러 번 추출되는 경우 방지)
+    // ── stageLabel 조합 ──────────────────────────────────────────────
+    // stage_core / date / connector 행 → stageLabel (시기/단계 전용)
+    // note 행 → stageMeta.notes (stageLabel에 절대 포함 안 함)
     const dedupedTexts = sb.texts.filter((t, i, arr) => i === 0 || t !== arr[i - 1]);
-    const rawLabel = dedupedTexts.join('\n').trim();
-    const inferredType = detectTypeFromParsedLabel(rawLabel, products);
+    const coreLines  = [];
+    const noteLines  = [];
+    dedupedTexts.forEach(t => {
+      const type = rxClassifyLeftRow(t);
+      if (type === 'note') noteLines.push(t);
+      else coreLines.push(t);
+    });
+    // stageLabel: core(stage_core/date/connector)만, fallback: 전체 (core가 없는 단순 페이지)
+    const stageLabel = (coreLines.length ? coreLines : dedupedTexts).join('\n').trim();
+
+    // v16: stage.area 우선순위: prodArea 최빈값 → pageTitleArea → null
+    const allProdAreas = products.map(p => p.prodArea).filter(Boolean);
+    const areaFreq = {};
+    allProdAreas.forEach(a => { areaFreq[a] = (areaFreq[a] || 0) + 1; });
+    const dominantProdArea = allProdAreas.length
+      ? Number(Object.entries(areaFreq).sort((a, b) => b[1] - a[1])[0][0])
+      : null;
+    const area = dominantProdArea || pageTitleAreas[sb.page] || null;
+
+    const inferredType = detectTypeFromParsedLabel(stageLabel, products);
     stages.push({
-      stageLabelOverride: rawLabel,  // 시기/단계명 원문 (stageLabel 전용)
+      stageLabelOverride: stageLabel,   // 시기/단계명 전용 (pageTitle과 절대 분리)
       stageLabel: '',
-      pageTitle: pageTitles[sb.page] || '',  // 페이지 제목 (groupHeader 전용, stageLabel과 분리)
+      pageTitle: pageTitles[sb.page] || '',  // 그룹 제목 전용 (stageLabel과 절대 분리)
+      stageMeta: {                      // v16: 단계 메타데이터
+        notes: noteLines.join('\n'),    //   note 행 (stageLabel에 넣지 않음)
+        rawTexts: dedupedTexts,         //   원본 전체 줄
+      },
       type: inferredType,
       month: 0,
       sourcePage: sb.page,
@@ -3125,9 +3225,12 @@ function parseRxPdfCoords(items) {
       days: '', dateRange: '', purpose: '',
       funcTags: [], funcColor: '#ffffff',
       typeNumOverride: 0, typeNumWord: '',
-      area: null,
+      area,
       products
     });
+
+    // 디버그 로그 (개발 모드에서만)
+    console.log(`[Parser v16] page=${sb.page} stageLabel="${stageLabel}" | pageTitle="${pageTitles[sb.page]||''}" | products=${products.length} | area=${area}`);
   });
 
   return stages.filter(s => s.products.length > 0);
