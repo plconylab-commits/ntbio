@@ -326,6 +326,47 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .cover-editable:hover{opacity:.72;outline:2px dashed rgba(255,255,255,.7);outline-offset:4px;}
 .rx-editable{cursor:pointer;position:relative;}
 .rx-editable:hover{background:rgba(58,172,170,.08);outline:1.5px dashed var(--teal);outline-offset:1px;}
+
+/* 선택 확정 — 엑셀 스타일 하이라이트 */
+.rx-editable.rx-cell-selected,
+.rx-editable.selected{
+  outline:2.5px solid var(--teal-dark)!important;
+  background:rgba(42,138,136,.20)!important;
+  box-shadow:inset 0 0 0 1px rgba(42,138,136,.35)!important;
+}
+/* 드래그 중 미리보기 */
+.rx-table td.drag-selecting{
+  background:rgba(58,172,170,.10)!important;
+  outline:1px solid var(--teal)!important;
+}
+
+/* ── floating bottom menu ── */
+#rx-cell-menu{position:fixed;z-index:9998;background:#fff;border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.25);padding:6px 8px;display:none;gap:6px;
+  flex-direction:row;align-items:center;}
+#rx-cell-menu.on{display:flex;}
+#rx-cell-menu button{padding:5px 11px;border:1.5px solid var(--teal);border-radius:6px;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+#rx-cell-menu .rxm-merge{background:var(--teal);color:#fff;}
+#rx-cell-menu .rxm-merge:hover{background:var(--teal-dark);}
+#rx-cell-menu .rxm-split{background:#fff;color:var(--teal-dark);}
+#rx-cell-menu .rxm-split:hover{background:var(--teal-light);}
+#rx-cell-menu .rxm-clear{background:#fff;color:#888;border-color:#ccc;}
+#rx-cell-menu .rxm-clear:hover{background:#f5f5f5;}
+
+/* ── 우클릭 컨텍스트 메뉴 ── */
+#rx-ctx-menu{position:fixed;z-index:10000;display:none;background:#fff;
+  border-radius:8px;min-width:148px;padding:4px 0;
+  box-shadow:0 4px 24px rgba(0,0,0,.22);border:1px solid #e0e0e0;}
+#rx-ctx-menu .rxctx-item{display:flex;align-items:center;gap:8px;
+  padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+  color:#333;transition:background .1s,color .1s;}
+#rx-ctx-menu .rxctx-item:hover{background:#f0f9f9;color:var(--teal-dark);}
+#rx-ctx-menu .rxctx-item.rxctx-danger{color:#c62828;}
+#rx-ctx-menu .rxctx-item.rxctx-danger:hover{background:#fff5f5;}
+#rx-ctx-menu .rxctx-item:disabled,
+#rx-ctx-menu .rxctx-item[data-disabled]{opacity:.35;pointer-events:none;}
+#rx-ctx-menu .rxctx-sep{height:1px;background:#eee;margin:4px 0;}
 #coverEditor{position:fixed;z-index:9999;background:#fff;border-radius:14px;
   box-shadow:0 6px 32px rgba(0,0,0,.28);padding:18px 20px;width:300px;display:none;
   top:50%;left:50%;transform:translate(-50%,-50%);}
@@ -791,7 +832,16 @@ window.addEventListener('DOMContentLoaded', () => {
             });
           });
           stageIdCnt = 0;
-          stages = parsedRx.stages.map(s => ({ ...s, id: ++stageIdCnt }));
+          stages = parsedRx.stages.map(s => ({
+            ...s,
+            id: ++stageIdCnt,
+            // 구버전 경로: 페이지 메타데이터 기본값 보장
+            pageGroup:  s.pageGroup  ?? null,
+            sourcePage: s.sourcePage ?? null,
+            pageType:   s.pageType   || '',
+            stageLabelOverride: s.stageLabelOverride || '',
+            stageLabel: s.stageLabel || ''
+          }));
         }
       } catch(e) {}
     }
@@ -815,7 +865,18 @@ window.addEventListener('DOMContentLoaded', () => {
     if ((e.ctrlKey||e.metaKey) && (e.key==='y' || (e.key==='z' && e.shiftKey))) {
       if (!isInput) { e.preventDefault(); redoStages(); }
     }
+    if (e.key === 'Escape' && _rxSelSi.size > 0) { _rxClearSel(); }
   });
+  // 바깥 클릭 시 rx 셀 선택 해제
+  document.addEventListener('click', e => {
+    if (_rxSelSi.size === 0) return;
+    const menu = document.getElementById('rx-cell-menu');
+    if (menu && menu.contains(e.target)) return;
+    if (e.target.closest('.rx-editable')) return;
+    _rxClearSel();
+  });
+  // 드래그 다중 선택 + 우클릭 컨텍스트 메뉴 이벤트 바인딩
+  _rxBindTableEvents();
   // 플로팅 재고 패널 항상 표시
   openInvFloat();
 });
@@ -1037,10 +1098,24 @@ function onTypeNumWord(si, word) {
   schedulePreview();
 }
 
+/**
+ * stageLabel 원문에서 화면 표시용 텍스트를 정제한다.
+ *  - "\n(" → "("  : 괄호 줄바꿈 재결합  ("옥토팜\n(발효계분)" → "옥토팜(발효계분)")
+ *  - 연속 개행 → 단일 개행
+ */
+function _cleanStageLabel(raw) {
+  if (!raw) return raw;
+  return raw
+    .replace(/\n\(/g, '(')            // 괄호 줄바꿈 결합
+    .replace(/[ \t]*\n[ \t]*/g, '\n') // 개행 주변 공백 정리
+    .replace(/\n{2,}/g, '\n')         // 연속 개행 → 1개
+    .trim();
+}
+
 function getStageLabel(st) {
   // 자유 입력 텍스트 우선, 없으면 구버전 type 필드 폴백
-  if (st.stageLabelOverride) return st.stageLabelOverride;
-  if (st.stageLabel)         return st.stageLabel;
+  if (st.stageLabelOverride) return _cleanStageLabel(st.stageLabelOverride);
+  if (st.stageLabel)         return _cleanStageLabel(st.stageLabel);
   if (st.type === '경운전')  return '경운 "전"';
   if (st.type === '경운후')  return '경운 "후"';
   if (st.type === '정식당일') return '정식+당일';
@@ -1051,14 +1126,21 @@ function getStageLabel(st) {
 }
 
 function getStageLabelHtml(st) {
-  return `<strong>${getStageLabel(st)}</strong>`;
+  // \n → <br> 로 변환해 HTML 표에서 여러 줄로 표시
+  const label = getStageLabel(st).replace(/\n/g, '<br>');
+  return `<strong>${label}</strong>`;
 }
 
 function getStageBadge(st) {
-  const month = st.pageGroup && st.pageGroup >= 1001 ? `${st.pageGroup - 1000}페이지 ` : (st.month ? `${st.month}월 ` : '');
   // 줄바꿈을 공백으로 치환해 뱃지 한 줄 표시
   const label = getStageLabel(st).replace(/\n/g, ' ');
   const date  = st.dateRange ? ` · ${st.dateRange}` : '';
+  // 의미있는 라벨이 있으면 페이지/월 접두어 생략
+  // (stageLabelOverride 또는 stageLabel이 채워진 경우)
+  const hasMeaningfulLabel = !!(st.stageLabelOverride || st.stageLabel);
+  const month = hasMeaningfulLabel
+    ? (st.month ? `${st.month}월 ` : '')
+    : (st.pageGroup && st.pageGroup >= 1001 ? `${st.pageGroup - 1000}페이지 ` : (st.month ? `${st.month}월 ` : ''));
   return month + label + date;
 }
 
@@ -1111,7 +1193,10 @@ function renderStages() {
             </div>
             ${st.area ? `<div style="font-size:11px;color:var(--teal-dark);font-weight:700;margin-top:2px;">(${st.area}평)</div>` : ''}
           </div>
-          <button class="prod-del-btn" onclick="delProd(${si},${pi})">✕ 삭제</button>
+          <div style="display:flex;gap:3px;flex-shrink:0;">
+            ${pi > 0 ? `<button class="prod-split-btn" onclick="splitStage(${si},${pi})" title="여기서 단계 나누기" style="font-size:10px;padding:2px 6px;border:1.5px solid #9b7fd4;border-radius:4px;background:#f3eeff;color:#7b5ea7;cursor:pointer;white-space:nowrap;">↕ 나누기</button>` : ''}
+            <button class="prod-del-btn" onclick="delProd(${si},${pi})">✕ 삭제</button>
+          </div>
         </div>
         <div class="prod-item-inputs">
           <div class="prod-item-top-row" style="grid-template-columns:70px 90px 1fr;">
@@ -1194,10 +1279,14 @@ function renderStages() {
         onclick="setFuncColor(${si},'${c}')"></div>`;
     }).join('');
 
+    const hasNext = si + 1 < stages.length;
     return `<div class="stage-card" id="stageCard_${st.id}">
       <div class="stage-head">
         <span class="slabel">${getStageBadge(st)}</span>
-        <button class="stage-del" onclick="delStage(${si})" title="삭제">✕</button>
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+          ${hasNext ? `<button class="stage-merge-btn" onclick="mergeStages(${si})" title="아래 단계와 합치기" style="font-size:11px;padding:2px 7px;border:1.5px solid var(--teal);border-radius:4px;background:var(--teal-light);color:var(--teal-dark);cursor:pointer;white-space:nowrap;">⊕ 합치기</button>` : ''}
+          <button class="stage-del" onclick="delStage(${si})" title="삭제">✕</button>
+        </div>
       </div>
       <div class="stage-body">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
@@ -1317,9 +1406,15 @@ function syncGroupOrder() {
   seen.forEach(mk => {
     if (!stageGroupOrder.includes(mk)) stageGroupOrder.push(mk);
     if (!groupLabels[mk]) {
-      // 기존 purpose를 초기 레이블로 (구형 PDF 호환)
-      const firstPurpose = stages.filter(s => getStageGroupKey(s) === mk).map(s => s.purpose).filter(Boolean)[0];
-      groupLabels[mk] = firstPurpose || (mk >= 1001 ? `${mk - 1000}페이지 처방` : (mk === 0 ? '기비 (기본시비)' : `${mk}월`));
+      // 초기 레이블 우선순위: purpose → stageLabelOverride → stageLabel → 페이지/월 fallback
+      const groupStages = stages.filter(s => getStageGroupKey(s) === mk);
+      const firstPurpose = groupStages.map(s => s.purpose).filter(Boolean)[0];
+      const firstOverride = groupStages.map(s => s.stageLabelOverride).filter(Boolean)[0];
+      const firstLabel   = groupStages.map(s => s.stageLabel).filter(Boolean)[0];
+      groupLabels[mk] = firstPurpose
+        || firstOverride
+        || firstLabel
+        || (mk >= 1001 ? `${mk - 1000}페이지 처방` : (mk === 0 ? '기비 (기본시비)' : `${mk}월`));
     }
   });
   // 없어진 그룹 제거
@@ -1686,6 +1781,417 @@ function delStage(si) {
   stages.splice(si, 1);
   renderStages();
   renderInventory();
+}
+
+// ── 단계 합치기 (si와 si+1 병합) ─────────────────────────────────
+function mergeStages(si) {
+  if (si < 0 || si + 1 >= stages.length) return;
+  _pushHistory();
+  const a = stages[si];
+  const b = stages[si + 1];
+  // 라벨: 두 override를 개행으로 합친 뒤 _cleanStageLabel로 정제
+  const parts = [a.stageLabelOverride || a.stageLabel, b.stageLabelOverride || b.stageLabel].filter(Boolean);
+  a.stageLabelOverride = _cleanStageLabel(parts.join('\n'));
+  a.stageLabel = '';
+  // 제품: 중복 key는 수량 합산, 새 제품은 뒤에 추가
+  (b.products || []).forEach(bp => {
+    const existing = (a.products || []).find(ap => ap.key === bp.key);
+    if (existing) {
+      existing.qty = (Number(existing.qty) || 0) + (Number(bp.qty) || 0);
+    } else {
+      a.products.push({ ...bp });
+    }
+  });
+  // 날짜 범위: 빈 것 우선 채움
+  if (!a.dateRange && b.dateRange) a.dateRange = b.dateRange;
+  // 기능 태그: 중복 없이 합산
+  const allTags = [...(a.funcTags || []), ...(b.funcTags || [])];
+  a.funcTags = [...new Set(allTags)];
+  stages.splice(si + 1, 1);
+  renderStages();
+  renderInventory();
+}
+
+// ── 단계 나누기 (si 단계를 product index splitAt 기준으로 2개로 분리) ──
+function splitStage(si, splitAt) {
+  const st = stages[si];
+  if (!st || !st.products || splitAt <= 0 || splitAt >= st.products.length) return;
+  _pushHistory();
+  const prodsA = st.products.slice(0, splitAt);
+  const prodsB = st.products.slice(splitAt);
+  const newStage = {
+    ...JSON.parse(JSON.stringify(st)),
+    products: prodsB,
+    stageLabelOverride: st.stageLabelOverride || st.stageLabel,
+    stageLabel: '',
+    id: Date.now() + Math.random()
+  };
+  st.products = prodsA;
+  stages.splice(si + 1, 0, newStage);
+  renderStages();
+  renderInventory();
+}
+
+// ── rx 셀 선택 UI ────────────────────────────────────────────────
+
+/* ═══════════════════════════════════════════════════════════════════
+   RX TABLE — 엑셀 수준 셀 선택 · 합치기 · 분할
+   ═══════════════════════════════════════════════════════════════════ */
+
+// _rxSelSi / selectedCells / _rxLastSelSi 는 위 상태 블록에서 선언됨
+
+let _rxDrag      = { on:false, startRow:-1, endRow:-1, startCol:0, endCol:0, tbody:null };
+let _rxDragMoved = false;   // 실제 이동 여부 (단순 클릭과 구분)
+let _rxEvtBound  = false;   // 이벤트 중복 방지
+let _rxCellMapCache = null; // buildCellMap 캐시
+
+// ── data-si 추출 ────────────────────────────────────────────────────
+function _rxGetSi(el) {
+  const v = el && el.dataset ? el.dataset.si : undefined;
+  return (v !== undefined && v !== '') ? parseInt(v) : null;
+}
+
+// ── rowspan/colspan 고려 2D 셀 맵 ────────────────────────────────────
+// cellMap[rowIdx][colIdx] = td (병합 셀은 같은 참조)
+function _rxBuildCellMap(tbody) {
+  if (_rxCellMapCache && _rxCellMapCache.tbody === tbody) return _rxCellMapCache;
+  const trs = [...tbody.querySelectorAll(':scope > tr')];
+  const map  = trs.map(() => ({}));
+  trs.forEach((tr, ri) => {
+    let ci = 0;
+    [...tr.children].forEach(td => {
+      while (map[ri][ci]) ci++;
+      const rs = Math.min(parseInt(td.getAttribute('rowspan')||'1'), trs.length - ri);
+      const cs = parseInt(td.getAttribute('colspan')||'1');
+      for (let r = ri; r < ri + rs; r++)
+        for (let c = ci; c < ci + cs; c++)
+          if (map[r]) map[r][c] = td;
+      ci += cs;
+    });
+  });
+  _rxCellMapCache = { tbody, map, trs };
+  return _rxCellMapCache;
+}
+function _rxInvalidateCellMap() { _rxCellMapCache = null; }
+
+// td → {row, col} — data-row/data-col 우선, fallback: 2D cellMap
+function _rxCellPos(td, tbody) {
+  const dr = td.dataset.row, dc = td.dataset.col;
+  if (dr !== undefined && dc !== undefined) return { row: parseInt(dr), col: parseInt(dc) };
+  const { map } = _rxBuildCellMap(tbody);
+  for (let r = 0; r < map.length; r++)
+    for (const c in map[r])
+      if (map[r][c] === td) return { row: r, col: parseInt(c) };
+  return null;
+}
+
+// ── 이벤트 바인딩 (.preview-area 위임, 1회만) ────────────────────────
+function _rxBindTableEvents() {
+  if (_rxEvtBound) return;
+  _rxEvtBound = true;
+  const pa = document.querySelector('.preview-area');
+  if (!pa) return;
+
+  // mousedown: 드래그 준비 (modifier 키 없을 때만)
+  pa.addEventListener('mousedown', e => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const td = e.target.closest('.rx-table tbody td');
+    if (!td) return;
+    const tbody = td.closest('tbody');
+    const pos   = _rxCellPos(td, tbody);
+    if (!pos) return;
+    _rxDrag      = { on:true, startRow:pos.row, endRow:pos.row,
+                     startCol:pos.col, endCol:pos.col, tbody };
+    _rxDragMoved = false;
+  });
+
+  // mousemove: 드래그 범위 갱신 (row + col 모두 추적)
+  pa.addEventListener('mousemove', e => {
+    if (!_rxDrag.on) return;
+    const td = e.target.closest('.rx-table tbody td');
+    if (!td || td.closest('tbody') !== _rxDrag.tbody) return;
+    const pos = _rxCellPos(td, _rxDrag.tbody);
+    if (!pos) return;
+    if (pos.row !== _rxDrag.startRow || pos.col !== _rxDrag.startCol) _rxDragMoved = true;
+    if (pos.row !== _rxDrag.endRow || pos.col !== _rxDrag.endCol) {
+      _rxDrag.endRow = pos.row;
+      _rxDrag.endCol = pos.col;
+      _rxUpdateDragHighlight();
+    }
+  });
+
+  // mouseup: 이동 있었으면 선택 확정
+  document.addEventListener('mouseup', () => {
+    if (!_rxDrag.on) return;
+    _rxDrag.on = false;
+    if (_rxDragMoved) _rxFinalizeDragSel();
+    else              _rxClearDragHighlight();
+    _rxDragMoved = false;
+  });
+
+  // contextmenu (우클릭)
+  pa.addEventListener('contextmenu', e => {
+    const td = e.target.closest('.rx-table tbody td.rx-editable');
+    if (!td) return;
+    e.preventDefault();
+    if (!td.classList.contains('selected')) {
+      const si = _rxGetSi(td);
+      if (si !== null) {
+        _rxSelSi.clear(); _rxSelSi.add(si);
+        selectedCells = [td];
+        _rxRefreshSelUI();
+      }
+    }
+    _rxShowCtxMenu(e.clientX, e.clientY);
+  });
+
+  // 바깥 클릭 → ctx 메뉴 닫기 + 선택 해제
+  document.addEventListener('click', e => {
+    const ctx = document.getElementById('rx-ctx-menu');
+    if (ctx && !ctx.contains(e.target)) _rxHideCtxMenu();
+    if (!_rxSelSi.size) return;
+    const fm = document.getElementById('rx-cell-menu');
+    if ((fm && fm.contains(e.target)) || e.target.closest('.rx-editable')) return;
+    _rxClearSel();
+  }, true);
+}
+
+// ── 드래그 하이라이트 — data-row/data-col 바운딩 박스 ──────────────
+function _rxUpdateDragHighlight() {
+  _rxClearDragHighlight();
+  const r1 = Math.min(_rxDrag.startRow, _rxDrag.endRow);
+  const r2 = Math.max(_rxDrag.startRow, _rxDrag.endRow);
+  const c1 = Math.min(_rxDrag.startCol, _rxDrag.endCol);
+  const c2 = Math.max(_rxDrag.startCol, _rxDrag.endCol);
+  (_rxDrag.tbody || document).querySelectorAll('td[data-row]').forEach(td => {
+    const r = parseInt(td.dataset.row), c = parseInt(td.dataset.col || '0');
+    if (r >= r1 && r <= r2 && c >= c1 && c <= c2) td.classList.add('drag-selecting');
+  });
+}
+function _rxClearDragHighlight() {
+  document.querySelectorAll('.rx-table .drag-selecting')
+    .forEach(td => td.classList.remove('drag-selecting'));
+}
+
+// ── 드래그 확정 — 바운딩 박스 내 모든 td 선택 ──────────────────────
+function _rxFinalizeDragSel() {
+  _rxClearDragHighlight();
+  const r1 = Math.min(_rxDrag.startRow, _rxDrag.endRow);
+  const r2 = Math.max(_rxDrag.startRow, _rxDrag.endRow);
+  const c1 = Math.min(_rxDrag.startCol, _rxDrag.endCol);
+  const c2 = Math.max(_rxDrag.startCol, _rxDrag.endCol);
+  _rxSelSi.clear(); selectedCells = [];
+  const seen = new Set();
+  (_rxDrag.tbody || document).querySelectorAll('td[data-row]').forEach(td => {
+    const r = parseInt(td.dataset.row), c = parseInt(td.dataset.col || '0');
+    if (r >= r1 && r <= r2 && c >= c1 && c <= c2 && !seen.has(td)) {
+      seen.add(td); selectedCells.push(td);
+      if (td.classList.contains('stage-td')) {
+        const si = _rxGetSi(td);
+        if (si !== null) _rxSelSi.add(si);
+      }
+    }
+  });
+  _rxRefreshSelUI();
+}
+
+// ── Ctrl/Shift+click 처리 ─────────────────────────────────────────
+function _rxCellSelect(el, e) {
+  const si = _rxGetSi(el);
+  if (si === null) return;
+  if (e && e.shiftKey && _rxLastSelSi !== null) {
+    const lo = Math.min(_rxLastSelSi, si), hi = Math.max(_rxLastSelSi, si);
+    for (let i = lo; i <= hi; i++) _rxSelSi.add(i);
+  } else {
+    if (_rxSelSi.has(si)) _rxSelSi.delete(si); else _rxSelSi.add(si);
+    _rxLastSelSi = si;
+  }
+  selectedCells = [];
+  _rxSelSi.forEach(s => {
+    const td = document.querySelector(`.stage-td[data-si="${s}"]`);
+    if (td) selectedCells.push(td);
+  });
+  _rxRefreshSelUI();
+}
+
+// ── UI 갱신: 하이라이트 + floating menu ─────────────────────────────
+function _rxRefreshSelUI() {
+  // selectedCells 에는 stage-td 외 product-td 등도 포함될 수 있음
+  const selSet = new Set(selectedCells);
+  document.querySelectorAll('.rx-editable, .rx-table tbody td[data-row]').forEach(el => {
+    const inSel = selSet.has(el);
+    el.classList.toggle('rx-cell-selected', inSel);
+    el.classList.toggle('selected', inSel);
+  });
+  const menu = document.getElementById('rx-cell-menu');
+  if (!menu) return;
+  const mergeBtn = menu.querySelector('.rxm-merge');
+  const splitBtn = menu.querySelector('.rxm-split');
+  mergeBtn.style.display = ''; splitBtn.style.display = '';
+  const n = selectedCells.length;
+  if (n === 0) { menu.classList.remove('on'); return; }
+  menu.classList.add('on');
+  // 메뉴 위치: 마지막 선택 셀 아래
+  const lastCell = selectedCells[selectedCells.length - 1];
+  if (lastCell) {
+    const r = lastCell.getBoundingClientRect();
+    menu.style.top  = (r.bottom + 8 + window.scrollY) + 'px';
+    menu.style.left = (r.left   + window.scrollX) + 'px';
+  }
+  // 합치기: 2개 이상 선택 / 분할: 1개이고 rowspan>1 또는 _vis.mergedSis.length>0
+  const hasMerged = selectedCells.some(td =>
+    (parseInt(td.getAttribute('rowspan')) || 1) > 1 ||
+    (parseInt(td.getAttribute('colspan')) || 1) > 1 ||
+    (() => { const si = _rxGetSi(td); return si !== null && stages[si]?._vis?.mergedSis?.length > 0; })()
+  );
+  if (n >= 2) splitBtn.style.display = 'none';
+  if (n === 1 && !hasMerged) mergeBtn.style.display = 'none';
+  if (n === 1 && hasMerged)  mergeBtn.style.display = 'none'; // 1개 선택 = 분할만
+}
+
+// ── 우클릭 컨텍스트 메뉴 ────────────────────────────────────────────
+function _rxShowCtxMenu(x, y) {
+  const menu = document.getElementById('rx-ctx-menu');
+  if (!menu) return;
+  menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.style.display = 'block';
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    if (r.right  > window.innerWidth)  menu.style.left = (x - r.width)  + 'px';
+    if (r.bottom > window.innerHeight) menu.style.top  = (y - r.height) + 'px';
+  });
+  const canMerge = _rxSelSi.size >= 2;
+  const mergedTd = selectedCells.length === 1 ? selectedCells[0] : null;
+  const canSplit = _rxSelSi.size === 1 && mergedTd &&
+                   (parseInt(mergedTd.getAttribute('rowspan')) || 1) > 1;
+  menu.querySelectorAll('.rxctx-merge').forEach(el =>
+    el.toggleAttribute('data-disabled', !canMerge));
+  menu.querySelectorAll('.rxctx-split').forEach(el =>
+    el.toggleAttribute('data-disabled', !canSplit));
+}
+function _rxHideCtxMenu() {
+  const m = document.getElementById('rx-ctx-menu');
+  if (m) m.style.display = 'none';
+}
+
+// ── 합치기 — 바운딩 박스 Top-Left 셀 유지, 나머지 display:none ──────
+// 분할 후 완벽 복구를 위해 stage._vis 에도 상태 저장 (renderStages 재실행 대비)
+function _rxMergeSel() {
+  _rxHideCtxMenu();
+  const cells = selectedCells.length ? selectedCells
+    : [..._rxSelSi].map(s => document.querySelector(`.stage-td[data-si="${s}"]`)).filter(Boolean);
+  if (cells.length < 2) return;
+
+  // ── 바운딩 박스 계산 ──────────────────────────────────────────────
+  let r1=Infinity, r2=-Infinity, c1=Infinity, c2=-Infinity;
+  cells.forEach(td => {
+    const r = parseInt(td.dataset.row ?? 0);
+    const c = parseInt(td.dataset.col ?? 0);
+    if (r < r1) r1 = r; if (r > r2) r2 = r;
+    if (c < c1) c1 = c; if (c > c2) c2 = c;
+  });
+  const totalRowspan = r2 - r1 + 1;
+  const totalColspan = c2 - c1 + 1;
+
+  // ── Top-Left 셀 찾기 ─────────────────────────────────────────────
+  const topLeft = cells.find(td =>
+    parseInt(td.dataset.row ?? 0) === r1 && parseInt(td.dataset.col ?? 0) === c1
+  );
+  if (!topLeft) return;
+
+  // ── Top-Left 에 span 설정 ─────────────────────────────────────────
+  topLeft.setAttribute('rowspan', totalRowspan);
+  if (totalColspan > 1) topLeft.setAttribute('colspan', totalColspan);
+
+  // ── 나머지 셀: display:none ───────────────────────────────────────
+  cells.forEach(td => { if (td !== topLeft) td.style.display = 'none'; });
+
+  // ── 데이터 모델 동기화 (renderStages 재실행 후에도 복구 가능) ──────
+  // stage-td 열(col=0) 처리: _vis 상태 기록
+  const stageTds = cells.filter(td => td.classList.contains('stage-td'));
+  const topLeftStageTd = stageTds.find(td =>
+    parseInt(td.dataset.row ?? 0) === r1 && parseInt(td.dataset.col ?? 0) === c1
+  );
+  if (topLeftStageTd) {
+    const anchorSi = _rxGetSi(topLeftStageTd);
+    if (anchorSi !== null && stages[anchorSi]) {
+      const anchor = stages[anchorSi];
+      const ownRows = (anchor.products || []).filter(p => p.key).length || 1;
+      if (!anchor._vis) anchor._vis = {};
+      anchor._vis.rowspanBonus = totalRowspan - ownRows;
+      anchor._vis.colspanBonus = totalColspan - 1;
+      anchor._vis.mergedSis = stageTds
+        .filter(td => td !== topLeftStageTd)
+        .map(td => _rxGetSi(td))
+        .filter(si => si !== null);
+      // 피흡수 단계에 hidden 플래그
+      anchor._vis.mergedSis.forEach(si => {
+        if (!stages[si]) return;
+        if (!stages[si]._vis) stages[si]._vis = {};
+        stages[si]._vis.hidden = true;
+        stages[si]._vis.mergedParent = anchorSi;
+      });
+    }
+  }
+  _rxClearSel();
+}
+
+// ── 분할 — 숨겨진 셀 전부 복구, rowspan/colspan 1로 초기화 ──────────
+function _rxSplitSel() {
+  _rxHideCtxMenu();
+  // 선택된 셀이 있으면 그것, 없으면 _rxSelSi 기준
+  const cells = selectedCells.length ? selectedCells
+    : [..._rxSelSi].map(s => document.querySelector(`.stage-td[data-si="${s}"]`)).filter(Boolean);
+
+  if (!cells.length) return;
+
+  // 기준 셀 (merged rowspan/colspan 가진 셀, 또는 첫 번째)
+  const anchor = cells.find(td =>
+    (parseInt(td.getAttribute('rowspan')) || 1) > 1 ||
+    (parseInt(td.getAttribute('colspan')) || 1) > 1
+  ) || cells[0];
+
+  // anchor 의 span 초기화
+  anchor.removeAttribute('rowspan');
+  anchor.removeAttribute('colspan');
+
+  // 같은 tbody 내 숨겨진 td 전부 복구 (display:none → '')
+  const tbody = anchor.closest('tbody');
+  if (tbody) {
+    tbody.querySelectorAll('td').forEach(td => {
+      if (td.style.display === 'none') {
+        td.style.display = '';
+        // 해당 셀의 rowspan/colspan도 초기화 (병합 전 원래 값인 1로)
+        td.removeAttribute('rowspan');
+        td.removeAttribute('colspan');
+      }
+    });
+  }
+
+  // ── 데이터 모델 동기화 ────────────────────────────────────────────
+  const anchorSi = _rxGetSi(anchor);
+  if (anchorSi !== null && stages[anchorSi]) {
+    const st = stages[anchorSi];
+    const vis = st._vis;
+    if (vis) {
+      // 피흡수 단계 hidden 해제
+      (vis.mergedSis || []).forEach(si => {
+        if (stages[si] && stages[si]._vis) {
+          stages[si]._vis.hidden = false;
+          stages[si]._vis.mergedParent = null;
+        }
+      });
+      vis.rowspanBonus  = 0;
+      vis.colspanBonus  = 0;
+      vis.mergedSis     = [];
+    }
+  }
+  _rxClearSel();
+}
+
+// ── 선택 해제 ────────────────────────────────────────────────────────
+function _rxClearSel() {
+  _rxSelSi.clear(); selectedCells = []; _rxLastSelSi = null;
+  _rxRefreshSelUI(); _rxHideCtxMenu();
 }
 
 // ── 단계 모달 ─────────────────────────────
@@ -2140,56 +2646,78 @@ function generatePreview() {
     const stagesInGroup = groups[monthKey] || [];
     const pageTitle = groupLabels[monthKey] || (monthKey >= 1001 ? `${monthKey - 1000}페이지 처방` : (monthKey ? `${monthKey}월 처방` : '기본 처방'));
     let rows = '';
+    let rowOffset = 0; // 논리 행 인덱스 (data-row 부여 기준)
+
     stagesInGroup.forEach(st => {
       const si = stages.indexOf(st);
       const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
       const dateInfo = st.dateRange ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.dateRange})</span>` : '';
       const areaInfo = st.area ? `<br><span style="font-size:0.85em;font-weight:600;">(${st.area}평)</span>` : '';
-      const stBase = `class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" onclick="openRxEdit(this)"`;
+
+      // ── _vis 병합 상태 ──────────────────────────────────────────────
+      const vis         = st._vis || {};
+      const isHidden    = !!vis.hidden;
+      const rowspanBonus = vis.rowspanBonus || 0;
+      const colspanBonus = vis.colspanBonus || 0;
+      const stageRowspan = (prods.length || 1) + rowspanBonus;
+      const stageColspan = 1 + colspanBonus;
+
+      // stage-td 공통 속성 (data-row, data-col 포함)
+      const stBase = `class="stage-td rx-editable" data-edit="stage-date"` +
+        ` data-si="${si}" data-row="${rowOffset}" data-col="0" onclick="openRxEdit(this,event)"`;
+
       if (!prods.length) {
-        rows += `<tr><td ${stBase}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>
-          <td colspan="4" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        const hiddenStyle = isHidden ? ' style="display:none"' : '';
+        rows += `<tr><td ${stBase} rowspan="${stageRowspan}"${colspanBonus?` colspan="${stageColspan}"`:''}${hiddenStyle}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>` +
+          `<td colspan="4" data-row="${rowOffset}" data-col="1" style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        rowOffset += 1;
         return;
       }
+
       const isMergedDesc = st.type === '관주' || st.type === '엽면';
       prods.forEach(({p, idx: pi}, rowIdx) => {
+        const rowNum = rowOffset + rowIdx;
         const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
         const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
         const prodSize = cartItem ? cartItem.size : p.key.split('||')[1] || '';
         const qtyCell = p.qty ? formatQty(p.qty, p.unit) : '';
         const prodAreaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
-        const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${prodName}${prodAreaLine}</td>`;
-        const sizeTd = `<td class="size-td">${prodSize}</td>`;
-        const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${qtyCell||'—'}</td>`;
+        const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${prodAreaLine}</td>`;
+        const sizeTd = `<td class="size-td" data-row="${rowNum}" data-col="2">${prodSize}</td>`;
+        const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
         // 관주/엽면: 첫 행에만 desc 셀 출력 (rowspan으로 통합)
         let descTd = '';
         if (isMergedDesc) {
           if (rowIdx === 0) {
             const allDescs = [...new Set(prods.map(({p:pp}) => pp.desc||'').filter(Boolean))];
             const descHtml = allDescs.length ? allDescs.join('<br>') : '<span style="color:#ccc;font-size:11px;">+</span>';
-            descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)" rowspan="${prods.length}" style="vertical-align:middle;">${descHtml}</td>`;
+            descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}" style="vertical-align:middle;">${descHtml}</td>`;
           }
         } else {
-          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" onclick="openRxEdit(this)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${p.desc||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
         }
         if (rowIdx === 0) {
-          rows += `<tr><td ${stBase} rowspan="${prods.length}">${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+          // 첫 행: stage-td 포함 (_vis.hidden이면 display:none, span 적용)
+          const hiddenStyle = isHidden ? ' style="display:none"' : '';
+          const spanAttrs   = ` rowspan="${stageRowspan}"${colspanBonus ? ` colspan="${stageColspan}"` : ''}`;
+          rows += `<tr><td ${stBase}${spanAttrs}${hiddenStyle}>${getStageLabelHtml(st)}${dateInfo}${areaInfo}</td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
           rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         }
       });
+      rowOffset += prods.length; // 다음 단계 시작 행 인덱스 전진
     });
     const allFuncRows = stagesInGroup.filter(s=>s.funcTags&&s.funcTags.length)
       .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff',si:stages.indexOf(s)}));
     const funcHeadHtml = allFuncRows.map(r=>
-      `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this)"
+      `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this,event)"
         style="background:${r.color};color:#111;font-size:22px;font-weight:700;
         text-align:center;padding:0 16px;height:49px;border:3.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;vertical-align:middle;">
         ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
       </th></tr>`).join('');
     return `<div class="page-card" data-pagekey="group_${monthKey}">
       <div class="content-page"><div class="content-inner">
-        <div class="page-purpose rx-editable" data-edit="page-title" data-monthkey="${monthKey}" onclick="openRxEdit(this)">${pageTitle}</div>
+        <div class="page-purpose rx-editable" data-edit="page-title" data-monthkey="${monthKey}" onclick="openRxEdit(this,event)">${pageTitle}</div>
         <table class="rx-table">
           <thead>${funcHeadHtml}
             <tr>
@@ -2408,14 +2936,16 @@ function detectTypeFromParsedLabel(label, products) {
 }
 
 function parseRxPdfCoords(items) {
-  // 행으로 묶기
+  // 행으로 묶기 — 러닝 평균 Y 사용 (고정 Y 드리프트 방지)
   const rows = [];
   for (const it of items) {
     const last = rows[rows.length - 1];
-    if (last && last.page === it.page && Math.abs(it.y - last.y) <= RX_ROW_Y_MERGE) {
+    if (last && last.page === it.page && Math.abs(it.y - last.yAvg) <= RX_ROW_Y_MERGE) {
       last.items.push(it);
+      last.yAvg = last.items.reduce((s, i) => s + i.y, 0) / last.items.length;
+      last.yMax = Math.max(last.yMax, it.y);
     } else {
-      rows.push({ y: it.y, page: it.page, items: [it] });
+      rows.push({ y: it.y, yAvg: it.y, yMax: it.y, page: it.page, items: [it] });
     }
   }
 
@@ -2426,13 +2956,13 @@ function parseRxPdfCoords(items) {
     const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
 
     leftRow.forEach(it =>
-      leftItems.push({ y: row.y, page: row.page, text: it.text })
+      leftItems.push({ y: row.yAvg, page: row.page, text: it.text })
     );
 
     if (rightRow.length > 0 &&
         RX_COUNT_UNITS_RE.test(rightRow.map(i => i.text).join(' '))) {
       rightRow.forEach(it =>
-        rightItems.push({ y: row.y, page: row.page, text: it.text })
+        rightItems.push({ y: row.yAvg, page: row.page, text: it.text })
       );
     }
   }
@@ -2449,15 +2979,29 @@ function parseRxPdfCoords(items) {
     cur.yMax = li.y;
   }
 
-  if (stageBlocks.length === 0) return [];
+  // 좌측 열 없는 페이지(제품만 있는 속지 등) → 페이지별 더미 블록 생성
+  if (stageBlocks.length === 0) {
+    const pageSet = [...new Set(rightItems.map(i => i.page))].sort((a, b) => a - b);
+    if (pageSet.length === 0) return [];
+    pageSet.forEach(pg => {
+      const pgItems = rightItems.filter(i => i.page === pg);
+      const yVals   = pgItems.map(i => i.y);
+      stageBlocks.push({ texts: [], yMin: Math.min(...yVals), yMax: Math.max(...yVals), page: pg });
+    });
+  }
 
-  // 우측 아이템을 행 단위로 재그룹화
+  // 우측 아이템을 행 단위로 재그룹화 (러닝 평균 Y)
   const rightRows = [];
   let lastRR = null;
   for (const ri of rightItems) {
-    if (!lastRR || lastRR.page !== ri.page || Math.abs(ri.y - lastRR.y) > RX_ROW_Y_MERGE) {
-      lastRR = { y: ri.y, page: ri.page, texts: [] };
+    if (!lastRR || lastRR.page !== ri.page || Math.abs(ri.y - lastRR.yAvg) > RX_ROW_Y_MERGE) {
+      lastRR = { y: ri.y, yAvg: ri.y, page: ri.page, texts: [] };
       rightRows.push(lastRR);
+    } else {
+      lastRR.texts.push(ri.text);
+      const cnt = lastRR.texts.length;
+      lastRR.yAvg = (lastRR.yAvg * (cnt - 1) + ri.y) / cnt;
+      continue;
     }
     lastRR.texts.push(ri.text);
   }
@@ -2465,15 +3009,19 @@ function parseRxPdfCoords(items) {
   // 각 stageBlock에 배정될 제품 행 배열 초기화
   const blockProducts = stageBlocks.map(() => []);
 
-  // ★ 각 우측 행을 같은 페이지 내 Y 중간점이 가장 가까운 stageBlock에 배정
+  // ★ 각 우측 행을 "마지막 선행 stageBlock(yMin ≤ 제품 Y)" 에 배정
+  // nearest-midpoint 대신 사용: 동일 Y 경계에서 오배정 방지
   rightRows.forEach(rr => {
-    let bestIdx = -1, bestDist = Infinity;
+    let bestIdx = -1;
     stageBlocks.forEach((sb, idx) => {
       if (sb.page !== rr.page) return;
-      const mid  = (sb.yMin + sb.yMax) / 2;
-      const dist = Math.abs(rr.y - mid);
-      if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+      if (sb.yMin <= rr.yAvg) bestIdx = idx;
     });
+    // 현재 페이지에 선행 블록이 없으면(제품이 블록보다 위에 있는 경우) 첫 블록에 배정
+    if (bestIdx < 0) {
+      const firstOnPage = stageBlocks.findIndex(sb => sb.page === rr.page);
+      if (firstOnPage >= 0) bestIdx = firstOnPage;
+    }
     if (bestIdx >= 0) blockProducts[bestIdx].push(rr);
   });
 
@@ -2512,10 +3060,12 @@ function parseRxPdfCoords(items) {
       products.push({ key, qty, unit, desc: '' });
     });
 
-    const rawLabel = sb.texts.join('\n').trim();
+    // 연속 중복 줄 제거 후 라벨 조합 (pdf.js 파편화로 같은 텍스트 여러 번 추출되는 경우 방지)
+    const dedupedTexts = sb.texts.filter((t, i, arr) => i === 0 || t !== arr[i - 1]);
+    const rawLabel = dedupedTexts.join('\n').trim();
     const inferredType = detectTypeFromParsedLabel(rawLabel, products);
     stages.push({
-      stageLabelOverride: rawLabel,  // 원문 그대로
+      stageLabelOverride: rawLabel,  // 원문 그대로 (중복 제거 후)
       stageLabel: '',
       type: inferredType,
       month: 0,
@@ -2970,12 +3520,20 @@ function applyParsedRx(parsed) {
   stages = parsed.stages.map(s => ({
     id: ++stageIdCnt,
     month: s.month || 0,
+    // ★ 페이지 추적 메타데이터 — parseRxPdfCoords 에서 채워진 값을 보존
+    pageGroup:  s.pageGroup  ?? null,
+    sourcePage: s.sourcePage ?? null,
+    pageType:   s.pageType   || '',
     type: s.type,
     days: s.days || '',
     dateRange: s.dateRange || '',
     purpose: s.purpose || '',
     funcTags: s.funcTags || [],
     funcColor: s.funcColor || '#ffffff',
+    typeNumOverride: s.typeNumOverride || 0,
+    typeNumWord:     s.typeNumWord     || '',
+    stageLabelOverride: s.stageLabelOverride || '',
+    stageLabel: s.stageLabel || '',
     products: (s.products || []).map(p => {
       if (!p.desc && s.type !== '엽면') {
         const prodName = (p.key||'').split('||')[0];
@@ -3001,6 +3559,12 @@ function applyParsedRx(parsed) {
 
 // ── 표지·처방전 통합 인라인 편집 ─────────────────────
 let _editorCtx = null; // { type, field?, si?, pi?, mk? }
+
+// ── rx 셀 선택 상태 ──────────────────────────────────────────
+let _rxSelSi      = new Set(); // 선택된 si (stage index) 집합 — 데이터 모델용
+let _rxLastSelSi  = null;      // shift+click 기준점
+let _rxCellClickBound = false;
+let selectedCells = [];        // 선택된 DOM <td> 요소 배열 — DOM 직접 조작용
 
 function editCoverLine(field) {
   _editorCtx = { type: 'cover', field };
@@ -3042,7 +3606,14 @@ function editCoverLine(field) {
   setTimeout(()=>ed.querySelector('#ceText').focus(),50);
 }
 
-function openRxEdit(el) {
+function openRxEdit(el, e) {
+  // modifier key → 선택 모드 (편집창 열지 않음)
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+    _rxCellSelect(el, e);
+    return;
+  }
+  // 일반 클릭 → 선택 해제 후 편집
+  _rxClearSel();
   const type = el.dataset.edit;
   const si   = parseInt(el.dataset.si);
   const pi   = parseInt(el.dataset.pi);
@@ -3054,8 +3625,10 @@ function openRxEdit(el) {
       get(){ return groupLabels[mk] || ''; }},
     'func-tags':  { t:'제품 기능 태그', h:'+ 로 구분  예) 뿌리활착+생장촉진',
       get(){ return (stages[si].funcTags||[]).join('+'); }},
-    'stage-date': { t:'날짜/기간', h:'예) 3월20일-3월25일',
-      get(){ return stages[si].dateRange||''; }},
+    // stage-date 클릭 → 단계명 편집 (날짜는 dateRange 필드로 이동)
+    // 표 셀(stage-td)에는 단계명이 표시되므로 단계명 편집이 더 직관적
+    'stage-date': { t:'단계명 편집', h:'단계명 직접 입력  예) 관주 1번',
+      get(){ return _cleanStageLabel(stages[si].stageLabelOverride || stages[si].stageLabel || getStageLabel(stages[si])); }},
     'prod-desc':  { t:'사용방법', h:'예) 물(10말)  주1회 500배액',
       get(){ return stages[si].products[pi].desc||''; }},
     'prod-qty':   { t:'사용량', h:'숫자 입력  예) 1  0.5  2',
@@ -3090,7 +3663,8 @@ function onCeTextInput() {
   } else if (type === 'func-tags') {
     stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
   } else if (type === 'stage-date') {
-    stages[si].dateRange = val;
+    // stage 셀 클릭 → 단계명 편집 (stageLabelOverride 갱신)
+    stages[si].stageLabelOverride = val;
   } else if (type === 'prod-desc') {
     stages[si].products[pi].desc = val;
   } else if (type === 'prod-qty') {
@@ -3184,6 +3758,21 @@ function _saveRxStages() {
   } catch(e) {}
 }
 </script>
+
+<!-- rx 셀 선택 floating bottom menu -->
+<div id="rx-cell-menu">
+  <button class="rxm-merge" onclick="_rxMergeSel()">🔗 합치기</button>
+  <button class="rxm-split" onclick="_rxSplitSel()">✂ 분할</button>
+  <button class="rxm-clear" onclick="_rxClearSel()">☐ 해제</button>
+</div>
+
+<!-- 우클릭 컨텍스트 메뉴 -->
+<div id="rx-ctx-menu">
+  <div class="rxctx-item rxctx-merge" onclick="_rxMergeSel()">🔗 셀 합치기</div>
+  <div class="rxctx-item rxctx-split" onclick="_rxSplitSel()">✂ 셀 분할</div>
+  <div class="rxctx-sep"></div>
+  <div class="rxctx-item" onclick="_rxClearSel()">☐ 선택 해제</div>
+</div>
 
 <!-- 표지 줄 편집 패널 -->
 <div id="coverEditor">

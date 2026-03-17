@@ -787,11 +787,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
 <script src="prescriptionModel.js?v=2"></script>
 <script src="productDB.js?v=2"></script>
-<script src="productMapper.js?v=2"></script>
+<script src="productMapper.js?v=3"></script>
+<script src="rxNormalizer.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
-<script src="pdfParser.js?v=5"></script>
-<script src="uiController.js?v=6"></script>
+<script src="pdfParser.js?v=13"></script>
+<script src="uiController.js?v=3"></script>
 <script src="main.js?v=2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1249,7 +1250,8 @@ function render(){
       </div><span class="gift-tag">본사지원</span></div>`;
     const lt=it.sp*it.qty;
     const dateDisp=it.date?it.date.slice(5).replace('-','/'):'';
-    const isCost=it.i&&it.i.startsWith('cost_');
+    // ★ cost 항목: 'cost_' prefix OR 비용 항목명 직접 매칭 (##TN## 재임포트 시 i 복원 전 호환)
+    const isCost=(it.i&&it.i.startsWith('cost_'))||/^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/.test(it.name);
     const byeoldoBorder=isCost&&it.byeoldo?'border:2px solid #1565C0;':'';
     const byeoldoBadge=isCost?`<button onclick="toggleByeoldoItem(${i})"
       style="font-size:11px;padding:3px 10px;border-radius:20px;border:1.5px solid ${it.byeoldo?'#1565C0':'#bbb'};
@@ -1574,7 +1576,7 @@ function doPdf(){
         ar:document.getElementById('cArea').value||'',
         cr:document.getElementById('cCrop').value||'',
         dt:document.getElementById('cDate').value||'',
-        i:cart.map(c=>[c.name,c.size,c.retail,c.sp,c.qty,c.gift?1:0,c.date||''])
+        i:cart.map(c=>[c.name,c.size,c.retail,c.sp,c.qty,c.gift?1:0,c.date||'',c.byeoldo?1:0])
       };
       const full='##TN##'+btoa(encodeURIComponent(JSON.stringify(d)))+'##TN##';
       for(var ci=0;ci<full.length;ci+=160) _tnLines.push(full.substring(ci,ci+160));
@@ -1722,6 +1724,8 @@ function goToPrescription(){
     crop:document.getElementById('cCrop').value||'',
     cart:cart
   };
+  // 이전 처방 단계 초기화 — 새 고객 처방전은 항상 빈 상태로 시작
+  localStorage.removeItem('rxStages');
   localStorage.setItem('rxData',JSON.stringify(data));
   window.location.href='처방전.html';
 }
@@ -2321,7 +2325,8 @@ function applyRxPdfEmbed(d){
       })),
       area:s.a||null,
       typeNumOverride:s.to||0,typeNumWord:s.tw||'',
-      stageLabelOverride:s.sl||''
+      stageLabelOverride:s.sl||'',
+      stageLabel:s.lb||''  // ★ lb 필드 복원 (누락 시 처방전에서 라벨 소실)
     })),
     pageOrder:d.po||null,
     costVisible:d.cv!==undefined?d.cv:true,
@@ -2416,9 +2421,13 @@ function parsePdfInvoice(text){
         addr:addr,region:d.rg||'',area:d.ar||'',crop:d.cr||'',
         date:d.dt||'',
         items:(d.i||[]).map(it=>({
+          // ★ i 필드: 비용 항목 식별용 (cost_ 프리픽스) — 없으면 이름으로 대체
+          i: /^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/.test(it[0]) ? 'cost_pdf_'+it[0] : undefined,
           name:it[0],size:it[1],retail:it[2],sp:it[3],qty:it[4],
           gift:it[5]===1,date:it[6]||'',
-          disc:it[2]>0?Math.round((1-it[3]/it[2])*100):0
+          byeoldo:it[7]===1,  // ★ byeoldo(별도/합계미포함) 복원
+          disc:it[2]>0?Math.round((1-it[3]/it[2])*100):0,
+          custom:true
         }))
       };
     }catch(e){console.error('[PDF] ##TN## 디코딩 실패:',e,tnm[1].slice(0,50));}
@@ -2783,8 +2792,11 @@ function applyParsedInvoice(parsed){
   if(parsed.crop) document.getElementById('cCrop').value=parsed.crop;
   if(parsed.date) document.getElementById('cDate').value=parsed.date;
 
-  // 카트에 제품 추가
+  // 카트에 제품 추가 — 누락 필드 보완 (##TN## 재임포트 등)
   parsed.items.forEach(it=>{
+    if(!it.i) it.i = 'pdf_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+    if(it.disc === undefined) it.disc = it.retail > 0 ? Math.round((1 - it.sp / it.retail) * 100) : 0;
+    if(it.custom === undefined) it.custom = true;
     cart.push(it);
   });
 
