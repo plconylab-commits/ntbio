@@ -2967,9 +2967,36 @@ function parseRxPdfCoords(items) {
     }
   }
 
+  // ── 페이지 상단 전체폭 행 = pageTitle 추출 (stageLabel 오염 방지) ──
+  // 좌(x<RX_LEFT_X_MAX) 와 우(x>=RX_LEFT_X_MAX+50) 양쪽에 아이템이 있으면 전체폭 행
+  const pageTitles = {};           // { pageNum: 'title text' }
+  const titleRowSet = new Set();   // 전체폭 행 인덱스 — leftItems에서 제외
+  const pageTopY = {};             // { pageNum: 첫번째 행 y }
+
+  rows.forEach((row, ri) => {
+    const pg = row.page;
+    if (pageTopY[pg] === undefined) pageTopY[pg] = row.yAvg;
+    // 페이지 상단 80px 이내 행만 검사 (타이틀은 항상 최상단에 위치)
+    if (row.yAvg - pageTopY[pg] > 80) return;
+
+    const xMin = Math.min(...row.items.map(it => it.x));
+    const xMax = Math.max(...row.items.map(it => it.x));
+    if (xMin < RX_LEFT_X_MAX && xMax > RX_LEFT_X_MAX + 50) {
+      // 전체폭 행 → pageTitle로 수집, leftItems에서 제외
+      const titleText = row.items.map(it => it.text).join(' ').trim();
+      if (titleText.length > 3) {
+        pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + titleText : titleText;
+        titleRowSet.add(ri);
+      }
+    }
+  });
+
   // 좌/우 분리 — 우측 행은 처방 수량 단위(포·병·봉·통·개) 포함 행만 수집
+  // 전체폭 pageTitle 행은 leftItems에 포함하지 않음
   const leftItems = [], rightItems = [];
-  for (const row of rows) {
+  rows.forEach((row, ri) => {
+    if (titleRowSet.has(ri)) return; // 전체폭 타이틀 행 제외
+
     const leftRow  = row.items.filter(it => it.x <  RX_LEFT_X_MAX);
     const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
 
@@ -2983,7 +3010,7 @@ function parseRxPdfCoords(items) {
         rightItems.push({ y: row.yAvg, page: row.page, text: it.text })
       );
     }
-  }
+  });
 
   // 좌측 덩어리(= stage 그룹) 묶기
   const stageBlocks = [];
@@ -3083,8 +3110,9 @@ function parseRxPdfCoords(items) {
     const rawLabel = dedupedTexts.join('\n').trim();
     const inferredType = detectTypeFromParsedLabel(rawLabel, products);
     stages.push({
-      stageLabelOverride: rawLabel,  // 원문 그대로 (중복 제거 후)
+      stageLabelOverride: rawLabel,  // 시기/단계명 원문 (stageLabel 전용)
       stageLabel: '',
+      pageTitle: pageTitles[sb.page] || '',  // 페이지 제목 (groupHeader 전용, stageLabel과 분리)
       type: inferredType,
       month: 0,
       sourcePage: sb.page,
@@ -3772,7 +3800,8 @@ function _saveRxStages() {
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null,
         typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',
-        stageLabelOverride: s.stageLabelOverride||'', stageLabel: s.stageLabel||''
+        stageLabelOverride: s.stageLabelOverride||'', stageLabel: s.stageLabel||'',
+        pageTitle: s.pageTitle||''
       })),
       pageOrder, costVisible, priceOverrides,
       groupLabels, stageGroupOrder,
