@@ -2375,6 +2375,8 @@ function onPdfSelected(input){
       // 2순위: 거래명세표 PDF (##TN## 마커 있을 때만 텍스트 파싱)
       if(compact.includes('##TN##')){
         const parsed=parsePdfInvoice(text);
+        window._invConfirmParsed=parsed;      // 모달에서 참조
+        window._invParsedItems=parsed.items; // items 보존
         applyParsedInvoice(parsed);
         return;
       }
@@ -2498,38 +2500,81 @@ function extractKoreanAddr(text){
 }
 
 function _parsePdf(text){
-  const result={name:'',phone:'',addr:'',date:'',items:[]};
+  const result={name:'',phone:'',addr:'',date:'',items:[],
+    warnings:{nameCandidates:[],phoneCandidates:[],addrCandidates:[]}};
 
-  // 날짜
+  // ── 날짜 ────────────────────────────────────────────────────
   const dm=text.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
-  if(dm){
-    const y=dm[1],m=dm[2].padStart(2,'0'),d=dm[3].padStart(2,'0');
-    result.date=y+'-'+m+'-'+d;
-  }
+  if(dm){ result.date=dm[1]+'-'+dm[2].padStart(2,'0')+'-'+dm[3].padStart(2,'0'); }
 
-  // 고객명: "XXX님" 패턴 (귀하 앞)
-  const nm=text.match(/([가-힣]{2,10})님\s*[\(귀]/);
-  if(nm) result.name=nm[1];
-
-  // 전화번호: PDF에서 숫자 사이 공백이 생길 수 있으므로 숫자간 공백 제거 후 매칭
-  const compacted=text.replace(/(\d)\s+(?=\d)/g,'$1');
-  const pm=compacted.match(/\(?\s*(01[016789])\s*\)?[\-\s]*(\d{3,4})[\-\s]*(\d{4})/);
-  if(pm) result.phone=pm[1]+pm[2]+pm[3];
-
-  // 주소 추출: 한국 주소 체계 기반 다단계 추출
-  result.addr=extractKoreanAddr(text);
-
-  // 제품 테이블 파싱
-  // 테이블 헤더 이후 ~ "천연비료회사는" 이전
+  // ── 영역 분할: 제품표 이전 = 고객/공급자 정보 ──────────────
   const tableStart=text.search(/품\s*목.*규\s*격.*수\s*량/);
+  const headerZone=tableStart>0 ? text.slice(0,tableStart) : text;
+  // "귀하" 이후 ~ 제품표 이전 = 고객 주소/연락처 핵심 영역
+  const guihaIdx=headerZone.search(/귀\s*하/);
+  const customerZone=guihaIdx>=0 ? headerZone.slice(guihaIdx) : headerZone;
+
+  // ── 고객명 추출 (4단계 우선순위) ───────────────────────────
+  // 1순위: "XXX님 귀하" (정식 거래명세표 수신인)
+  const nm1=text.match(/([가-힣]{2,6})님\s*귀\s*하/);
+  // 2순위: "XXX 귀하" (님 없는 형식)
+  const nm2=headerZone.match(/([가-힣]{2,5})\s+귀\s*하/);
+  // 3순위: "에이스농장 송한천" — 농장명 뒤 인명
+  const nm3=headerZone.match(/[가-힣]{2,}농장\s+([가-힣]{2,5})(?:\s|$|\n)/);
+  // 4순위: "XXX 전화:" 앞 (XXX농장 전화:010-... 형식)
+  const nm4=headerZone.match(/([가-힣]{2,8})\s+전화\s*[:：]/);
+  const nameCandidates=[nm1?.[1],nm2?.[1],nm3?.[1],nm4?.[1]]
+    .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i); // 중복 제거
+  result.name=nameCandidates[0]||'';
+  result.warnings.nameCandidates=nameCandidates;
+
+  // ── 전화번호 추출 (제품표 이전 우선 / 대표번호 제외) ───────
+  // 1577-, 1588-, 0504- 등 기업 대표번호 제외
+  const CORP_PREFIX=/^1[5-9]\d{2}|^0504|^080/;
+  const mobileRe=/\(?(01[016789])\)?[\-\s]*(\d{3,4})[\-\s]*(\d{4})/g;
+  const phoneCandidates=[];
+  // 검색 순서: 고객영역 → 헤더영역 → 전체 (처음 발견된 영역에서 멈춤)
+  for(const zone of [customerZone,headerZone,text]){
+    const zc=zone.replace(/(\d)\s+(?=\d)/g,'$1');
+    let pm; mobileRe.lastIndex=0;
+    while((pm=mobileRe.exec(zc))!==null){
+      const raw=pm[1]+pm[2]+pm[3];
+      if(!phoneCandidates.includes(raw)&&!CORP_PREFIX.test(raw)) phoneCandidates.push(raw);
+    }
+    if(phoneCandidates.length) break;
+  }
+  result.phone=phoneCandidates[0]||'';
+  result.warnings.phoneCandidates=phoneCandidates;
+
+  // ── 주소 추출 (고객 영역 우선, 실패 시 전체) ───────────────
+  const addr=extractKoreanAddr(customerZone)||extractKoreanAddr(text);
+  result.addr=addr;
+  if(addr) result.warnings.addrCandidates=[addr];
+
+  // ── 제품 테이블 파싱 ─────────────────────────────────────────
   const tableEnd=text.search(/천연비료\s*회사는/);
   if(tableStart>=0&&tableEnd>tableStart){
-    const tableText=text.slice(tableStart,tableEnd);
-    // 숫자+쉼표로 된 가격 패턴, 규격 패턴, 수량 패턴을 찾아 제품 행 파싱
-    parseProductRows(tableText,result.items);
+    parseProductRows(text.slice(tableStart,tableEnd),result.items);
   }
 
+  console.log('[_parsePdf] 추출결과:',{
+    name:result.name, nameCandidates,
+    phone:result.phone, phoneCandidates,
+    addr:result.addr, items:result.items.length
+  });
   return result;
+}
+
+// ─── 제품 행 여부 판별 ───────────────────────────────────────────────────
+// 아래 패턴에 해당하는 이름은 제품행이 아님 (메타/헤더/고객정보 행 제외)
+const INVOICE_META_RE=/거래명세표|입금표|공급받는자|공급자\s*보관|^\s*등록\s*$|^번호\s+\d|귀\s*하|사업장\s*소재지|업\s*태|종\s*목|대표전화|팩\s*스|결제금액|합계금액|원칙으로\s*합니다|소비자가|공급가액|수\s*량|규\s*격|합\s*계|상\s*호|성\s*명|기타무역업|수출입업/;
+
+function _isProductItemName(name){
+  if(!name||!name.trim()) return false;
+  if(INVOICE_META_RE.test(name.trim())) return false;
+  // 순수 숫자/기호만 있는 토큰은 제품명 아님
+  if(/^[\d,\-\/\s]+$/.test(name.trim())) return false;
+  return true;
 }
 
 function parseProductRows(tableText,items){
@@ -2592,11 +2637,11 @@ function parseProductRows(tableText,items){
           const n2=parseInt(nums2[1].replace(/,/g,''));
           if(Math.abs(n1)<=100){qty2=n1;sp2=n2;} else{qty2=1;sp2=n2;}
         }
-        if(cName){
+        if(cName&&_isProductItemName(cName)){
           items.push({
             i:'custom_'+Date.now()+'_'+items.length,
             name:cName,size:'-',retail:Math.abs(sp2),disc:0,sp:sp2,qty:qty2,
-            gift:false,custom:true,date:itemDate2
+            gift:false,custom:true,date:itemDate2,rowType:'product'
           });
         }
         i=afterStart+afterTokens2.length;
@@ -2651,7 +2696,7 @@ function parseProductRows(tableText,items){
       if(!sp&&retail) sp=retail;
     }
 
-    if(prodName&&(qty>0||isGift)){
+    if(prodName&&_isProductItemName(prodName)&&(qty>0||isGift)){
       // PRODS 매칭
       const prodIdx=findProdMatch(prodName,size);
       if(isGift){
@@ -2659,7 +2704,7 @@ function parseProductRows(tableText,items){
           i:prodIdx>=0?prodIdx:'custom_'+Date.now()+'_'+items.length,
           name:prodName,size,retail:prodIdx>=0?PRODS[prodIdx].price:0,
           disc:100,sp:0,qty:qty||1,gift:true,
-          custom:prodIdx<0,date:itemDate
+          custom:prodIdx<0,date:itemDate,rowType:'product'
         });
       }else{
         const retailPrice=prodIdx>=0?PRODS[prodIdx].price:retail;
@@ -2670,7 +2715,7 @@ function parseProductRows(tableText,items){
           name:prodName,size,retail:retailPrice,
           disc:Math.max(0,disc),sp:supplyPrice,qty,gift:false,
           customSp:sp>0&&sp!==retailPrice,
-          custom:prodIdx<0,date:itemDate
+          custom:prodIdx<0,date:itemDate,rowType:'product'
         });
       }
     }
@@ -2769,53 +2814,157 @@ function fixAddrNumbers(s){
 }
 
 function applyParsedInvoice(parsed){
-  // 카트 비우기
-  cart=[];
+  // warnings 필드 보완 (##TN## 등 구형 parsed에도 대응)
+  if(!parsed.warnings) parsed.warnings={nameCandidates:[],phoneCandidates:[],addrCandidates:[]};
+  // 제품 항목 누락 필드 사전 보완
+  parsed.items.forEach(it=>{
+    if(!it.i)       it.i    = 'pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+    if(it.disc===undefined) it.disc = it.retail>0?Math.round((1-it.sp/it.retail)*100):0;
+    if(it.custom===undefined) it.custom=true;
+  });
+  // 확인 모달 오픈 (고객정보 수정 + 제품 적용)
+  _openInvoiceConfirmModal(parsed);
+}
 
-  // 고객 정보 채우기
-  if(parsed.name) document.getElementById('cName').value=parsed.name;
-  if(parsed.phone){
-    document.getElementById('cPhone').value=parsed.phone;
-    fmtPhone(document.getElementById('cPhone'),'cPhone');
-  }
-  if(parsed.addr){
-    document.getElementById('cAddr').value=parsed.addr;
-    document.getElementById('cRegion').value=parsed.region||shortenRegion(parsed.addr);
-  }
-  if(parsed.phone2){
-    document.getElementById('cPhone2').value=parsed.phone2;
+/* ─── 거래명세표 불러오기 확인 모달 ─────────────────────────────────── */
+function _openInvoiceConfirmModal(parsed){
+  const prev=document.getElementById('invConfirmOverlay');
+  if(prev) prev.remove();
+
+  const cnt=parsed.items.length;
+  const giftCnt=parsed.items.filter(it=>it.gift).length;
+  const w=parsed.warnings;
+  const extraNames =(w.nameCandidates ||[]).slice(1).join(', ');
+  const extraPhones=(w.phoneCandidates||[]).slice(1).join(', ');
+
+  const nameFail =!parsed.name  ? '<div class="inv-warn">⚠ 고객명 추출 실패 — 직접 입력하세요</div>' : '';
+  const phoneFail=!parsed.phone ? '<div class="inv-warn">⚠ 연락처 추출 실패 — 직접 입력하세요</div>' : '';
+  const addrNote =!parsed.addr  ? '<div class="inv-warn">⚠ 주소 없음 — 서버 자동 조회 예정</div>' : '';
+
+  const overlay=document.createElement('div');
+  overlay.id='invConfirmOverlay';
+  overlay.innerHTML=`
+    <style>
+      #invConfirmOverlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;
+        display:flex;align-items:center;justify-content:center}
+      .inv-box{background:#fff;border-radius:14px;width:min(540px,95vw);max-height:88vh;
+        overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);padding:28px 28px 20px}
+      .inv-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+      .inv-hdr h3{margin:0;font-size:17px}
+      .inv-x{border:none;background:none;font-size:20px;cursor:pointer;color:#888}
+      .inv-section{background:#f5f9fa;border-radius:10px;padding:16px;margin-bottom:14px;
+        border:1px solid #d4e8e8}
+      .inv-section-title{font-weight:700;font-size:12px;color:#2a8a88;margin-bottom:10px;
+        text-transform:uppercase;letter-spacing:.5px}
+      .inv-grid{display:grid;grid-template-columns:58px 1fr;gap:8px 10px;align-items:center}
+      .inv-lbl{font-size:13px;font-weight:600;color:#555;white-space:nowrap}
+      .inv-inp{padding:7px 11px;border:1px solid #c8d8d8;border-radius:7px;font-size:14px;
+        width:100%;box-sizing:border-box}
+      .inv-inp:focus{outline:none;border-color:#2a8a88;box-shadow:0 0 0 2px rgba(42,138,136,.15)}
+      .inv-hint{grid-column:2;font-size:11px;color:#999;margin-top:-4px}
+      .inv-warn{color:#c0392b;font-size:12px;font-weight:600;margin:6px 0 0;grid-column:1/-1}
+      .inv-items-bar{background:#eef7f5;border-radius:8px;padding:12px 16px;margin-bottom:16px;
+        font-size:14px;border:1px solid #c0e0dc}
+      .inv-btn{display:block;width:100%;padding:14px;background:#2a8a88;color:#fff;
+        border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer}
+      .inv-btn:hover{background:#228a85}
+    </style>
+    <div class="inv-box">
+      <div class="inv-hdr">
+        <h3>📄 거래명세표 불러오기 확인</h3>
+        <button class="inv-x" onclick="document.getElementById('invConfirmOverlay').remove()">✕</button>
+      </div>
+
+      <!-- 고객 정보 -->
+      <div class="inv-section">
+        <div class="inv-section-title">🏷 고객 정보 확인 / 수정</div>
+        <div class="inv-grid">
+          <label class="inv-lbl">고객명</label>
+          <input id="invCustName" class="inv-inp" value="${parsed.name||''}" placeholder="고객명 직접 입력">
+          ${extraNames?`<div class="inv-hint">다른 후보: ${extraNames}</div>`:''}
+          ${nameFail}
+
+          <label class="inv-lbl">연락처</label>
+          <input id="invCustPhone" class="inv-inp" value="${parsed.phone||''}" placeholder="010-0000-0000">
+          ${extraPhones?`<div class="inv-hint">다른 후보: ${extraPhones}</div>`:''}
+          ${phoneFail}
+
+          <label class="inv-lbl">주소</label>
+          <input id="invCustAddr" class="inv-inp" value="${parsed.addr||''}" placeholder="주소 직접 입력">
+          ${addrNote}
+        </div>
+      </div>
+
+      <!-- 제품 요약 -->
+      <div class="inv-items-bar">
+        📦 제품 <b>${cnt}개</b>${giftCnt?` (증정 ${giftCnt}개 포함)`:''}
+        ${cnt===0?'&nbsp;&nbsp;<span style="color:#c0392b;font-weight:700">⚠ 제품 없음 — 고객정보만 적용됩니다</span>':''}
+      </div>
+
+      <button class="inv-btn" onclick="_applyInvoiceConfirm()">
+        ✅ 확인 — 명세표에 적용하기
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+  // 고객명 입력칸에 포커스
+  setTimeout(()=>document.getElementById('invCustName')?.focus(),80);
+}
+
+function _applyInvoiceConfirm(){
+  const parsed=window._invConfirmParsed||{items:[],warnings:{}};
+  // 원본 parsed를 overlay에서 꺼내도록 data-attr 활용
+  // → items는 overlay에 없으므로 _invParsedItems로 보존
+  const items=window._invParsedItems||parsed.items||[];
+
+  const name =(document.getElementById('invCustName') ?.value||'').trim();
+  const phone=(document.getElementById('invCustPhone')?.value||'').trim();
+  const addr =(document.getElementById('invCustAddr') ?.value||'').trim();
+
+  // ── 고객 정보 세팅 (값이 있든 없든 무조건 덮어씌움) ──
+  document.getElementById('cName').value=name;
+  const cPhoneEl=document.getElementById('cPhone');
+  cPhoneEl.value=phone;
+  if(phone) fmtPhone(cPhoneEl,'cPhone');
+  document.getElementById('cAddr').value=addr;
+  if(addr) document.getElementById('cRegion').value=
+    (window._invConfirmParsed?.region)||shortenRegion(addr);
+
+  const p2=window._invConfirmParsed?.phone2;
+  if(p2){
+    document.getElementById('cPhone2').value=p2;
     fmtPhone(document.getElementById('cPhone2'),'cPhone2');
     document.getElementById('phone2Row').style.display='';
     document.getElementById('phone2AddBtn').style.display='none';
   }
-  if(parsed.area) document.getElementById('cArea').value=parsed.area;
-  if(parsed.crop) document.getElementById('cCrop').value=parsed.crop;
-  if(parsed.date) document.getElementById('cDate').value=parsed.date;
+  if(window._invConfirmParsed?.area) document.getElementById('cArea').value=window._invConfirmParsed.area;
+  if(window._invConfirmParsed?.crop) document.getElementById('cCrop').value=window._invConfirmParsed.crop;
+  if(window._invConfirmParsed?.date) document.getElementById('cDate').value=window._invConfirmParsed.date;
 
-  // 카트에 제품 추가 — 누락 필드 보완 (##TN## 재임포트 등)
-  parsed.items.forEach(it=>{
-    if(!it.i) it.i = 'pdf_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
-    if(it.disc === undefined) it.disc = it.retail > 0 ? Math.round((1 - it.sp / it.retail) * 100) : 0;
-    if(it.custom === undefined) it.custom = true;
-    cart.push(it);
-  });
+  // ── 카트: 기존 비우고 제품 추가 ──
+  cart=[];
+  items.forEach(it=>cart.push(it));
 
-  render();
-  syncPrint();
+  if(typeof sortCart==='function') sortCart();
+  if(typeof render==='function')   render();
+  if(typeof syncPrint==='function') syncPrint();
 
-  const cnt=parsed.items.length;
-  const giftCnt=parsed.items.filter(it=>it.gift).length;
-  let msg='PDF 불러오기 완료!\n\n';
-  msg+='제품: '+cnt+'개'+(giftCnt?' (증정 '+giftCnt+'개 포함)':'')+'\n';
-  msg+='고객명: '+(parsed.name||'❌ 추출 실패')+'\n';
-  msg+='연락처: '+(parsed.phone||'❌ 추출 실패')+'\n';
-  msg+='주소: '+(parsed.addr||'❌ PDF에 없음 → 서버에서 자동 조회');
-  alert(msg);
+  document.getElementById('invConfirmOverlay').remove();
+  window._invConfirmParsed=null;
+  window._invParsedItems=null;
 
-  // 이름+연락처가 있으면 항상 서버 동기화 → 미수금 배지 + 빈 필드 자동 채우기
-  if(parsed.name && parsed.phone){
-    checkUnpaidOnCustomer();
-  }
+  // 미수금 조회
+  if(name&&phone&&typeof checkUnpaidOnCustomer==='function') checkUnpaidOnCustomer();
+
+  // 완료 토스트
+  const msg=`✅ 불러오기 완료 — 제품 ${items.length}개 / 고객: ${name||'(미입력)'}`;
+  const toast=document.createElement('div');
+  toast.textContent=msg;
+  Object.assign(toast.style,{position:'fixed',bottom:'80px',left:'50%',
+    transform:'translateX(-50%)',background:'#2a8a88',color:'#fff',
+    padding:'12px 24px',borderRadius:'10px',fontWeight:'700',fontSize:'15px',
+    zIndex:'99999',pointerEvents:'none',boxShadow:'0 4px 16px rgba(0,0,0,.3)'});
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(),3000);
 }
 
 // ─── 완전삭제 / 복구 ────────────────────

@@ -239,6 +239,26 @@ function injectValidationCSS() {
     .vld-apply-btn:disabled {
       background: #bbb; cursor: not-allowed;
     }
+
+    /* ── 고객 정보 바 ── */
+    .vld-customer-bar {
+      display: flex; flex-wrap: wrap; gap: 8px 14px;
+      padding: 11px 14px; background: #eef7f6;
+      border: 1px solid #b8dedc; border-radius: 8px;
+      margin-bottom: 10px; align-items: center;
+    }
+    .vld-customer-bar .vld-cust-label {
+      font-size: 12px; font-weight: 700; color: #2a8a88; white-space: nowrap;
+    }
+    .vld-customer-bar .vld-cust-field {
+      display: flex; align-items: center; gap: 5px;
+    }
+    .vld-cust-inp {
+      padding: 5px 10px; border: 1px solid #c0d8d8; border-radius: 6px;
+      font-size: 13px; min-width: 90px;
+    }
+    .vld-cust-inp:focus { outline: none; border-color: #2a8a88; }
+    .vld-cust-addr { min-width: 200px; }
   `;
   document.head.appendChild(style);
 }
@@ -514,6 +534,11 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
   const rows = window._vldRows || [];
   const warningCount = rows.filter(r => r.warnings && r.warnings.length).length;
 
+  // 고객 정보: 현재 입력 필드 값 (수정 가능하게 pre-fill)
+  const _cName  = document.getElementById('cName')?.value  || '';
+  const _cPhone = document.getElementById('cPhone')?.value || '';
+  const _cAddr  = document.getElementById('cAddr')?.value  || '';
+
   const html = `
     <div class="overlay on" id="validationOverlay" onclick="_vldCloseOut(event)">
       <div class="modal">
@@ -541,6 +566,22 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
             <span>작물: <b>${fi.cropName || '-'}</b></span>
             <span>전체 평수: <b>${totalArea ? totalArea + '평' : '-'}</b></span>
             <span style="color:#e67e22;">※ 적용 전 반드시 검토하세요</span>
+          </div>
+
+          <!-- 고객 정보 확인/수정 -->
+          <div class="vld-customer-bar">
+            <div class="vld-cust-field">
+              <span class="vld-cust-label">고객명</span>
+              <input id="vld-cust-name" class="vld-cust-inp" value="${_cName.replace(/"/g,'&quot;')}" placeholder="고객명">
+            </div>
+            <div class="vld-cust-field">
+              <span class="vld-cust-label">연락처</span>
+              <input id="vld-cust-phone" class="vld-cust-inp" value="${_cPhone.replace(/"/g,'&quot;')}" placeholder="010-0000-0000">
+            </div>
+            <div class="vld-cust-field">
+              <span class="vld-cust-label">주소</span>
+              <input id="vld-cust-addr" class="vld-cust-inp vld-cust-addr" value="${_cAddr.replace(/"/g,'&quot;')}" placeholder="주소">
+            </div>
           </div>
 
           <!-- 일괄 작업 바 -->
@@ -1050,9 +1091,43 @@ function _vldToggleWarnings() {
 /* ───────────────────────────────────────────
    장바구니에 적용
    ─────────────────────────────────────────── */
+// ─── 제품 행 여부 판별 (메타/헤더 행 제외) ───────────────────────────────────
+const _VLD_META_RE = /거래명세표|입금표|공급받는자|공급자\s*보관|^\s*등록\s*$|^번호\s+\d|귀\s*하|사업장\s*소재지|업\s*태|종\s*목|대표전화|팩\s*스|결제금액|합계금액|원칙으로\s*합니다|기타무역업|수출입업/;
+function _isProductVldRow(r) {
+  if (r.rowType === 'header' || r.rowType === 'meta') return false;
+  const name = (r.productName || r.productRaw || r.stageRaw || '').trim();
+  if (!name) return false;
+  if (_VLD_META_RE.test(name)) return false;
+  // 수량/매칭/처방 정보가 전혀 없으면 제품 행이 아님
+  if (!r.finalQty && !r.dosageQty && !r.matchId && !(r.rowType === 'product')) return false;
+  return true;
+}
+
 function _applyToCart() {
-  const rows    = window._vldRows || [];
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 0: 메타/헤더 행 최종 필터 (제품 행만 남김)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const allRows = window._vldRows || [];
+  const rows    = allRows.filter(_isProductVldRow);
+  const metaSkipped = allRows.length - rows.length;
+  if (metaSkipped > 0) {
+    console.log(`[_applyToCart] 메타/헤더 행 ${metaSkipped}개 제외 (rows[0]="${(allRows[0]?.productName||allRows[0]?.productRaw||'?')}")`);
+  }
+
   const overlay = document.getElementById('validationOverlay');
+
+  // ── 고객 정보 동기화: vld-cust-* → cName/cPhone/cAddr ──
+  if (overlay) {
+    const custName  = overlay.querySelector('#vld-cust-name');
+    const custPhone = overlay.querySelector('#vld-cust-phone');
+    const custAddr  = overlay.querySelector('#vld-cust-addr');
+    if (custName?.value.trim())  document.getElementById('cName').value = custName.value.trim();
+    if (custPhone?.value.trim()) {
+      document.getElementById('cPhone').value = custPhone.value.trim();
+      if (typeof fmtPhone === 'function') fmtPhone(document.getElementById('cPhone'), 'cPhone');
+    }
+    if (custAddr?.value.trim())  document.getElementById('cAddr').value = custAddr.value.trim();
+  }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 1: DOM → rows 강제 전체 동기화 (change 이벤트 없이 버튼만 눌러도 반영)
