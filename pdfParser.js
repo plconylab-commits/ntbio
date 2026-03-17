@@ -555,17 +555,26 @@ async function parsePdfToJSON(pdfFile) {
         }
       }
 
-      // stage_core가 없는 고아 블록(note만으로 구성) → 직전 블록에 병합
+      // stage_core가 없는 고아 블록(note만으로 구성)
+      // v15: yGap ≤ LEFT_CELL_MAX_GAP 이면 직전 블록에 병합 (같은 셀 연속 텍스트)
+      //      yGap >  LEFT_CELL_MAX_GAP 이면 폐기 (풋터/회사명/하단 노이즈)
       for (let i = stageBlocks.length - 1; i >= 1; i--) {
         const sb = stageBlocks[i];
         if (!sb.rowTypes.includes('stage_core')) {
           const prev = stageBlocks[i - 1];
-          prev.lines.push(...sb.lines);
-          prev.rowTypes.push(...sb.rowTypes);
-          prev.yMax = Math.max(prev.yMax, sb.yMax);
-          prev.rowspanRows += sb.rowspanRows;
-          prev.trace.push(`  [orphan-merge] 직전 블록에 병합 (y=${sb.yMin}~${sb.yMax})`);
-          prev.trace.push(...sb.trace);
+          const yGap = sb.yMin - prev.yMax;
+          if (yGap <= LEFT_CELL_MAX_GAP) {
+            // 가까운 고아 → 직전 블록에 병합 (기존 동작 유지)
+            prev.lines.push(...sb.lines);
+            prev.rowTypes.push(...sb.rowTypes);
+            prev.yMax = Math.max(prev.yMax, sb.yMax);
+            prev.rowspanRows += sb.rowspanRows;
+            prev.trace.push(`  [orphan-merge] 직전 블록에 병합 (gap=${yGap}, y=${sb.yMin}~${sb.yMax})`);
+            prev.trace.push(...sb.trace);
+          } else {
+            // 멀리 떨어진 고아 → 풋터/회사명 등 노이즈, 폐기
+            console.log(`[Parser v15] 먼 고아 블록 폐기 (gap=${yGap}): "${sb.lines.join(' ')}"`);
+          }
           stageBlocks.splice(i, 1);
         }
       }
