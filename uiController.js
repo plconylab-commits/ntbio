@@ -1051,45 +1051,76 @@ function _vldToggleWarnings() {
    장바구니에 적용
    ─────────────────────────────────────────── */
 function _applyToCart() {
-  const rows = window._vldRows || [];
+  const rows    = window._vldRows || [];
   const overlay = document.getElementById('validationOverlay');
 
-  // ── DOM → 데이터 동기화 ──
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 1: DOM → rows 강제 전체 동기화 (change 이벤트 없이 버튼만 눌러도 반영)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (overlay) {
-    // 단계명 원문
-    overlay.querySelectorAll('.vld-stage-label').forEach(ta => {
-      const idx = Number(ta.dataset.idx);
-      if (rows[idx] !== undefined) rows[idx].stageRaw = ta.value;
+    // ① 매칭 제품 셀렉터 (matchId / price) ← 이전에 누락돼 있던 핵심 항목
+    overlay.querySelectorAll('.vld-sel').forEach(sel => {
+      const idx = Number(sel.dataset.idx);
+      if (!rows[idx]) return;
+      const opt = sel.selectedOptions[0];
+      rows[idx].matchId   = sel.value;
+      rows[idx].matchName = opt ? opt.textContent.split(' (')[0] : '미매칭';
+      rows[idx].price     = opt ? Number(opt.dataset.price || 0) : 0;
+      rows[idx].size      = opt ? (opt.dataset.size  || '') : '';
     });
-    // 단계명 정규화
-    overlay.querySelectorAll('.vld-stage-norm').forEach(inp => {
-      const idx = Number(inp.dataset.idx);
-      if (rows[idx] !== undefined) rows[idx].stageNormalized = inp.value;
-    });
-    // 제품명
-    overlay.querySelectorAll('.vld-prod-name').forEach(inp => {
-      const idx = Number(inp.dataset.idx);
-      if (rows[idx] !== undefined) rows[idx].productName = inp.value;
-    });
-    // 용량
-    overlay.querySelectorAll('.vld-pkg-input').forEach(inp => {
-      const idx = Number(inp.dataset.idx);
-      if (rows[idx] !== undefined) rows[idx].packageSizeRaw = inp.value;
-    });
-    // 기준 평수
-    overlay.querySelectorAll('.vld-area-input').forEach(inp => {
-      const idx = Number(inp.dataset.idx);
-      if (rows[idx] !== undefined) rows[idx].baseArea = Number(inp.value) || null;
-    });
-    // 최종 수량 (수동 오버라이드)
+    // ② 최종 수량 (직접 입력 오버라이드)
     overlay.querySelectorAll('.vld-qty').forEach(inp => {
       const idx = Number(inp.dataset.idx);
       if (rows[idx]) rows[idx].finalQty = Number(inp.value) || 0;
     });
+    // ③ 기준 평수
+    overlay.querySelectorAll('.vld-area-input').forEach(inp => {
+      const idx = Number(inp.dataset.idx);
+      if (rows[idx]) rows[idx].baseArea = Number(inp.value) || null;
+    });
+    // ④ 처방 수량
+    overlay.querySelectorAll('.vld-dosage').forEach(inp => {
+      const idx = Number(inp.dataset.idx);
+      if (rows[idx]) rows[idx].dosageQty = Number(inp.value) || null;
+    });
+    // ⑤ 제품명 / 용량 / 단계명
+    overlay.querySelectorAll('.vld-prod-name').forEach(inp => {
+      const idx = Number(inp.dataset.idx);
+      if (rows[idx]) rows[idx].productName = inp.value;
+    });
+    overlay.querySelectorAll('.vld-pkg-input').forEach(inp => {
+      const idx = Number(inp.dataset.idx);
+      if (rows[idx]) rows[idx].packageSizeRaw = inp.value;
+    });
+    overlay.querySelectorAll('.vld-stage-label').forEach(ta => {
+      const idx = Number(ta.dataset.idx);
+      if (rows[idx]) rows[idx].stageRaw = ta.value;
+    });
+    overlay.querySelectorAll('.vld-stage-norm').forEach(inp => {
+      const idx = Number(inp.dataset.idx);
+      if (rows[idx]) rows[idx].stageNormalized = inp.value;
+    });
   }
 
-  // ── 매칭 안 된 행 경고 ──
-  const unmatchedRows = rows.filter(r => !r.matchId && r.dosageQty > 0);
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 2: 동기화 후 rows 상태 진단 로그
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  console.group('[_applyToCart] DOM→rows 동기화 완료');
+  console.table(rows.map((r, i) => ({
+    idx:         i,
+    productName: r.productName || '',
+    matchId:     r.matchId     || '(없음)',
+    finalQty:    r.finalQty    ?? '?',
+    dosageQty:   r.dosageQty   ?? '?',
+    baseArea:    r.baseArea    ?? '?',
+    price:       r.price       ?? 0,
+  })));
+  console.groupEnd();
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 3: 미매칭 행 경고 (조용히 닫지 않음)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const unmatchedRows = rows.filter(r => !r.matchId && (r.dosageQty > 0 || r.finalQty > 0));
   if (unmatchedRows.length > 0) {
     const ok = confirm(
       `${unmatchedRows.length}개 행이 아직 미매칭 상태입니다.\n` +
@@ -1098,48 +1129,121 @@ function _applyToCart() {
     if (!ok) return;
   }
 
-  // ── 같은 제품(matchId 기준) 수량 합산: 소수점 합산 후 Math.ceil 1회 ──
-  // ★ 반병×7 = 0.5×7 = 3.5 → Math.ceil → 4병  (행마다 올림하면 1×7=7이 되므로 안 됨)
-  const mergedMap  = {}; // matchId → float 합산
-  const matchUnits = {}; // matchId → unit (마지막 값 사용)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 4: matchId 기준 수량 합산 (소수점 합산 후 Math.ceil 1회)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const mergedMap  = {};
+  const matchUnits = {};
   rows.forEach(r => {
     if (!r.matchId || !r.finalQty || r.finalQty <= 0) return;
     mergedMap[r.matchId]  = (mergedMap[r.matchId] || 0) + r.finalQty;
     matchUnits[r.matchId] = r.dosageUnit || matchUnits[r.matchId] || '';
   });
 
-  // ── 장바구니에 적용: 합산값 Math.ceil 1회 ──
-  let addedCount = 0;
+  console.log('[_applyToCart] mergedMap:', mergedMap,
+    '| 합산 항목 수:', Object.keys(mergedMap).length);
+
+  // mergedMap이 비면 즉시 원인 표시 후 리턴 (모달 닫지 않음)
+  if (Object.keys(mergedMap).length === 0) {
+    const reasons = rows.map((r, i) => {
+      if (!r.matchId)              return `행${i}: matchId 없음 (${r.productName || '?'})`;
+      if (!(r.finalQty > 0))       return `행${i}: finalQty=${r.finalQty} (0 또는 NaN)`;
+      return null;
+    }).filter(Boolean).slice(0, 6).join('\n');
+    alert(
+      '❌ 추가된 제품이 없습니다.\n\n' +
+      '원인 (최대 6개):\n' + (reasons || '모든 행이 건너뛰어졌습니다.') + '\n\n' +
+      '▶ matchId가 없으면 드롭다운에서 제품을 선택하세요.\n' +
+      '▶ finalQty가 0이면 수량을 입력하세요.'
+    );
+    return; // ← 모달을 닫지 않음
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 5: 장바구니에 적용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let addedCount   = 0;
+  let skippedCount = 0;
+
+  console.log('[_applyToCart] cart.push 전 cart.length =', (typeof cart !== 'undefined' ? cart.length : 'cart 없음'));
+
   Object.entries(mergedMap).forEach(([matchId, totalRaw]) => {
     const totalQty = Math.ceil(totalRaw);
-    const prod     = PRODUCT_DB.find(p => p.id === matchId);
-    if (!prod) return;
+    const prod     = (typeof PRODUCT_DB !== 'undefined')
+                       ? PRODUCT_DB.find(p => p.id === matchId)
+                       : null;
+    if (!prod) {
+      console.warn(`[_applyToCart] matchId="${matchId}" → PRODUCT_DB에 없음 (스킵)`);
+      skippedCount++;
+      return;
+    }
 
     const existing = cart.find(c => c.name === prod.name && c.size === (prod.size || ''));
     if (existing) {
       existing.qty += totalQty;
+      console.log(`[_applyToCart] 기존 항목 수량 추가: "${prod.name}" +${totalQty} → ${existing.qty}`);
     } else {
       cart.push({
         i:      'rx_' + Date.now() + '_' + Math.random().toString(36).slice(2),
         name:   prod.name,
-        size:   prod.size || '',
-        retail: prod.price,
+        size:   prod.size   || '',
+        retail: prod.price  || 0,
         disc:   0,
-        sp:     prod.price,
+        sp:     prod.price  || 0,
         qty:    totalQty,
         gift:   false,
         custom: true
       });
+      console.log(`[_applyToCart] 신규 push: "${prod.name}" qty=${totalQty}`);
     }
     addedCount++;
   });
 
-  if (typeof render === 'function') render();
+  console.log('[_applyToCart] cart.push 후 cart.length =', cart.length,
+    '| 추가:', addedCount, '| 스킵:', skippedCount);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STEP 6: UI 갱신 + 결과 피드백
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (addedCount === 0) {
+    // PRODUCT_DB에 매칭 실패 — 모달 닫지 않음
+    alert(
+      '❌ 추가된 제품이 없습니다. (matchId / finalQty를 확인하세요)\n\n' +
+      `mergedMap 항목 수: ${Object.keys(mergedMap).length}\n` +
+      `PRODUCT_DB 미발견으로 스킵: ${skippedCount}개\n\n` +
+      '콘솔(F12)에서 [_applyToCart] 로그를 확인하세요.'
+    );
+    return; // ← 모달 열어둠
+  }
+
+  // 성공 시: render → 정렬 → 인쇄 동기화 → 모달 닫기
+  if (typeof sortCart  === 'function') sortCart();
+  if (typeof render    === 'function') render();
+  if (typeof syncPrint === 'function') syncPrint();
+
+  if (cart.length === 0) {
+    alert('⚠ render() 후에도 cart가 비어 있습니다. 콘솔 로그를 확인하세요.');
+  }
+
   closeValidationModal();
 
-  if (addedCount > 0) {
-    // 완료 토스트 (있을 경우 사용)
-    console.log(`[검증모달] ${addedCount}개 제품 장바구니 적용 완료`);
+  // 요약 토스트 or alert
+  const msg = `✅ ${addedCount}개 제품 명세표에 추가됨` +
+              (skippedCount > 0 ? `\n(DB 미발견으로 ${skippedCount}개 스킵)` : '');
+  if (typeof showToast === 'function') {
+    showToast(msg);
+  } else {
+    // showToast 없으면 잠깐 떴다 사라지는 인라인 알림 생성
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    Object.assign(toast.style, {
+      position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+      background:'#2a8a88', color:'#fff', padding:'12px 24px', borderRadius:'10px',
+      fontWeight:'700', fontSize:'15px', zIndex:'99999', pointerEvents:'none',
+      boxShadow:'0 4px 16px rgba(0,0,0,.3)'
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 }
 
