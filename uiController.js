@@ -15,7 +15,7 @@
 /* ───────────────────────────────────────────
    CSS 동적 삽입
    ─────────────────────────────────────────── */
-(function injectValidationCSS() {
+function injectValidationCSS() {
   if (document.getElementById('vld-css')) return;
   const style = document.createElement('style');
   style.id = 'vld-css';
@@ -241,7 +241,7 @@
     }
   `;
   document.head.appendChild(style);
-})();
+}
 
 /* ───────────────────────────────────────────
    내부 상태
