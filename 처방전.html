@@ -1053,6 +1053,24 @@ function onStageLabelOverride(si, val) {
   stages[si].stageLabelOverride = val;
   schedulePreview();
 }
+
+// ── 페이지 제목 입력 (스테이지 카드 textarea → groupLabels 연동) ────
+function onPageTitleInput(si, val) {
+  const mk = getStageGroupKey(stages[si]);
+  groupLabels[mk] = val;
+  // 같은 그룹의 다른 단계 카드 textarea도 실시간 동기화
+  stages.forEach((st, idx) => {
+    if (idx !== si && getStageGroupKey(st) === mk) {
+      const ta = document.getElementById(`stageTitleArea_${idx}`);
+      if (ta) ta.value = val;
+    }
+  });
+  // 그룹 헤더 입력란도 동기화
+  const inp = document.querySelector(`#monthGrp_${mk} .group-label-input`);
+  if (inp) inp.value = val;
+  schedulePreview();
+  _saveRxStages();
+}
 function _getHistoryState() {
   return JSON.stringify({ stages, groupLabels, stageGroupOrder });
 }
@@ -1291,12 +1309,12 @@ function renderStages() {
       <div class="stage-body">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           <div style="flex:2;min-width:160px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">📋 처방 단계명 <span style="font-size:10px;font-weight:400;">(줄바꿈 자유 입력)</span></label>
-            <textarea rows="3"
+            <label style="font-size:12px;color:#888;font-weight:700;">📋 페이지 제목 <span style="font-size:10px;font-weight:400;">(비워두면 공란)</span></label>
+            <textarea id="stageTitleArea_${si}" rows="2"
               style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;"
-              placeholder="예) 감사 비료&#10;수확:후 및&#10;3월-4월"
-              oninput="onStageLabelOverride(${si},this.value)"
-            >${st.stageLabelOverride||''}</textarea>
+              placeholder=""
+              oninput="onPageTitleInput(${si},this.value)"
+            >${groupLabels[getStageGroupKey(st)]||''}</textarea>
           </div>
           <div style="flex:1;min-width:80px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📅 날짜 간격</label>
@@ -1426,6 +1444,13 @@ function syncGroupOrder() {
 // ── 그룹 레이블 수정 ─────────────────────
 function setGroupLabel(mk, val) {
   groupLabels[mk] = val;
+  // 해당 그룹의 단계 카드 페이지 제목 textarea도 실시간 동기화
+  stages.forEach((st, idx) => {
+    if (getStageGroupKey(st) === mk) {
+      const ta = document.getElementById(`stageTitleArea_${idx}`);
+      if (ta) ta.value = val;
+    }
+  });
   schedulePreview();
   _saveRxStages();
 }
@@ -3668,6 +3693,13 @@ function onCeTextInput() {
     // 그룹 헤더 입력 필드도 즉시 업데이트
     const inp = document.querySelector(`#monthGrp_${mk} .group-label-input`);
     if (inp) inp.value = val;
+    // 해당 그룹의 단계 카드 페이지 제목 textarea도 실시간 동기화
+    stages.forEach((st, idx) => {
+      if (getStageGroupKey(st) === mk) {
+        const ta = document.getElementById(`stageTitleArea_${idx}`);
+        if (ta) ta.value = val;
+      }
+    });
   } else if (type === 'func-tags') {
     stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
   } else if (type === 'stage-date') {
