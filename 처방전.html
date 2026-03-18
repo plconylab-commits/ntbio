@@ -797,7 +797,19 @@ window.addEventListener('DOMContentLoaded', () => {
       const saved = JSON.parse(rawStages);
       if (saved.stages && saved.stages.length > 0) {
         stageIdCnt = 0;
-        stages = saved.stages.map(s => ({ ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '' }));
+        stages = saved.stages.map(s => {
+          const base = { ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '' };
+          // v17 migration: 구버전에서 stageLabelOverride = stageRawCell 로 저장된 경우 정정
+          if (!base.stageDisplayText && base.stageRawCell) {
+            // stageDisplayText가 없으면 stageRawCell을 그대로 사용 (best effort)
+            base.stageDisplayText = base.stageRawCell;
+          }
+          if (base.stageLabelOverride && base.stageLabelOverride === base.stageRawCell && base.stageDisplayText) {
+            // stageLabelOverride가 stageRawCell과 같으면 구버전 오염 패턴 → stageDisplayText로 교체
+            base.stageLabelOverride = base.stageDisplayText;
+          }
+          return base;
+        });
         pageOrder = saved.pageOrder || [];
         costVisible = saved.costVisible || false;
         priceOverrides = saved.priceOverrides || {};
@@ -1051,7 +1063,7 @@ function onTypeNumOverride(si, val) {
 }
 function onStageLabelOverride(si, val) {
   stages[si].stageDisplayOverride = val;  // 수정값은 displayOverride에 저장 (rawCell 보존)
-  stages[si].stageLabelOverride   = val;  // 하위 호환 유지
+  // stageLabelOverride 동기화 금지 — v17: 오염 방지
   schedulePreview();
 }
 
@@ -1115,8 +1127,10 @@ function _cleanStageLabel(raw) {
 }
 
 function getStageLabel(st) {
-  // 자유 입력 텍스트 우선, 없으면 구버전 type 필드 폴백
+  // v17 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell → stageLabelOverride
+  // pageTitle / groupLabels 는 절대 사용 금지
   if (st.stageDisplayOverride)  return _cleanStageLabel(st.stageDisplayOverride);
+  if (st.stageDisplayText)      return _cleanStageLabel(st.stageDisplayText);
   if (st.stageRawCell)          return _cleanStageLabel(st.stageRawCell);
   if (st.stageLabelOverride)    return _cleanStageLabel(st.stageLabelOverride);
   if (st.stageLabel)            return _cleanStageLabel(st.stageLabel);
@@ -1140,7 +1154,7 @@ function getStageBadge(st) {
   const label = getStageLabel(st).replace(/\n/g, ' ');
   const date  = st.dateRange ? ` · ${st.dateRange}` : '';
   // 의미있는 라벨이 있으면 페이지/월 접두어 생략
-  const hasMeaningfulLabel = !!(st.stageDisplayOverride || st.stageRawCell || st.stageLabelOverride || st.stageLabel);
+  const hasMeaningfulLabel = !!(st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || st.stageLabelOverride || st.stageLabel);
   const month = hasMeaningfulLabel
     ? (st.month ? `${st.month}월 ` : '')
     : (st.pageGroup && st.pageGroup >= 1001 ? `${st.pageGroup - 1000}페이지 ` : (st.month ? `${st.month}월 ` : ''));
@@ -1299,7 +1313,7 @@ function renderStages() {
               style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;"
               placeholder="예) 관주(1번)&#10;3월:20일-25일"
               oninput="onStageLabelOverride(${si},this.value)"
-            >${st.stageDisplayOverride || st.stageRawCell || st.stageLabelOverride || st.stageLabel || ''}</textarea>
+            >${st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || ''}</textarea>
           </div>
           <div style="flex:1;min-width:80px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📅 날짜 간격</label>
@@ -2667,13 +2681,8 @@ function generatePreview() {
     let rows = '';
     let rowOffset = 0; // 논리 행 인덱스 (data-row 부여 기준)
 
-    // ── 그룹 전체 행 수 계산 → 페이지 제목 셀 rowspan ─────────────────
-    const totalGroupRows = stagesInGroup.reduce((sum, st) => {
-      const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
-      return sum + (prods.length || 1) + ((st._vis||{}).rowspanBonus || 0);
-    }, 0) || 1;
-    let groupCellRendered = false;
-
+    // ── v17: stage-td는 각 stage별 단계명 표시 (pageTitle 표시 역할 제거) ──
+    // pageTitle은 page-purpose div에서만 표시. stage-td는 stageDisplayText를 보여줌
     stagesInGroup.forEach(st => {
       const si = stages.indexOf(st);
       const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
@@ -2681,17 +2690,20 @@ function generatePreview() {
       // ── _vis 병합 상태 ──────────────────────────────────────────────
       const vis         = st._vis || {};
       const isHidden    = !!vis.hidden;
-      const rowspanBonus = vis.rowspanBonus || 0;
+
+      // 단계명 표시값 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell
+      // stageLabelOverride / stageLabel / pageTitle 는 절대 사용 금지
+      const stageLabelText = st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || '(단계명)';
+      const stageLabelHtml = stageLabelText.replace(/\n/g, '<br>');
+      const stageRowspan   = prods.length || 1;
 
       if (!prods.length) {
         const hiddenStyle = isHidden ? ' style="display:none"' : '';
-        const titleTd = groupCellRendered ? '' :
-          `<td class="stage-td rx-editable" data-edit="page-title" data-monthkey="${monthKey}" ` +
-          `rowspan="${totalGroupRows}" data-row="0" data-col="0" ` +
+        const stageTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
+          `rowspan="1" data-row="${rowOffset}" data-col="0" ` +
           `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
-          `<strong>${pageTitle}</strong></td>`;
-        groupCellRendered = true;
-        rows += `<tr>${titleTd}<td colspan="4" data-row="${rowOffset}" data-col="1"${hiddenStyle} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+          `<strong>${stageLabelHtml}</strong></td>`;
+        rows += `<tr>${stageTd}<td colspan="4" data-row="${rowOffset}" data-col="1"${hiddenStyle} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
         rowOffset += 1;
         return;
       }
@@ -2719,12 +2731,13 @@ function generatePreview() {
         } else {
           descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${descText||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
         }
-        if (rowIdx === 0 && !groupCellRendered) {
-          groupCellRendered = true;
-          rows += `<tr><td class="stage-td rx-editable" data-edit="page-title" data-monthkey="${monthKey}" ` +
-            `rowspan="${totalGroupRows}" data-row="0" data-col="0" ` +
+        if (rowIdx === 0) {
+          // 각 stage 첫 행에만 stage-td 렌더 (rowspan = 이 stage의 제품 수)
+          const stageTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
+            `rowspan="${stageRowspan}" data-row="${rowNum}" data-col="0" ` +
             `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
-            `<strong>${pageTitle}</strong></td>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+            `<strong>${stageLabelHtml}</strong></td>`;
+          rows += `<tr>${stageTd}${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         } else {
           rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
         }
@@ -3103,12 +3116,28 @@ function parseRxPdfCoords(items) {
     // stage_core가 없는 첫 블록 = orphan 후보
     const hasCore = sb.texts.some(t => rxClassifyLeftRow(t) === 'stage_core');
     if (!hasCore && sb.texts.length > 0) {
+      // v17: 같은 페이지에 실제 stage_core / date 블록이 있는지 확인
+      // 있으면 → 이 블록은 pageTitle로 승격
+      // 없으면 → 이 블록이 유일한 stage일 수 있으므로 승격하지 않음
+      const pageHasRealStageBlocks = stageBlocks.some((other, otherIdx) => {
+        if (otherIdx === idx) return false;
+        if (other.page !== sb.page) return false;
+        if (orphanPromoted.has(otherIdx)) return false;
+        return other.texts.some(t => {
+          const type = rxClassifyLeftRow(t);
+          return type === 'stage_core' || type === 'date';
+        });
+      });
+      if (!pageHasRealStageBlocks) {
+        console.log(`[Parser v17] page ${sb.page} orphan NOT promoted (페이지에 다른 stage 블록 없음): "${sb.texts.join('|')}"`);
+        return; // 승격 안 함 — 실제 stage 블록으로 남겨둠
+      }
       const orphanText = sb.texts.filter(t => t.trim() && !RX_LEFT_TABLE_HDR_RE.test(t)).join(' ').trim();
       if (orphanText.length > 5) {
         const pg = sb.page;
         pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + orphanText : orphanText;
         orphanPromoted.add(idx);
-        console.log(`[Parser v16] page ${pg} pageTitle (orphan): "${orphanText}"`);
+        console.log(`[Parser v17] page ${pg} pageTitle (orphan promoted): "${orphanText}"`);
       }
     }
   });
@@ -3253,7 +3282,8 @@ function parseRxPdfCoords(items) {
         detailCellType,
       },
       // ── 하위 호환 ──
-      stageLabelOverride: stageRawCell,   // 기존 코드가 읽는 필드
+      // v17: stageRawCell이 아닌 stageDisplayText 사용 — stageRawCell에 오염 방지
+      stageLabelOverride: stageDisplayText || '',
       stageLabel: '',
       pageTitle: pageTitles[sb.page] || '',  // groupLabel 전용, stageLabel과 절대 분리
       type: inferredType,
@@ -3723,11 +3753,15 @@ function applyParsedRx(parsed) {
     funcColor: s.funcColor || '#ffffff',
     typeNumOverride: s.typeNumOverride || 0,
     typeNumWord:     s.typeNumWord     || '',
-    stageLabelOverride:  s.stageLabelOverride  || '',
     stageLabel:          s.stageLabel          || '',
     stageRawCell:        s.stageRawCell        || '',
     stageDisplayOverride: s.stageDisplayOverride || '',
-    stageDisplayText:    s.stageDisplayText    || '',
+    // v17: stageDisplayText 없으면 stageRawCell에서 복원 (migration)
+    stageDisplayText:    s.stageDisplayText    || s.stageRawCell || '',
+    // v17: stageLabelOverride가 stageRawCell과 같으면 구버전 오염 → stageDisplayText로 교체
+    stageLabelOverride:  (s.stageLabelOverride && s.stageLabelOverride !== s.stageRawCell)
+                           ? s.stageLabelOverride
+                           : (s.stageDisplayText || s.stageRawCell || ''),
     stageMeta:           s.stageMeta           || null,
     products: (s.products || []).map(p => {
       if (!p.desc && !p.detailCellRaw && s.type !== '엽면') {
@@ -3823,7 +3857,9 @@ function openRxEdit(el, e) {
     // stage-date 클릭 → 단계명 편집 (날짜는 dateRange 필드로 이동)
     // 표 셀(stage-td)에는 단계명이 표시되므로 단계명 편집이 더 직관적
     'stage-date': { t:'시기/단계명', h:'시기/단계 원문 그대로 입력 (줄바꿈 자유)',
-      get(){ return stages[si].stageDisplayOverride || stages[si].stageRawCell || stages[si].stageLabelOverride || stages[si].stageLabel || getStageLabel(stages[si]); }},
+      // v17: stageDisplayOverride → stageDisplayText → stageRawCell 만 사용
+      // stageLabelOverride / stageLabel / getStageLabel() / pageTitle 사용 금지
+      get(){ return stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || ''; }},
     'prod-desc':  { t:'사용방법', h:'예) 물(10말)  주1회 500배액',
       get(){ const p=stages[si].products[pi]; return p.detailCellDisplayOverride || p.detailCellRaw || p.desc || ''; }},
     'prod-qty':   { t:'사용량', h:'숫자 입력  예) 1  0.5  2',
@@ -3862,9 +3898,8 @@ function onCeTextInput() {
     stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
   } else if (type === 'stage-date') {
     // stage 셀 클릭 → 시기/단계명 편집
-    // stageDisplayOverride에 저장해 stageRawCell 원문을 보존
+    // stageDisplayOverride에만 저장 — stageLabelOverride 동기화 금지 (오염 방지)
     stages[si].stageDisplayOverride = val;
-    stages[si].stageLabelOverride   = val;  // 하위 호환 유지
     // 스테이지 카드의 시기/단계명 textarea도 실시간 동기화
     const snArea = document.getElementById(`stageNameArea_${si}`);
     if (snArea) snArea.value = val;
