@@ -140,18 +140,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   display:flex;align-items:center;justify-content:center;}
 .stage-del:hover{background:rgba(255,255,255,.4);}
 .stage-body{padding:8px 10px;}
-/* ── 자동 라벨 행 (관주/엽면 전용) ── */
-.auto-label-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  background:var(--teal-light);border:1.5px solid var(--teal);border-radius:6px;
-  padding:5px 9px;margin-bottom:3px;}
-.auto-label-badge{font-size:15px;font-weight:800;color:var(--teal-dark);
-  letter-spacing:.3px;min-width:80px;}
-.auto-label-controls{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto;}
-.auto-label-num-wrap{display:flex;flex-direction:column;}
-.type-num-input{width:52px;font-size:13px;padding:3px 5px;border:1.5px solid var(--teal);
-  border-radius:4px;text-align:center;color:var(--teal-dark);font-weight:700;}
-.type-suffix-select{font-size:13px;padding:3px 5px;border:1.5px solid var(--teal);
-  border-radius:4px;color:var(--teal-dark);font-weight:700;background:#fff;}
 .prod-row{display:grid;grid-template-columns:1fr 50px 1fr 22px;gap:5px;
   align-items:center;margin-bottom:5px;}
 /* ── 제품 행 ── */
@@ -730,26 +718,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
             <option value="엽면">엽면</option>
           </select></div>
       </div>
-      <!-- 관주/엽면 전용: 번호 + 단위 선택 -->
+      <!-- 관주/엽면 선택 시: 자동 번호 안내 -->
       <div class="f-row" id="typeNumRow" style="display:none;">
         <div class="fg">
-          <label>자동 라벨 미리보기</label>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span id="mAutoLabelPreview" style="font-size:16px;font-weight:700;color:var(--teal-dark);background:var(--teal-light);padding:4px 12px;border-radius:6px;letter-spacing:.5px;">관주(1번)</span>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <label style="font-size:11px;color:#888;white-space:nowrap;">번호 직접 지정:</label>
-              <input id="mTypeNumOverride" type="number" min="1" max="99" placeholder="자동"
-                style="width:60px;font-size:13px;padding:4px 6px;border:1.5px solid #ddd;border-radius:5px;"
-                oninput="updateModalAutoLabel()">
-            </div>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <label style="font-size:11px;color:#888;">단위:</label>
-              <select id="mTypeNumWord" style="font-size:13px;padding:4px 6px;border:1.5px solid #ddd;border-radius:5px;"
-                onchange="updateModalAutoLabel()">
-                <option value="번">번</option>
-                <option value="안">안</option>
-              </select>
-            </div>
+          <div style="background:var(--teal-light);border:1.5px solid var(--teal);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--teal-dark);">
+            <strong id="mAutoLabelPreview">관주(1번)</strong>
+            <span style="font-size:11px;color:#888;margin-left:6px;">으로 자동 추가됩니다</span>
           </div>
         </div>
       </div>
@@ -762,9 +736,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
           </div>
         </div>
       </div>
-      <div class="f-row" id="customLabelRow">
+      <div class="f-row">
         <div class="fg">
-          <label id="mStageLabelLabel">직접 입력 <span id="mStageLabelHint" style="font-size:10px;color:#999;">(입력 시 자동 라벨 대신 사용)</span></label>
+          <label>직접 입력 <span style="font-size:10px;color:#999;">(비워두면 자동 라벨 사용)</span></label>
           <input id="mStageLabel" type="text" placeholder="예) 감사비료 수확:후 및 3월 4월">
         </div>
       </div>
@@ -1110,28 +1084,10 @@ function onTypeNumOverride(si, val) {
 function onStageLabelOverride(si, val) {
   stages[si].stageDisplayOverride = val;  // 수정값은 displayOverride에 저장 (rawCell 보존)
   // stageLabelOverride 동기화 금지 — v17: 오염 방지
-  // 직접 입력이 비워지면 뱃지 다시 표시
-  const badge = document.getElementById(`autoLabelBadge_${si}`);
-  if (badge) {
-    const st = stages[si];
-    badge.style.opacity = val ? '0.4' : '1';
-  }
   // 헤더 .slabel 실시간 업데이트 (renderStages 없이)
   const slabel = document.querySelector(`#stageCard_${stages[si].id} .slabel`);
   if (slabel) slabel.textContent = getStageBadge(stages[si]);
   schedulePreview();
-}
-
-// 번호/단위 변경 시 자동 라벨 뱃지 실시간 업데이트 (renderStages 없이)
-function updateAutoLabelBadge(si) {
-  const st = stages[si];
-  if (!st) return;
-  const badge = document.getElementById(`autoLabelBadge_${si}`);
-  if (badge) {
-    badge.textContent = `${st.type}(${st.typeNum||1}${st.typeNumWord||'번'})`;
-  }
-  const slabel = document.querySelector(`#stageCard_${st.id} .slabel`);
-  if (slabel) slabel.textContent = getStageBadge(st);
 }
 
 function _getHistoryState() {
@@ -1375,34 +1331,12 @@ function renderStages() {
       <div class="stage-body">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           <div style="flex:2;min-width:140px;">
-            <label style="font-size:12px;color:#888;font-weight:700;">🕐 시기/단계명</label>
-            ${(st.type === '관주' || st.type === '엽면') ? `
-            <div class="auto-label-row" id="autoLabelRow_${si}">
-              <span class="auto-label-badge" id="autoLabelBadge_${si}">${st.type}(${st.typeNum||1}${st.typeNumWord||'번'})</span>
-              <div class="auto-label-controls">
-                <div class="auto-label-num-wrap">
-                  <label style="font-size:10px;color:#888;margin-bottom:1px;display:block;">번호</label>
-                  <input type="number" class="type-num-input" min="1" max="99"
-                    value="${st.typeNumOverride || st.typeNum || 1}"
-                    title="번호 직접 지정 (비우면 자동)"
-                    oninput="onTypeNumOverride(${si},this.value)">
-                </div>
-                <div>
-                  <label style="font-size:10px;color:#888;margin-bottom:1px;display:block;">단위</label>
-                  <select class="type-suffix-select" onchange="onTypeNumWord(${si},this.value)">
-                    <option value="번" ${(st.typeNumWord||'번')==='번'?'selected':''}>번</option>
-                    <option value="안" ${st.typeNumWord==='안'?'selected':''}>안</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <label style="font-size:10px;color:#aaa;font-weight:400;margin-top:4px;display:block;">
-              ✏️ 직접 입력 시 자동 라벨 대신 사용 <span style="color:#ccc;">(비우면 자동 라벨로 복귀)</span>
-            </label>` : `
-            <span style="font-size:10px;color:#aaa;font-weight:400;">(줄바꿈 자유 입력)</span>`}
+            <label style="font-size:12px;color:#888;font-weight:700;">🕐 시기/단계명
+              <span style="font-size:10px;font-weight:400;color:#aaa;"> (줄바꿈 자유 · 비우면 자동)</span>
+            </label>
             <textarea id="stageNameArea_${si}" rows="2"
-              style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;margin-top:2px;"
-              placeholder="${(st.type==='관주'||st.type==='엽면') ? '비워두면 자동 라벨 사용 (예: 관주(1번))' : '예) 감사 비료 수확:후 및 3월-4월'}"
+              style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;"
+              placeholder="${getStageLabel(st)}"
               oninput="onStageLabelOverride(${si},this.value)"
             >${st.stageDisplayOverride || (st.type!=='관주'&&st.type!=='엽면' ? (st.stageDisplayText||st.stageRawCell||'') : '')}</textarea>
           </div>
@@ -2323,8 +2257,6 @@ function openStageModal() {
   document.getElementById('mDateRange').value = '';
   document.getElementById('mDays').value = '';
   document.getElementById('mStageLabel').value = '';
-  document.getElementById('mTypeNumOverride').value = '';
-  document.getElementById('mTypeNumWord').value = '번';
   onTypeChange();
 }
 function closeStageModal() {
@@ -2338,22 +2270,15 @@ function onTypeChange() {
   const isRepeat = t === '관주' || t === '엽면';
   document.getElementById('daysRow').style.display = t === '정식후' ? '' : 'none';
   document.getElementById('typeNumRow').style.display = isRepeat ? '' : 'none';
-  // 직접입력 라벨 문구 조정
-  const hint = document.getElementById('mStageLabelHint');
-  if (hint) hint.textContent = isRepeat ? '(입력 시 자동 라벨 대신 사용)' : '(예: 감사비료 수확:후 및 3월 4월)';
   if (isRepeat) updateModalAutoLabel();
 }
-// 모달 자동 라벨 미리보기 업데이트
+// 모달 자동 라벨 미리보기 업데이트 (관주/엽면 선택 시)
 function updateModalAutoLabel() {
   const type = document.getElementById('mType').value;
   const month = parseInt(document.getElementById('mMonth').value) || 0;
-  const overrideVal = document.getElementById('mTypeNumOverride').value;
-  const suffix = document.getElementById('mTypeNumWord').value || '번';
-  // 자동 번호: 현재 month=0 그룹 기준 (새 단계는 항상 month=0 그룹에 추가됨)
   const autoNum = previewTypeNum(month, type);
-  const num = overrideVal ? parseInt(overrideVal) : autoNum;
   const preview = document.getElementById('mAutoLabelPreview');
-  if (preview) preview.textContent = `${type}(${num}${suffix})`;
+  if (preview) preview.textContent = `${type}(${autoNum}번)`;
 }
 function confirmStage() {
   _pushHistory();
@@ -2362,18 +2287,13 @@ function confirmStage() {
   const days = parseInt(document.getElementById('mDays').value) || null;
   const dateRange = document.getElementById('mDateRange').value.trim();
   const customLabel = document.getElementById('mStageLabel').value.trim();
-  const isRepeat = type === '관주' || type === '엽면';
-  const typeNumWord = isRepeat ? (document.getElementById('mTypeNumWord').value || '번') : '';
-  const typeNumOverrideVal = isRepeat ? parseInt(document.getElementById('mTypeNumOverride').value) : 0;
-  const typeNumOverride = (typeNumOverrideVal >= 1) ? typeNumOverrideVal : 0;
   stages.push({
     id: ++stageIdCnt, month, type, days, dateRange,
     purpose: '', funcTags: [], funcColor: '#ffffff', products: [],
     stageLabel: customLabel,
-    // v17 fields
-    stageDisplayOverride: customLabel,  // 직접 입력값 → stageDisplayOverride
-    typeNumWord,
-    typeNumOverride,
+    stageDisplayOverride: customLabel,  // 직접 입력값만 override에 저장
+    typeNumWord: '',  // 기본값 '번'은 getStageLabel에서 처리
+    typeNumOverride: 0,
     stageDisplayText: '', stageRawCell: '', stageLabelOverride: '',
     stageMeta: null, pageTitle: '',
   });
@@ -2817,9 +2737,10 @@ function generatePreview() {
       const vis         = st._vis || {};
       const isHidden    = !!vis.hidden;
 
-      // 단계명 표시값 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell
-      // stageLabelOverride / stageLabel / pageTitle 는 절대 사용 금지
-      const stageLabelText = st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || '(단계명)';
+      // 단계명 표시값: getStageLabel() 하나로 통일
+      // getStageLabel 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell
+      //   → stageLabelOverride → stageLabel → 자동 라벨(관주(N번) / 엽면(N번)) → type
+      const stageLabelText = getStageLabel(st);
       const stageLabelHtml = stageLabelText.replace(/\n/g, '<br>');
       const stageRowspan   = prods.length || 1;
 
@@ -3983,9 +3904,9 @@ function openRxEdit(el, e) {
     // stage-date 클릭 → 단계명 편집 (날짜는 dateRange 필드로 이동)
     // 표 셀(stage-td)에는 단계명이 표시되므로 단계명 편집이 더 직관적
     'stage-date': { t:'시기/단계명', h:'시기/단계 원문 그대로 입력 (줄바꿈 자유)',
-      // v17: stageDisplayOverride → stageDisplayText → stageRawCell 만 사용
-      // stageLabelOverride / stageLabel / getStageLabel() / pageTitle 사용 금지
-      get(){ return stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || ''; }},
+      // 편집기 초기값: stageDisplayOverride(사용자 직접 입력)가 있으면 그것,
+      // 없으면 getStageLabel로 자동 라벨(관주(N번) 등) 표시 → 편집 시작점 제공
+      get(){ return stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || getStageLabel(stages[si]); }},
     'prod-desc':  { t:'사용방법', h:'예) 물(10말)  주1회 500배액',
       get(){ const p=stages[si].products[pi]; return p.detailCellDisplayOverride || p.detailCellRaw || p.desc || ''; }},
     'prod-qty':   { t:'사용량', h:'숫자 입력  예) 1  0.5  2',
