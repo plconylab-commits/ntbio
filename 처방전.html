@@ -2899,7 +2899,9 @@ function generatePreview() {
         ft: s.funcTags, fc: s.funcColor,
         pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
         a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
-        sl: s.stageLabelOverride||'', lb: s.stageLabel||''
+        sl: s.stageLabelOverride||'', lb: s.stageLabel||'',
+        // v18: 표시 텍스트 3종 — 경로 무관 자동번호 동작 보장
+        sdt: s.stageDisplayText||'', src: s.stageRawCell||'', sdo: s.stageDisplayOverride||''
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined,
@@ -2915,6 +2917,8 @@ function generatePreview() {
   preview.innerHTML = `<div class="print-pages" id="printPages" style="--rx-fs:${fs}px;--rx-th:${thfs}px;">${html}</div>`;
   setTimeout(updateTocThumbnails, 80);
   if (window.innerWidth <= 768) setTimeout(applyMobilePreviewScale, 120);
+  // v18: 화면 미리보기 자동 축소
+  setTimeout(applyPreviewAutoFit, 150);
 }
 
 function doPrint() {
@@ -2976,6 +2980,42 @@ function removePrintAutoFit() {
 
 window.addEventListener('beforeprint', applyPrintAutoFit);
 window.addEventListener('afterprint',  removePrintAutoFit);
+// ── 화면 미리보기 자동 축소 (실시간 잘림 방지) ───────────────────────────────
+const PREVIEW_SAFE_H   = 563;  // px — content-inner 안전 높이
+const PREVIEW_MIN_ZOOM = 0.80; // 화면 미리보기 최소 zoom
+
+function applyPreviewAutoFit() {
+  document.querySelectorAll('.page-card').forEach(card => {
+    const cp = card.querySelector('.content-page');
+    const ci = card.querySelector('.content-inner');
+    if (!cp || !ci) return;
+
+    cp.style.removeProperty('--rx-fs');
+    cp.style.removeProperty('zoom');
+    cp.classList.remove('print-compact');
+    delete card.dataset.previewScaled;
+
+    let h = ci.scrollHeight;
+    if (h <= PREVIEW_SAFE_H) return;
+
+    // Step 1: 폰트 3px 축소
+    const baseFs = parseInt(getComputedStyle(cp).getPropertyValue('--rx-fs')) || 17;
+    const newFs  = Math.max(9, baseFs - 3);
+    cp.style.setProperty('--rx-fs', newFs + 'px');
+    h = ci.scrollHeight;
+    if (h <= PREVIEW_SAFE_H) { card.dataset.previewScaled = '1'; return; }
+
+    // Step 2: padding/line-height 축소
+    cp.classList.add('print-compact');
+    h = ci.scrollHeight;
+    if (h <= PREVIEW_SAFE_H) { card.dataset.previewScaled = '1'; return; }
+
+    // Step 3: zoom 축소 (최소 0.80)
+    const scale = Math.max(PREVIEW_MIN_ZOOM, PREVIEW_SAFE_H / h);
+    cp.style.zoom = scale;
+    card.dataset.previewScaled = '1';
+  });
+}
 
 // ══ 모바일 탭 전환 ══
 let _mobileTab = 'builder';
@@ -3500,6 +3540,8 @@ function applyRxData(d) {
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0, typeNumWord: s.tw||'',
     stageLabelOverride: s.sl||'', stageLabel: s.lb||'',
+    // v18: 표시 텍스트 3종 복원
+    stageDisplayText: s.sdt||'', stageRawCell: s.src||'', stageDisplayOverride: s.sdo||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
