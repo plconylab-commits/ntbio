@@ -2144,7 +2144,7 @@ function _rxBindTableEvents() {
 let _gridCol      = null;   // 열 드래그 상태
 let _gridRow      = null;   // 행 드래그 상태
 let _pendingDrag  = null;   // 드래그 확정 대기 (threshold 통과 전)
-const _BORDER_HIT  = 4;     // border 감지 범위 px (좁게 → 클릭 방해 최소)
+const _BORDER_HIT  = 6;     // border 감지 범위 px — 6px로 넓혀 핸들 찾기 쉽게
 const _DRAG_THRESH = 4;     // 이 px 이상 이동해야 resize 활성화
 const _MIN_COL_W   = 28;
 const _MIN_ROW_H   = 32;   // 최소 행 높이 — 내용물 잘림 방지
@@ -2342,15 +2342,11 @@ function _rxGridHitTest(e) {
 
   if (nearB) {
     const tr     = cell.closest('tr');
-    // 스페이서 행 하단 = 푸터 상단 → 리사이즈 금지 (푸터 높이 보호)
-    if (tr.classList.contains('rx-spacer-tr')) return null;
-    // 푸터 행 하단 = 마지막 행 → 리사이즈 금지
-    if (tr.classList.contains('rx-footer-tr')) return null;
     const allTrs = [...table.querySelectorAll('tr')];
     const trIdx  = allTrs.indexOf(tr);
-    // 마지막 행 하단 경계선은 리사이즈 불가 (추가 안전망)
+    // 마지막 행(푸터) 하단 경계선은 리사이즈 불가
     if (trIdx === allTrs.length - 1) return null;
-    // 인접 행만 zero-sum 파트너 (스페이서가 자동으로 여백 흡수)
+    // 스페이서 하단 드래그 = 푸터 높이 조절 (허용 — 아래 행이 푸터이면 minPeer=_MIN_ROW_H 적용)
     const trBelow = allTrs[trIdx + 1];
     return { mode:'row', cell, table, tr, trIdx, trBelow };
   }
@@ -2445,12 +2441,15 @@ function _rxInitColResize(container) {
       let newH = _gridRow.startH + Δ;
 
       if (_gridRow.trBelow) {
-        // 인접 행: 스페이서는 0까지, 일반 행은 _MIN_ROW_H까지 축소 가능
-        const isSpacer = _gridRow.trBelow.classList.contains('rx-spacer-tr');
-        const minPeer  = isSpacer ? 0 : _MIN_ROW_H;
+        // 현재 행이 스페이서면 0까지 축소 가능 (여백이므로), 일반 행은 _MIN_ROW_H
+        const isCurSpacer  = _gridRow.tr.classList.contains('rx-spacer-tr');
+        // 인접 행이 스페이서면 0까지 축소 가능, 일반 행(푸터 포함)은 _MIN_ROW_H
+        const isBelowSpacer = _gridRow.trBelow.classList.contains('rx-spacer-tr');
+        const minCur  = isCurSpacer  ? 0 : _MIN_ROW_H;
+        const minPeer = isBelowSpacer ? 0 : _MIN_ROW_H;
         let newHP = _gridRow.startHBelow - (newH - _gridRow.startH);
         if (newHP < minPeer) { newHP = minPeer; newH = _gridRow.startH + _gridRow.startHBelow - minPeer; }
-        if (newH  < _MIN_ROW_H) { newH = _MIN_ROW_H; newHP = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
+        if (newH  < minCur)  { newH  = minCur;  newHP = _gridRow.startH + _gridRow.startHBelow - minCur; }
         _gridRow.tr.style.height      = newH  + 'px';
         _gridRow.trBelow.style.height = newHP + 'px';
       } else {
