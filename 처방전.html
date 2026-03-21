@@ -335,9 +335,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   box-shadow:inset 0 0 0 1px rgba(42,138,136,.35)!important;
 }
 /* 드래그 중 미리보기 */
-.rx-table td.drag-selecting{
-  background:rgba(58,172,170,.10)!important;
-  outline:1px solid var(--teal)!important;
+.rx-table td.drag-selecting,
+.rx-table td.rx-block-sel{
+  background:rgba(33,120,210,.12)!important;
+  outline:2px solid rgba(33,120,210,.45)!important;
+  outline-offset:-2px;
 }
 
 /* ── floating bottom menu ── */
@@ -386,33 +388,115 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 #coverEditor .optional-hint{font-size:11px;color:#aaa;margin-top:6px;}
 
 /* ── 내용 페이지 ── */
-.content-page{background:var(--teal);padding:14px;min-height:595px;
-  display:flex;flex-direction:column;}
+.content-page{background:var(--teal);padding:14px;height:297mm;
+  overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;}
 .content-inner{background:#fff;border:3px solid rgba(255,255,255,.6);
-  border-radius:4px;flex:1;overflow:hidden;display:flex;flex-direction:column;}
+  border-radius:4px;flex:1;overflow:visible;}
 .page-purpose{background:#fff;color:#111;font-size:22px;font-weight:900;
   padding:0 16px;height:49px;box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;}
-.rx-table{width:100%;border-collapse:collapse;flex:1;border:3.5px solid var(--teal);}
+/* page-purpose as td inside merged rx-table */
+.rx-table td.page-purpose{display:table-cell;vertical-align:middle;
+  border:3.5px solid var(--teal);}
+.rx-table{width:100%;border-collapse:collapse;border:3.5px solid var(--teal);}
 .rx-table th{background:#fff;color:#111;border:3.5px solid var(--teal);
-  padding:12px 10px;font-size:19px;font-weight:700;text-align:center;}
-.rx-table td{border:3.5px solid var(--teal);padding:11px 10px;font-size:var(--rx-fs,17px);
-  font-weight:700;vertical-align:middle;background:#fff;text-align:center;color:#111;}
+  padding:6px 8px;font-size:19px;font-weight:700;text-align:center;
+  vertical-align:middle;overflow:hidden;}
+.rx-table td{border:3.5px solid var(--teal);padding:6px 8px;font-size:var(--rx-fs,17px);
+  font-weight:700;vertical-align:middle;background:#fff;text-align:center;color:#111;
+  overflow:hidden;}
 .rx-table .stage-td{background:#E0F5F5;text-align:center;font-size:var(--rx-fs,17px);
   font-weight:900;width:110px;color:#111;line-height:1.4;
   border-right:3.5px solid var(--teal);}
 .rx-table .product-td{font-size:var(--rx-fs,17px);font-weight:700;color:#111;text-align:center;}
 .rx-table .size-td{text-align:center;color:#111;font-size:var(--rx-fs,17px);font-weight:700;}
 .rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;white-space:nowrap;}
-.rx-table .desc-td{font-size:var(--rx-fs,17px);color:#111;font-weight:600;text-align:center;}
+.rx-table .desc-td{
+  font-size:var(--rx-fs,17px);color:#111;font-weight:600;
+  vertical-align:middle;padding:6px 8px;overflow:visible;
+}
+.rx-table .desc-td .desc-inner{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;line-height:1.6;
+  font-size:var(--rx-fs,17px);
+  word-break:keep-all;
+}
+/* 관주/엽면 병합 셀 — 행을 여러 개 합치므로 글씨를 더 크게, 줄간격 넓게 */
+.rx-table .desc-td-merged .desc-inner{
+  font-size:calc(var(--rx-fs,17px) + 3px);
+  line-height:1.9;
+  font-weight:700;
+  gap:6px;
+}
 .rx-table tbody tr:hover td{background:#f0fbfb;}
-.page-footer-bar{background:#fff;color:#111;padding:0 16px;
+
+/* ── 인라인 편집 ── */
+.rx-table td.rx-editing,
+.page-purpose.rx-editing,
+.rx-table th.rx-editing{
+  background:var(--teal-light,#E0F5F5)!important;
+  outline:2.5px solid var(--teal)!important;
+  outline-offset:-2px;cursor:text;
+}
+.rx-table td[contenteditable]:focus,
+.page-purpose[contenteditable]:focus,
+.rx-table th[contenteditable]:focus{outline:2.5px solid var(--teal)!important;}
+
+/* ── 격자 리사이즈 — mousemove 근접감지 방식 ── */
+.rx-table{table-layout:fixed;width:100%;}
+.rx-table th,.rx-table td{position:relative;}
+.rx-table th{user-select:none;}
+
+/* 드래그 중 커서 & 선택 잠금 */
+body.col-resizing,body.col-resizing *{cursor:col-resize!important;user-select:none!important;}
+body.row-resizing,body.row-resizing *{cursor:row-resize!important;user-select:none!important;}
+body.grid-selecting,body.grid-selecting *{user-select:none!important;}
+
+/* 스페이서 행 — 페이지 하단 여백 흡수 */
+tr.rx-spacer-tr td{background:#fff;border-left:3.5px solid var(--teal);
+  border-right:3.5px solid var(--teal);border-top:none;border-bottom:none;
+  padding:0;}
+/* 제품/시기 셀 최소 높이 보장 */
+.rx-table .product-td,.rx-table .stage-td,.rx-table .qty-td,
+.rx-table .size-td{min-height:45px;}
+/* 인쇄: table-layout 유지 */
+@media print{.rx-table{table-layout:fixed;width:100%;}}
+.page-footer-bar{background:#fff;color:#111;padding:0 16px;margin-top:auto;
   height:49px;box-sizing:border-box;
   font-size:22px;font-weight:700;text-align:center;letter-spacing:1px;
   display:flex;align-items:center;justify-content:center;gap:16px;
   border:3.5px solid var(--teal);border-top:none;}
+/* page-footer-bar as td inside merged rx-table */
+.rx-table td.page-footer-bar{display:table-cell;vertical-align:middle;
+  margin-top:0;border:3.5px solid var(--teal);}
+/* bottom-note row inside merged rx-table */
+tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
+  font-size:12px;color:#2A5050;line-height:1.75;padding:8px 16px;}
+
+/* ── 서식 툴바 ── */
+#rxFloatToolbar{position:fixed;top:52px;left:50%;transform:translateX(-50%);
+  z-index:9900;background:#fff;border:1.5px solid var(--teal);
+  border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  display:none;align-items:center;gap:3px;padding:5px 10px;
+  font-size:13px;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;}
+#rxFloatToolbar.show{display:flex;}
+#rxFloatToolbar select{border:1px solid #ccc;border-radius:4px;
+  padding:2px 4px;font-size:12px;background:#fff;max-width:120px;}
+#rxFloatToolbar .tb-num{border:1px solid #ccc;border-radius:4px;
+  padding:2px 4px;font-size:12px;width:48px;background:#fff;}
+#rxFloatToolbar .tb-btn{border:1px solid #ddd;border-radius:4px;
+  padding:3px 8px;background:#f8f8f8;cursor:pointer;font-size:13px;
+  line-height:1.4;min-width:28px;font-family:inherit;}
+#rxFloatToolbar .tb-btn:hover{background:var(--teal-light);}
+#rxFloatToolbar .tb-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+#rxFloatToolbar .tb-sep{width:1px;height:20px;background:#ddd;margin:0 3px;flex-shrink:0;}
+#rxFloatToolbar .tb-clr-wrap{display:flex;align-items:center;gap:2px;cursor:pointer;position:relative;}
+#rxFloatToolbar .tb-clr-wrap span{font-size:12px;font-weight:700;}
+#rxFloatToolbar input[type="color"]{width:22px;height:22px;padding:0;
+  border:1px solid #ccc;border-radius:3px;cursor:pointer;vertical-align:middle;}
 
 /* ── 플로팅 재고 패널 ── */
 .inv-float{position:fixed;top:60px;left:416px;z-index:500;
@@ -812,7 +896,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (saved.stages && saved.stages.length > 0) {
         stageIdCnt = 0;
         stages = saved.stages.map(s => {
-          const base = { ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '' };
+          const base = { ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '',
+            // v18: 세 필드 기본값 보장 (구버전 저장본에 없을 경우 대비)
+            stageDisplayText: s.stageDisplayText || '', stageRawCell: s.stageRawCell || '', stageDisplayOverride: s.stageDisplayOverride || ''
+          };
           // v17 migration: 구버전에서 stageLabelOverride = stageRawCell 로 저장된 경우 정정
           if (!base.stageDisplayText && base.stageRawCell) {
             // stageDisplayText가 없으면 stageRawCell을 그대로 사용 (best effort)
@@ -1155,9 +1242,17 @@ function _cleanStageLabel(raw) {
 }
 
 function getStageLabel(st) {
-  // v17 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell → stageLabelOverride
+  // v18 우선순위:
+  //   1. stageDisplayOverride (사용자 직접 입력) — 항상 최우선
+  //   2. 관주/엽면이면 자동번호 라벨 즉시 사용 (raw text보다 앞)
+  //      → raw text(stageDisplayText/stageRawCell/...)가 있어도 무시
+  //   3. 관주/엽면이 아닌 경우: stageDisplayText → stageRawCell → stageLabelOverride → stageLabel → type 폴백
   // pageTitle / groupLabels 는 절대 사용 금지
   if (st.stageDisplayOverride)  return _cleanStageLabel(st.stageDisplayOverride);
+  // ★ v18 핵심: 관주/엽면은 raw text 무시하고 자동번호 라벨 사용
+  if (st.type === '관주')    return `관주(${st.typeNum || 1}${st.typeNumWord || '번'})`;
+  if (st.type === '엽면')    return `엽면(${st.typeNum || 1}${st.typeNumWord || '번'})`;
+  // 관주/엽면이 아닌 단계: 기존 raw text 우선순위 유지
   if (st.stageDisplayText)      return _cleanStageLabel(st.stageDisplayText);
   if (st.stageRawCell)          return _cleanStageLabel(st.stageRawCell);
   if (st.stageLabelOverride)    return _cleanStageLabel(st.stageLabelOverride);
@@ -1166,8 +1261,6 @@ function getStageLabel(st) {
   if (st.type === '경운후')  return '경운 "후"';
   if (st.type === '정식당일') return '정식+당일';
   if (st.type === '정식후')  return `정식 "후" ${st.days || ''}일`;
-  if (st.type === '관주')    return `관주(${st.typeNum || 1}${st.typeNumWord || '번'})`;
-  if (st.type === '엽면')    return `엽면(${st.typeNum || 1}${st.typeNumWord || '번'})`;
   return st.type || '(단계명 입력)';
 }
 
@@ -1182,7 +1275,9 @@ function getStageBadge(st) {
   const label = getStageLabel(st).replace(/\n/g, ' ');
   const date  = st.dateRange ? ` · ${st.dateRange}` : '';
   // 의미있는 라벨이 있으면 페이지/월 접두어 생략
-  const hasMeaningfulLabel = !!(st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || st.stageLabelOverride || st.stageLabel);
+  // v18: 관주/엽면은 자동번호 라벨이 있으므로 항상 meaningful로 처리
+  const hasMeaningfulLabel = !!(st.stageDisplayOverride || st.type === '관주' || st.type === '엽면' ||
+    st.stageDisplayText || st.stageRawCell || st.stageLabelOverride || st.stageLabel);
   const month = hasMeaningfulLabel
     ? (st.month ? `${st.month}월 ` : '')
     : (st.pageGroup && st.pageGroup >= 1001 ? `${st.pageGroup - 1000}페이지 ` : (st.month ? `${st.month}월 ` : ''));
@@ -1957,6 +2052,8 @@ function _rxBindTableEvents() {
   // mousedown: 드래그 준비 (modifier 키 없을 때만)
   pa.addEventListener('mousedown', e => {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    // 격자 리사이즈 핸들 클릭 시 셀 드래그 무시
+    if (e.target.closest('.col-resize-handle') || e.target.closest('.row-resize-handle')) return;
     const td = e.target.closest('.rx-table tbody td');
     if (!td) return;
     const tbody = td.closest('tbody');
@@ -2016,6 +2113,508 @@ function _rxBindTableEvents() {
     if ((fm && fm.contains(e.target)) || e.target.closest('.rx-editable')) return;
     _rxClearSel();
   }, true);
+
+  // ── 열 리사이즈 (유기적 드래그: 좌 열 ↔ 우 열 폭 교환) ──────────────
+  _rxInitColResize(pa);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+//  격자(Grid) 리사이즈 엔진 v4
+//  ① <col width> / <tr style="height"> 직접 제어 — div/padding 조절 없음
+//  ② 클릭 차단 없음 — drag threshold(4px) 통과 후에만 resize 활성화
+//  ③ Zero-sum — 행 경계선 이동 시 인접 행(위아래) 합산 고정
+//  ④ 마지막 행 하단: 위 tr가 보상 (합산 고정), footer 최소 높이 보호
+//  ⑤ Undo/Redo — mousedown/mouseup 두 시점 innerHTML 스냅샷
+// ══════════════════════════════════════════════════════════════════════
+let _gridCol      = null;   // 열 드래그 상태
+let _gridRow      = null;   // 행 드래그 상태
+let _pendingDrag  = null;   // 드래그 확정 대기 (threshold 통과 전)
+const _BORDER_HIT  = 4;     // border 감지 범위 px (좁게 → 클릭 방해 최소)
+const _DRAG_THRESH = 4;     // 이 px 이상 이동해야 resize 활성화
+const _MIN_COL_W   = 28;
+const _MIN_ROW_H   = 32;   // 최소 행 높이 — 내용물 잘림 방지
+const _FOOTER_MIN  = 36;
+
+// ── 영구 저장소 ──────────────────────────────────────────────────────
+const _rxResizeStore = {
+  cols: {},  // { pagekey: { colIdx: 'Xpx' } }
+  rows: {},  // { 'pagekey_rN': 'Xpx' }
+};
+
+function _rxTableKey(table) {
+  return table?.closest('[data-pagekey]')?.dataset.pagekey || '_';
+}
+
+function _rxRestoreResize() {
+  document.querySelectorAll('.rx-table').forEach(table => {
+    const k = _rxTableKey(table);
+    const sc = _rxResizeStore.cols[k];
+    if (sc) {
+      const cols = [...table.querySelectorAll('colgroup col')];
+      Object.entries(sc).forEach(([i, w]) => { if (cols[+i]) cols[+i].style.width = w; });
+    }
+    const trs = [...table.querySelectorAll('tr')];
+    trs.forEach((tr, idx) => {
+      const h = _rxResizeStore.rows[k + '_r' + idx];
+      if (h) tr.style.height = h;
+    });
+  });
+}
+
+// ── 초기화 — 컬럼 너비만 잠금, 행 높이는 브라우저 auto 유지 ─────────
+function _rxInitTableSizes() {
+  document.querySelectorAll('.rx-table').forEach(table => {
+    const k    = _rxTableKey(table);
+    const cols = [...table.querySelectorAll('colgroup col')];
+
+    // ① col 너비만 처리 (저장값 없으면 rx-header-row th 실측)
+    const hasCols = _rxResizeStore.cols[k] && Object.keys(_rxResizeStore.cols[k]).length;
+    if (!hasCols) {
+      const ths = [...table.querySelectorAll('.rx-header-row th')];
+      const map = {};
+      ths.forEach((th, i) => {
+        if (!cols[i]) return;
+        const w = th.getBoundingClientRect().width;
+        if (w > 0) { cols[i].style.width = w + 'px'; map[i] = w + 'px'; }
+      });
+      if (Object.keys(map).length) _rxResizeStore.cols[k] = map;
+    } else {
+      Object.entries(_rxResizeStore.cols[k]).forEach(([i, w]) => { if (cols[+i]) cols[+i].style.width = w; });
+    }
+
+    // ② 행 높이: 사용자가 직접 조절한 값만 복원 (나머지는 height:auto 유지)
+    const trs = [...table.querySelectorAll('tr')];
+    trs.forEach((tr, i) => {
+      const stored = _rxResizeStore.rows[k + '_r' + i];
+      if (stored) tr.style.height = stored;
+      // 저장값 없으면 height:auto — 브라우저가 콘텐츠 기반으로 결정
+    });
+
+    // ③ 스페이서로 남은 페이지 공간 채우기
+    _rxFillSpacer(table);
+  });
+}
+
+// ── 스페이서 행으로 페이지 하단 여백 채우기 ─────────────────────────
+function _rxFillSpacer(table) {
+  const spacer = table.querySelector('tr.rx-spacer-tr');
+  if (!spacer) return;
+  const card = table.closest('[data-pagekey]');
+  const ci   = card?.querySelector('.content-inner');
+  if (!ci) return;
+
+  spacer.style.height = '0px';  // 리셋 후 측정
+  void table.offsetHeight;      // reflow
+
+  const ciH    = Math.floor(ci.getBoundingClientRect().height);
+  const trs    = [...table.querySelectorAll('tr')];
+  const othersH = trs
+    .filter(tr => tr !== spacer)
+    .reduce((sum, tr) => sum + Math.ceil(tr.getBoundingClientRect().height), 0);
+
+  const spacerH = Math.max(0, ciH - othersH - 2);
+  spacer.style.height = spacerH + 'px';
+
+  // 스페이서 높이 저장소 갱신
+  const k = _rxTableKey(table);
+  const idx = trs.indexOf(spacer);
+  if (idx >= 0) _rxResizeStore.rows[k + '_r' + idx] = spacerH + 'px';
+}
+
+// ── Undo / Redo — 완전 상태 스냅샷 (리사이즈 + 텍스트 + 서식 모두 포함) ──
+const _rxUndoStack = [];
+const _rxRedoStackFull = [];
+const _RX_HISTORY_MAX = 50;
+
+function _rxSnapState() {
+  // stages / groupLabels는 전역 변수 (싱글 파일 구조 보장)
+  return {
+    stagesJSON:      JSON.stringify(typeof stages !== 'undefined' ? stages : []),
+    labelsJSON:      JSON.stringify(typeof groupLabels !== 'undefined' ? groupLabels : {}),
+    resizeCols:      JSON.parse(JSON.stringify(_rxResizeStore.cols)),
+    resizeRows:      JSON.parse(JSON.stringify(_rxResizeStore.rows)),
+    tablesHTML:      [...document.querySelectorAll('.rx-table')].map(t => ({
+                       key: _rxTableKey(t), html: t.innerHTML
+                     })),
+  };
+}
+
+function _rxHistoryCapture() {
+  const snap = _rxSnapState();
+  _rxUndoStack.push(snap);
+  if (_rxUndoStack.length > _RX_HISTORY_MAX) _rxUndoStack.shift();
+  _rxRedoStackFull.length = 0;
+}
+
+function _rxApplySnap(snap) {
+  // 리사이즈 저장소 먼저 복원 (generatePreview 후 _rxRestoreResize 에서 참조됨)
+  _rxResizeStore.cols = snap.resizeCols;
+  _rxResizeStore.rows = snap.resizeRows;
+
+  // 텍스트/서식 변경이 없으면 DOM만 복원 (빠른 경로)
+  const hasDomOnly = snap.tablesHTML && snap.tablesHTML.length;
+  const stCur = JSON.stringify(typeof stages !== 'undefined' ? stages : []);
+  const lbCur = JSON.stringify(typeof groupLabels !== 'undefined' ? groupLabels : {});
+
+  if (snap.stagesJSON === stCur && snap.labelsJSON === lbCur) {
+    // 데이터 변경 없음 — DOM 스냅샷만 복원
+    snap.tablesHTML.forEach(({ key, html }) => {
+      const table = document.querySelector(`[data-pagekey="${key}"] .rx-table`);
+      if (!table) return;
+      table.innerHTML = html;
+      const cols = [...table.querySelectorAll('colgroup col')];
+      const cm = {}; cols.forEach((c, i) => { if (c.style.width) cm[i] = c.style.width; });
+      _rxResizeStore.cols[key] = cm;
+      [...table.querySelectorAll('tr')].forEach((tr, i) => {
+        _rxResizeStore.rows[key + '_r' + i] = tr.style.height || '';
+      });
+    });
+    return;
+  }
+
+  // 데이터 변경 있음 — 전체 재생성
+  try {
+    const restoredStages = JSON.parse(snap.stagesJSON);
+    if (typeof stages !== 'undefined') stages.splice(0, stages.length, ...restoredStages);
+    const restoredLabels = JSON.parse(snap.labelsJSON);
+    if (typeof groupLabels !== 'undefined') {
+      Object.keys(groupLabels).forEach(k => delete groupLabels[k]);
+      Object.assign(groupLabels, restoredLabels);
+    }
+    if (typeof generatePreview === 'function') generatePreview();
+  } catch(e) { console.warn('Undo restore failed:', e); }
+}
+
+function _rxUndo() {
+  if (!_rxUndoStack.length) return;
+  _rxRedoStackFull.push(_rxSnapState());
+  _rxApplySnap(_rxUndoStack.pop());
+}
+
+function _rxRedo() {
+  if (!_rxRedoStackFull.length) return;
+  _rxUndoStack.push(_rxSnapState());
+  _rxApplySnap(_rxRedoStackFull.pop());
+}
+
+// ── <col> 인덱스 계산 ────────────────────────────────────────────────
+function _rxGetColIdx(cell) {
+  if (cell.dataset.col !== undefined) return parseInt(cell.dataset.col);
+  let idx = 0;
+  for (const c of cell.parentElement.children) {
+    if (c === cell) return idx;
+    idx += (parseInt(c.getAttribute('colspan')) || 1);
+  }
+  return 0;
+}
+
+// ── mousemove → border 근접 판정 ────────────────────────────────────
+function _rxGridHitTest(e) {
+  const cell = e.target.closest('.rx-table th, .rx-table td');
+  if (!cell) return null;
+  const r     = cell.getBoundingClientRect();
+  const nearR = e.clientX >= r.right  - _BORDER_HIT;
+  const nearB = e.clientY >= r.bottom - _BORDER_HIT;
+  if (!nearR && !nearB) return null;
+
+  const table      = cell.closest('table');
+  const cols       = [...table.querySelectorAll('colgroup col')];
+  const colIdx     = _rxGetColIdx(cell);
+  const cellColspan = parseInt(cell.getAttribute('colspan')) || 1;
+  // colspan 셀은 col resize 불가 (제목/헤더/푸터 행)
+  const canCol = nearR && cellColspan === 1 && colIdx < cols.length - 1;
+  if (canCol) return { mode:'col', cell, table, cols, colIdx };
+
+  if (nearB) {
+    const tr     = cell.closest('tr');
+    // 스페이서 행 하단 = 푸터 상단 → 리사이즈 금지 (푸터 높이 보호)
+    if (tr.classList.contains('rx-spacer-tr')) return null;
+    // 푸터 행 하단 = 마지막 행 → 리사이즈 금지
+    if (tr.classList.contains('rx-footer-tr')) return null;
+    const allTrs = [...table.querySelectorAll('tr')];
+    const trIdx  = allTrs.indexOf(tr);
+    // 마지막 행 하단 경계선은 리사이즈 불가 (추가 안전망)
+    if (trIdx === allTrs.length - 1) return null;
+    // 인접 행만 zero-sum 파트너 (스페이서가 자동으로 여백 흡수)
+    const trBelow = allTrs[trIdx + 1];
+    return { mode:'row', cell, table, tr, trIdx, trBelow };
+  }
+  return null;
+}
+
+// ── 리사이즈 엔진 초기화 ─────────────────────────────────────────────
+function _rxInitColResize(container) {
+
+  // 1) cursor 표시 (mousemove)
+  container.addEventListener('mousemove', e => {
+    if (_gridCol || _gridRow || _pendingDrag) return;
+    const hit  = _rxGridHitTest(e);
+    const cell = e.target.closest('.rx-table th, .rx-table td');
+    if (!cell) return;
+    cell.style.cursor = hit ? (hit.mode === 'col' ? 'col-resize' : 'row-resize') : '';
+  });
+  container.addEventListener('mouseleave', () => {
+    if (_gridCol || _gridRow) return;
+    container.querySelectorAll('.rx-table th[style*="cursor"],.rx-table td[style*="cursor"]')
+      .forEach(el => (el.style.cursor = ''));
+  });
+
+  // 2) mousedown — threshold 대기 시작 (click 이벤트 방해 안 함)
+  container.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const hit = _rxGridHitTest(e);
+    if (!hit) return;
+    // preventDefault/stopPropagation 하지 않음 → click 정상 동작
+    _pendingDrag = { hit, startX: e.clientX, startY: e.clientY };
+  });
+
+  // 3) mousemove — threshold 초과 시 resize 활성화 + 실시간 갱신
+  document.addEventListener('mousemove', e => {
+    // threshold 체크 → resize 활성화
+    if (_pendingDrag && !_gridCol && !_gridRow) {
+      const dx = e.clientX - _pendingDrag.startX;
+      const dy = e.clientY - _pendingDrag.startY;
+      if (Math.abs(dx) >= _DRAG_THRESH || Math.abs(dy) >= _DRAG_THRESH) {
+        e.preventDefault();
+        _rxHistoryCapture(); // undo: 드래그 확정 직전 스냅샷
+        const hit = _pendingDrag.hit;
+        _pendingDrag = null;
+
+        if (hit.mode === 'col') {
+          // col 초기화: rx-header-row th 실측값으로 모든 col 고정
+          const ths = hit.table.querySelectorAll('.rx-header-row th');
+          hit.cols.forEach((col, i) => {
+            if (ths[i]) col.style.width = ths[i].getBoundingClientRect().width + 'px';
+          });
+          document.body.classList.add('col-resizing');
+          _gridCol = {
+            table:   hit.table,
+            colL:    hit.cols[hit.colIdx],
+            colR:    hit.cols[hit.colIdx + 1],
+            startX:  e.clientX,
+            startWL: parseFloat(hit.cols[hit.colIdx].style.width),
+            startWR: parseFloat(hit.cols[hit.colIdx + 1]?.style.width || '0'),
+          };
+        } else {
+          const startH = hit.tr.offsetHeight || hit.tr.getBoundingClientRect().height;
+          hit.tr.style.height = startH + 'px';
+          let startHBelow = 0;
+          if (hit.trBelow) {
+            startHBelow = hit.trBelow.offsetHeight || hit.trBelow.getBoundingClientRect().height;
+            hit.trBelow.style.height = startHBelow + 'px';
+          }
+          document.body.classList.add('row-resizing');
+          _gridRow = {
+            table: hit.table, tr: hit.tr, trBelow: hit.trBelow,
+            startY: e.clientY, startH, startHBelow,
+          };
+        }
+      }
+    }
+
+    // col resize 실시간 갱신
+    if (_gridCol) {
+      e.preventDefault();
+      const d = e.clientX - _gridCol.startX;
+      let wL = _gridCol.startWL + d, wR = _gridCol.startWR - d;
+      if (wL < _MIN_COL_W) { wL = _MIN_COL_W; wR = _gridCol.startWL + _gridCol.startWR - _MIN_COL_W; }
+      if (wR < _MIN_COL_W) { wR = _MIN_COL_W; wL = _gridCol.startWL + _gridCol.startWR - _MIN_COL_W; }
+      _gridCol.colL.style.width = wL + 'px';
+      if (_gridCol.colR) _gridCol.colR.style.width = wR + 'px';
+    }
+
+    // row resize 실시간 갱신 — 인접 행 단순 교환 (스페이서가 여백 흡수)
+    if (_gridRow) {
+      e.preventDefault();
+      const Δ = e.clientY - _gridRow.startY;
+      let newH = _gridRow.startH + Δ;
+
+      if (_gridRow.trBelow) {
+        // 인접 행: 스페이서는 0까지, 일반 행은 _MIN_ROW_H까지 축소 가능
+        const isSpacer = _gridRow.trBelow.classList.contains('rx-spacer-tr');
+        const minPeer  = isSpacer ? 0 : _MIN_ROW_H;
+        let newHP = _gridRow.startHBelow - (newH - _gridRow.startH);
+        if (newHP < minPeer) { newHP = minPeer; newH = _gridRow.startH + _gridRow.startHBelow - minPeer; }
+        if (newH  < _MIN_ROW_H) { newH = _MIN_ROW_H; newHP = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
+        _gridRow.tr.style.height      = newH  + 'px';
+        _gridRow.trBelow.style.height = newHP + 'px';
+      } else {
+        _gridRow.tr.style.height = Math.max(_MIN_ROW_H, newH) + 'px';
+      }
+    }
+  });
+
+  // 4) mouseup — 저장소 보존, undo 스택에 변경 후 스냅샷도 추가
+  document.addEventListener('mouseup', () => {
+    _pendingDrag = null;
+    if (_gridCol) {
+      const k = _rxTableKey(_gridCol.table);
+      const cols = [..._gridCol.table.querySelectorAll('colgroup col')];
+      const map = {}; cols.forEach((c, i) => { if (c.style.width) map[i] = c.style.width; });
+      _rxResizeStore.cols[k] = map;
+      document.body.classList.remove('col-resizing');
+      _gridCol = null;
+    }
+    if (_gridRow) {
+      const k = _rxTableKey(_gridRow.table);
+      [..._gridRow.table.querySelectorAll('tr')].forEach((tr, i) => {
+        _rxResizeStore.rows[k + '_r' + i] = tr.style.height || '';
+      });
+      // 드래그 후 스페이서 재보정 (부동소수점 오차 등 누적 보정)
+      _rxFillSpacer(_gridRow.table);
+      document.body.classList.remove('row-resizing');
+      _gridRow = null;
+    }
+  });
+
+  // 5) 키보드 — Undo/Redo + 블록선택 Delete/Ctrl+C
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      if (typeof _inlineEditing !== 'undefined' && _inlineEditing) return;
+      e.preventDefault(); _rxUndo(); return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      if (typeof _inlineEditing !== 'undefined' && _inlineEditing) return;
+      e.preventDefault(); _rxRedo(); return;
+    }
+    const sel = [...document.querySelectorAll('.rx-table td.drag-selecting,.rx-table td.selected')];
+    if (!sel.length) return;
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      sel.forEach(td => {
+        const si = parseInt(td.dataset.si), pi = parseInt(td.dataset.pi);
+        const type = td.dataset.edit;
+        if (isNaN(si)) return;
+        if (type === 'prod-desc' && !isNaN(pi)) {
+          stages[si].products[pi].detailCellDisplayOverride = '';
+          stages[si].products[pi].desc = '';
+        } else if (type === 'prod-qty' && !isNaN(pi)) {
+          stages[si].products[pi].qty = 0;
+        }
+      });
+      schedulePreview();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      navigator.clipboard.writeText(sel.map(td => td.innerText.trim()).join('\t')).catch(() => {});
+    }
+  });
+}
+
+function _rxInjectRowHandles() { /* no-op */ }
+
+// ══════════════════════════════════════════════════════════════════════
+//  서식 툴바 — 셀 편집 시 자동 표시
+// ══════════════════════════════════════════════════════════════════════
+let _tbActiveCell = null;
+
+function _rxCreateToolbar() {
+  if (document.getElementById('rxFloatToolbar')) return;
+  const tb = document.createElement('div');
+  tb.id = 'rxFloatToolbar';
+  tb.innerHTML = `
+    <select id="tbFont" title="폰트">
+      <option value="">폰트 선택</option>
+      <option value="'Noto Sans KR',sans-serif">Noto Sans KR</option>
+      <option value="'NanumGothic',sans-serif">나눔고딕</option>
+      <option value="'Malgun Gothic',sans-serif">맑은 고딕</option>
+      <option value="Arial,sans-serif">Arial</option>
+      <option value="'Times New Roman',serif">Times New Roman</option>
+    </select>
+    <input type="number" class="tb-num" id="tbSize" min="8" max="72" placeholder="크기" title="글자 크기(px)">
+    <span class="tb-sep"></span>
+    <button class="tb-btn" id="tbBold" onclick="rxTbExec('bold')" title="굵게 (Ctrl+B)"><b>B</b></button>
+    <button class="tb-btn" id="tbItalic" onclick="rxTbExec('italic')" title="기울임 (Ctrl+I)"><i>I</i></button>
+    <button class="tb-btn" id="tbUnder" onclick="rxTbExec('underline')" title="밑줄 (Ctrl+U)"><u>U</u></button>
+    <span class="tb-sep"></span>
+    <label class="tb-clr-wrap" title="글자색">
+      <span style="text-decoration:underline;text-decoration-color:var(--tc,#111);">A</span>
+      <input type="color" id="tbTextColor" value="#111111" oninput="rxTbColor('foreColor',this.value)">
+    </label>
+    <label class="tb-clr-wrap" title="배경색">
+      <span style="background:var(--bc,#fff);padding:0 2px;">배</span>
+      <input type="color" id="tbBgColor" value="#ffffff" oninput="rxTbColor('hiliteColor',this.value)">
+    </label>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" onclick="_rxHideToolbar()" title="닫기" style="font-size:11px;padding:2px 6px;">✕</button>
+  `;
+  document.body.appendChild(tb);
+  document.getElementById('tbFont').addEventListener('change', rxTbFontFamily);
+  document.getElementById('tbSize').addEventListener('change', rxTbFontSize);
+  document.getElementById('tbSize').addEventListener('keydown', e => { if (e.key === 'Enter') rxTbFontSize(); });
+}
+
+function _rxShowToolbar(cell) {
+  _tbActiveCell = cell;
+  _rxCreateToolbar();
+  document.getElementById('rxFloatToolbar')?.classList.add('show');
+  _tbSyncState();
+}
+
+function _rxHideToolbar() {
+  document.getElementById('rxFloatToolbar')?.classList.remove('show');
+  _tbActiveCell = null;
+}
+
+function _tbSyncState() {
+  if (!_tbActiveCell) return;
+  try {
+    document.getElementById('tbBold')?.classList.toggle('active', document.queryCommandState('bold'));
+    document.getElementById('tbItalic')?.classList.toggle('active', document.queryCommandState('italic'));
+    document.getElementById('tbUnder')?.classList.toggle('active', document.queryCommandState('underline'));
+    const fs = parseFloat(getComputedStyle(_tbActiveCell).fontSize);
+    if (fs) { const el = document.getElementById('tbSize'); if (el) el.value = Math.round(fs); }
+  } catch(e) {}
+}
+
+function rxTbExec(cmd) {
+  if (!_tbActiveCell) return;
+  _rxHistoryCapture();
+  _tbActiveCell.focus();
+  document.execCommand(cmd, false, null);
+  _tbSyncState();
+}
+
+function rxTbFontSize() {
+  const size = document.getElementById('tbSize')?.value;
+  if (!size || !_tbActiveCell) return;
+  _rxHistoryCapture();
+  _tbActiveCell.focus();
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    document.execCommand('fontSize', false, '7');
+    _tbActiveCell.querySelectorAll('font[size="7"]').forEach(f => {
+      f.removeAttribute('size'); f.style.fontSize = size + 'px';
+    });
+  } else {
+    _tbActiveCell.style.fontSize = size + 'px';
+  }
+}
+
+function rxTbFontFamily() {
+  const font = document.getElementById('tbFont')?.value;
+  if (!font || !_tbActiveCell) return;
+  _rxHistoryCapture();
+  _tbActiveCell.focus();
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    document.execCommand('fontName', false, font);
+  } else {
+    _tbActiveCell.style.fontFamily = font;
+  }
+}
+
+function rxTbColor(cmd, color) {
+  if (!color || !_tbActiveCell) return;
+  _rxHistoryCapture();
+  _tbActiveCell.focus();
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    document.execCommand(cmd, false, color);
+  } else {
+    if (cmd === 'foreColor') _tbActiveCell.style.color = color;
+    else _tbActiveCell.style.backgroundColor = color;
+  }
 }
 
 // ── 드래그 하이라이트 — data-row/data-col 바운딩 박스 ──────────────
@@ -2702,6 +3301,8 @@ function generateCostPageHtml(area) {
 
 // ── 처방전 생성 ───────────────────────────
 function generatePreview() {
+  // 인라인 편집 중이면 re-render 보류
+  if (_inlineEditing) { _pendingPreview = true; return; }
   // 렌더링 전 항상 typeNum 재계산 — 관주(1번)/관주(2번) 등 자동 라벨 보장
   recalcTypeNums();
 
@@ -2768,23 +3369,31 @@ function generatePreview() {
         const rowNum = rowOffset + rowIdx;
         const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
         const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
-        const prodSize = cartItem ? cartItem.size : p.key.split('||')[1] || '';
+        // 용량(capacity) 우선순위: PDF 파싱값 → 카트 size → key 괄호 size
+        const prodSize = p.capacity || (cartItem ? cartItem.size : p.key.split('||')[1] || '');
         const qtyCell = p.qty ? formatQty(p.qty, p.unit) : '';
         const prodAreaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
         const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${prodAreaLine}</td>`;
-        const sizeTd = `<td class="size-td" data-row="${rowNum}" data-col="2">${prodSize}</td>`;
+        const sizeTd = `<td class="size-td rx-editable" data-edit="prod-size" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="2" onclick="openRxEdit(this,event)">${prodSize}</td>`;
         const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
         // Detail column priority: manual override → detailCellRaw → usageDisplayText → desc
         let descTd = '';
         const descText = p.detailCellDisplayOverride || p.detailCellRaw || p.usageDisplayText || p.desc || '';
+        // desc 내용을 <div class="desc-inner">로 감싸 flex 중앙 정렬 적용
+        const _wrapDesc = (html) => `<div class="desc-inner">${html}</div>`;
+        const _emptyDesc = '<span style="color:#ccc;font-size:11px;">+</span>';
         if (isMergedDesc) {
           if (rowIdx === 0) {
+            // 관주/엽면: 모든 제품 desc를 모아 하나의 병합 셀에 표시 (중복 제거)
             const allDescs = [...new Set(prods.map(({p:pp}) => pp.detailCellDisplayOverride || pp.detailCellRaw || pp.usageDisplayText || pp.desc || '').filter(Boolean))];
-            const descHtml = allDescs.length ? allDescs.join('<br>') : '<span style="color:#ccc;font-size:11px;">+</span>';
-            descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}" style="vertical-align:middle;">${descHtml}</td>`;
+            const inner = allDescs.length
+              ? allDescs.map(d => d.replace(/\n/g, '<br>')).join('<br>')
+              : _emptyDesc;
+            descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}">${_wrapDesc(inner)}</td>`;
           }
         } else {
-          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${descText||'<span style="color:#ccc;font-size:11px;">+</span>'}</td>`;
+          const inner = descText ? descText.replace(/\n/g, '<br>') : _emptyDesc;
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${_wrapDesc(inner)}</td>`;
         }
         if (rowIdx === 0) {
           // 각 stage 첫 행에만 stage-td 렌더 (rowspan = 이 stage의 제품 수)
@@ -2802,32 +3411,45 @@ function generatePreview() {
     const allFuncRows = stagesInGroup.filter(s=>s.funcTags&&s.funcTags.length)
       .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff',si:stages.indexOf(s)}));
     const funcHeadHtml = allFuncRows.map(r=>
-      `<tr><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this,event)"
+      `<tr class="rx-funchead-tr"><th colspan="5" class="rx-editable" data-edit="func-tags" data-si="${r.si}" onclick="openRxEdit(this,event)"
         style="background:${r.color};color:#111;font-size:22px;font-weight:700;
         text-align:center;padding:0 16px;height:49px;border:3.5px solid var(--teal);letter-spacing:.5px;cursor:pointer;vertical-align:middle;">
         ${r.tags.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}
       </th></tr>`).join('');
     return `<div class="page-card" data-pagekey="group_${monthKey}">
       <div class="content-page"><div class="content-inner">
-        <div class="page-purpose rx-editable" data-edit="page-title" data-monthkey="${monthKey}" onclick="openRxEdit(this,event)">${pageTitle}</div>
         <table class="rx-table">
-          <thead>${funcHeadHtml}
-            <tr>
-              <th style="width:110px;">시기/단계</th>
-              <th style="width:160px;">제품명</th>
-              <th style="width:70px;">용량</th>
-              <th style="width:90px;">사용량</th>
+          <colgroup>
+            <col style="width:110px;">
+            <col style="width:160px;">
+            <col style="width:70px;">
+            <col style="width:90px;">
+            <col>
+          </colgroup>
+          <tbody>
+            <tr class="rx-title-tr">
+              <td colspan="5" class="page-purpose rx-editable" data-edit="page-title" data-monthkey="${monthKey}" onclick="openRxEdit(this,event)">${pageTitle}</td>
+            </tr>
+            ${funcHeadHtml}
+            <tr class="rx-header-row">
+              <th>시기/단계</th>
+              <th>제품명</th>
+              <th>용량</th>
+              <th>사용량</th>
               <th>물량/평수 (사용법)</th>
             </tr>
-          </thead>
-          <tbody>${rows}</tbody>
+            ${rows}
+            ${showBottomNote && monthKey === lastGroupKey ? `<tr class="rx-bottom-note-tr">
+              <td colspan="5">※ 세균성+바이러스 예방을 위하여 첫 물줄 때 <strong>엘쎄로닥터 CK-1</strong>을
+              50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
+              관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성</td>
+            </tr>` : ''}
+            <tr class="rx-spacer-tr"><td colspan="5"></td></tr>
+            <tr class="rx-footer-tr">
+              <td colspan="5" class="page-footer-bar"><img src="logo.png" style="height:34px;margin-right:6px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</td>
+            </tr>
+          </tbody>
         </table>
-        ${showBottomNote && monthKey === lastGroupKey ? `<div class="rx-bottom-note">
-          ※ 세균성+바이러스 예방을 위하여 첫 물줄 때 <strong>엘쎄로닥터 CK-1</strong>을
-          50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
-          관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성
-        </div>` : ''}
-        <div class="page-footer-bar"><img src="logo.png" style="height:34px;margin-right:6px;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div>
       </div></div>
     </div>`;
   }
@@ -2897,9 +3519,11 @@ function generatePreview() {
       st: stages.map(s => ({
         m: s.month, pg: s.pageGroup ?? undefined, sp: s.sourcePage ?? undefined, pt: s.pageType || undefined, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
-        pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0]),
+        pr: (s.products||[]).map(p => [p.key, p.qty, p.unit, p.desc, p.prodArea||0, p.capacity||'']),
         a: s.area||0, to: s.typeNumOverride||0, tw: s.typeNumWord||'',
-        sl: s.stageLabelOverride||'', lb: s.stageLabel||''
+        sl: s.stageLabelOverride||'', lb: s.stageLabel||'',
+        // v18: 표시 텍스트 3종 — 어떤 경로로 불러와도 자동번호 동작 보장
+        sdt: s.stageDisplayText||'', src: s.stageRawCell||'', sdo: s.stageDisplayOverride||''
       })),
       po: pageOrder, cv: costVisible,
       po2: Object.keys(priceOverrides).length ? priceOverrides : undefined,
@@ -2913,8 +3537,16 @@ function generatePreview() {
 
   const preview = document.getElementById('previewArea');
   preview.innerHTML = `<div class="print-pages" id="printPages" style="--rx-fs:${fs}px;--rx-th:${thfs}px;">${html}</div>`;
+  // 리사이즈 저장 값 즉시 복원 (DOM 재생성 후 보존된 너비/높이 재적용)
+  _rxRestoreResize();
+  // 행(가로선) 리사이즈 핸들 자동 삽입
+  _rxInjectRowHandles();
   setTimeout(updateTocThumbnails, 80);
   if (window.innerWidth <= 768) setTimeout(applyMobilePreviewScale, 120);
+  // v18: 화면 미리보기 자동 축소 — DOM 렌더링 후 실행
+  setTimeout(applyPreviewAutoFit, 150);
+  // autofit 완료 후 모든 col/tr에 px 고정값 삽입 (리사이즈 기준점 확립)
+  setTimeout(_rxInitTableSizes, 230);
 }
 
 function doPrint() {
@@ -2939,7 +3571,7 @@ function applyPrintAutoFit() {
     cp.classList.remove('print-compact');
 
     let h = ci.scrollHeight;
-    if (h <= PRINT_SAFE_H) return;  // 축소 불필요
+    if (h <= ci.clientHeight * 1.05) return;  // 축소 불필요
 
     // Step 1: 폰트 2px 축소 (CSS custom property override)
     const curFs = parseInt(getComputedStyle(cp).getPropertyValue('--rx-fs')) || 17;
@@ -2947,16 +3579,16 @@ function applyPrintAutoFit() {
     cp.style.setProperty('--rx-fs', newFs + 'px');
 
     h = ci.scrollHeight;
-    if (h <= PRINT_SAFE_H) { card.dataset.printScaled = '1'; return; }
+    if (h <= ci.clientHeight * 1.05) { card.dataset.printScaled = '1'; return; }
 
     // Step 2: 셀 padding / line-height 축소
     cp.classList.add('print-compact');
 
     h = ci.scrollHeight;
-    if (h <= PRINT_SAFE_H) { card.dataset.printScaled = '1'; return; }
+    if (h <= ci.clientHeight * 1.05) { card.dataset.printScaled = '1'; return; }
 
     // Step 3: 전체 zoom 축소
-    const scale = Math.max(PRINT_MIN_ZOOM, PRINT_SAFE_H / h);
+    const scale = Math.max(PRINT_MIN_ZOOM, ci.clientHeight / h);
     cp.style.zoom = scale;
     card.dataset.printScaled = '1';
   });
@@ -2974,8 +3606,53 @@ function removePrintAutoFit() {
   });
 }
 
-window.addEventListener('beforeprint', applyPrintAutoFit);
+window.addEventListener('beforeprint', () => {
+  // 사용자 조절 resize 값을 인라인 스타일로 재적용 → @media print에서도 동일하게 유지
+  _rxRestoreResize();
+  applyPrintAutoFit();
+});
 window.addEventListener('afterprint',  removePrintAutoFit);
+
+// ── 화면 미리보기 자동 축소 (실시간 미리보기 잘림 방지) ──────────────────────
+// content-inner overflow:hidden 때문에 내용이 길면 화면에서 잘림
+// generatePreview() 후 자동 실행해서 각 페이지를 축소 적용
+const PREVIEW_SAFE_H   = 563;  // px — content-page(595) - padding(14*2) - border 여유
+const PREVIEW_MIN_ZOOM = 0.80; // 화면 미리보기 최소 zoom (인쇄보다 더 축소 허용)
+
+function applyPreviewAutoFit() {
+  document.querySelectorAll('.page-card').forEach(card => {
+    const cp = card.querySelector('.content-page');
+    const ci = card.querySelector('.content-inner');
+    if (!cp || !ci) return;
+
+    // 이전 미리보기 축소 리셋
+    cp.style.removeProperty('--rx-fs');
+    cp.style.removeProperty('zoom');
+    cp.classList.remove('print-compact');
+    delete card.dataset.previewScaled;
+
+    // scrollHeight는 overflow:hidden 여부와 무관하게 실제 컨텐츠 높이 반환
+    let h = ci.scrollHeight;
+    if (h <= ci.clientHeight * 1.05) return;  // 축소 불필요
+
+    // Step 1: 폰트 점진적 축소 (최대 3px)
+    const baseFs = parseInt(getComputedStyle(cp).getPropertyValue('--rx-fs')) || 17;
+    const newFs  = Math.max(9, baseFs - 3);
+    cp.style.setProperty('--rx-fs', newFs + 'px');
+    h = ci.scrollHeight;
+    if (h <= ci.clientHeight * 1.05) { card.dataset.previewScaled = '1'; return; }
+
+    // Step 2: 셀 padding / line-height 축소 (.print-compact 재사용)
+    cp.classList.add('print-compact');
+    h = ci.scrollHeight;
+    if (h <= ci.clientHeight * 1.05) { card.dataset.previewScaled = '1'; return; }
+
+    // Step 3: 전체 zoom 축소 (최소 0.80)
+    const scale = Math.max(PREVIEW_MIN_ZOOM, ci.clientHeight / h);
+    cp.style.zoom = scale;
+    card.dataset.previewScaled = '1';
+  });
+}
 
 // ══ 모바일 탭 전환 ══
 let _mobileTab = 'builder';
@@ -3055,6 +3732,17 @@ const RX_ROW_Y_MERGE        = 10;   // 같은 행 Y 허용 오차 (px)
 const RX_STAGE_Y_GAP        = 50;   // 좌측 그룹 사이 간격 (px)
 const RX_COUNT_UNITS_RE     = /포|병|봉|통|개/;
 const RX_PAGE_TITLE_Y_GAP   = 60;   // v16: 첫 좌측 아이템 ↔ 다음 좌측 아이템 gap > 이 값 → pageTitle 후보
+const RX_PAGE_Y_MAX         = 800;  // 이 Y 이상은 푸터 영역으로 간주 → 수집 제외
+// ── 사용법 셀 파싱 전용 푸터 필터 ────────────────────────────────
+// 용도: PDF에서 추출한 텍스트가 처방 내용이 아닌 업체 공통정보일 때 수집 제외
+// ⚠ 이 필터는 parseRxPdfCoords() 내부 rightDetailItems 수집에만 사용
+//   → 화면 하단 page-footer-bar(logo + 업체정보) HTML 렌더링과는 완전히 별개
+const RX_FOOTER_RE = new RegExp([
+  '담당자',                         // "담당자:010-..."
+  '1577-\\d{4}',                    // 대표번호 전체 (1577-5963 등)
+  '천연바이오',                     // 업체명
+  '\\b0\\d{1,2}-\\d{3,4}-\\d{4}\\b', // 전화번호 형식: 010-1234-5678 / 02-123-4567
+].join('|'));
 // v16: 좌측 열 테이블 헤더/구조 텍스트 필터 (단계명 오염 방지)
 const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단계명?|시기명?|품\s*목|규\s*격|수\s*량|제품명?|용\s*량|사용량|물량\s*[\/\/]?\s*평수|합\s*계|소\s*계|비\s*고|구\s*분|내\s*용|번호|No\.)$/i;
 
@@ -3098,6 +3786,24 @@ function rxClassifyLeftRow(text) {
   if (/\d+\s*월|\d+\s*[-~]\s*\d+\s*월/.test(t)) return 'date';
   if (/^(및|and|or|또는|그리고|after|before)$/i.test(t)) return 'connector';
   return 'note';
+}
+
+/**
+ * PDF 텍스트 아이템 조인 후 공백 정리
+ * - 괄호 앞뒤 공백 제거: "발효계분 (55%)" → "발효계분(55%)"
+ * - 슬래시 앞뒤 공백 제거: "견운모 / 고령토" → "견운모/고령토"
+ * - 마침표 앞 공백 제거: "경운합니다 ." → "경운합니다."
+ */
+function cleanDetailText(text) {
+  return text
+    .replace(/\s+\(/g, '(')              // 여는 괄호 앞 공백 제거: "발효계분 (" → "발효계분("
+    .replace(/\(\s+/g, '(')              // 여는 괄호 뒤 공백 제거: "( 55%)" → "(55%)"
+    .replace(/\s+\)/g, ')')              // 닫는 괄호 앞 공백 제거: "(55% )" → "(55%)"
+    .replace(/\s*\/\s*/g, '/')           // 슬래시 앞뒤 공백 제거: "A / B" → "A/B"
+    .replace(/\s+\./g, '.')              // 마침표 앞 공백 제거: "합니다 ." → "합니다."
+    .replace(/(\d)\s+([가-힣])/g, '$1$2') // 숫자+한글 단위 공백 제거: "30 분" → "30분", "50 말" → "50말"
+    .replace(/\s{2,}/g, ' ')             // 연속 공백 → 단일 공백
+    .trim();
 }
 
 function parseRxPdfCoords(items) {
@@ -3172,19 +3878,31 @@ function parseRxPdfCoords(items) {
     const leftRow  = row.items.filter(it => it.x < RX_LEFT_X_MAX);
     const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
 
-    leftRow.forEach(it => {
-      if (!RX_LEFT_TABLE_HDR_RE.test(it.text.trim()))
-        leftItems.push({ y: row.yAvg, page: row.page, text: it.text });
-    });
+    // 같은 행의 좌측 아이템을 하나로 합쳐 push (개별 문자 분리 방지)
+    if (leftRow.length > 0) {
+      const rowText = leftRow
+        .filter(it => !RX_LEFT_TABLE_HDR_RE.test(it.text.trim()))
+        .map(it => it.text)
+        .join(' ')
+        .trim();
+      if (rowText) leftItems.push({ y: row.yAvg, page: row.page, text: rowText });
+    }
 
     if (rightRow.length > 0) {
+      // ④ 페이지 하단 푸터 영역 제외 (Y > RX_PAGE_Y_MAX)
+      if (row.yAvg > RX_PAGE_Y_MAX) return;
+
       const rightText = rightRow.map(i => i.text).join(' ');
       if (RX_COUNT_UNITS_RE.test(rightText)) {
+        // ④ 제품 행도 푸터 영역이면 제외
         rightRow.forEach(it => rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text }));
       } else {
         // 단위 없는 우측 행: detail 후보 (usage/composition/instruction)
-        const detailText = rightText.trim();
-        // 단순 숫자·단위·좌표는 제외, 의미있는 텍스트만 수집
+        const detailText = cleanDetailText(rightText);
+        // ① 사용법 셀 한정: 업체정보·연락처 제외 (HTML 푸터 레이아웃과 무관)
+        if (RX_FOOTER_RE.test(detailText)) return;
+        // 단순 숫자·단위·좌표 제외, 의미있는 텍스트만 수집
+        // ② 행마다 별도 push → prodDescMap에서 \n 으로 조인되어 줄바꿈 보존
         if (detailText.length > 2 && !/^\d+(\.\d+)?(kg|g|L|ml|㎖|㎏)?$/.test(detailText)) {
           rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText });
         }
@@ -3289,11 +4007,11 @@ function parseRxPdfCoords(items) {
     if (idx >= 0) blockProducts[idx].push(rr);
   });
 
-  // ── 8. detail 행 → stageBlock 배정 ──────────────────────────────
-  const blockDetails = stageBlocks.map(() => []);
+  // ── 8. detail 행 → stageBlock 배정 (Y 포함 객체 보존) ──────────────
+  const blockDetailItems = stageBlocks.map(() => []);
   rightDetailItems.forEach(di => {
     const idx = assignToBlock(di.y, di.page);
-    if (idx >= 0) blockDetails[idx].push(di.text);
+    if (idx >= 0) blockDetailItems[idx].push({ y: di.y, text: di.text });
   });
 
   // ── 9. pageTitles에서 평수 추출 ──────────────────────────────────
@@ -3314,19 +4032,39 @@ function parseRxPdfCoords(items) {
     const dedupedTexts = sb.texts.filter((t, i, arr) => i === 0 || t !== arr[i - 1]);
     const stageRawCell = dedupedTexts.join('\n').trim();
 
-    // stageDisplayText (표시용): stage_core/date/connector 행 우선, 없으면 전체
-    const coreLines = dedupedTexts.filter(t => {
-      const type = rxClassifyLeftRow(t);
-      return type !== 'note';
-    });
+    // stageDisplayText (표시용): 전체 좌측 텍스트 (note 필터 제거 — "3월 4월" 등 날짜 보존)
     const noteLines = dedupedTexts.filter(t => rxClassifyLeftRow(t) === 'note');
-    const stageDisplayText = (coreLines.length ? coreLines : dedupedTexts).join('\n').trim();
+    const stageDisplayText = dedupedTexts.join('\n').trim();
 
-    // detailCellRaw: 이 stage에 배정된 detail 행 전체
-    const detailCellRaw = blockDetails[idx].join('\n').trim();
+    // detailCellRaw: 이 stage 전체 detail 텍스트 (stageMeta용)
+    const detailCellRaw = blockDetailItems[idx].map(d => d.text).join('\n').trim();
     const detailCellType = (typeof classifyDetailCell === 'function')
       ? classifyDetailCell(detailCellRaw)
       : (detailCellRaw ? 'instruction' : 'empty');
+
+    // ── Y 기반 detail → 제품별 배정 (경계선 방식: 다음 제품 Y 직전까지) ──
+    // detail 아이템을 Y 오름차순 정렬
+    const sortedDetailObjs = blockDetailItems[idx]
+      .map((di, i) => ({ y: di.y, text: di.text, _id: i }))
+      .sort((a, b) => a.y - b.y);
+    // 제품 행을 Y 오름차순 정렬
+    const sortedProdRows = assigned.slice().sort((a, b) => a.yAvg - b.yAvg);
+    // 제품별 detail 라인 버킷 초기화
+    const prodDescMap = new Map();
+    sortedProdRows.forEach(rr => prodDescMap.set(rr.yAvg, []));
+    // 각 detail 아이템 → "가장 가까운 위쪽 제품" 배정
+    // 핵심: break 없이 끝까지 순회하여 조건을 만족하는 마지막(가장 아래) 제품을 선택
+    // → 오버랩 구간에서 항상 더 아래(더 가까운) 제품이 이김
+    const DETAIL_Y_BUFFER = 20; // 제품명보다 최대 20px 위에 있는 설명도 해당 제품으로 허용
+    sortedDetailObjs.forEach(di => {
+      let assignedRr = sortedProdRows[0]; // 기본: 첫 번째 제품 (설명이 맨 위에 있을 때)
+      for (const rr of sortedProdRows) {
+        if (rr.yAvg - DETAIL_Y_BUFFER <= di.y) {
+          assignedRr = rr; // 조건 만족 시 계속 갱신 (break 없음 — 마지막 매칭이 최종)
+        }
+      }
+      prodDescMap.get(assignedRr.yAvg).push(di.text);
+    });
 
     // 제품 파싱
     const products = [];
@@ -3343,12 +4081,21 @@ function parseRxPdfCoords(items) {
       const prodAreaM = line.match(/(\d+(?:\.\d+)?)\s*평/);
       const prodArea  = prodAreaM ? Number(prodAreaM[1]) : null;
 
+      // ── capacity(용량) 추출: namePart 정제 전에 먼저 저장 ──────────
+      // 예) "1kg", "500g", "10L", "500ml", "1ℓ" → capacity 필드
+      const capacityM = line.match(/(\d+(?:\.\d+)?)\s*(L|ℓ|ml|㎖|kg|g|㎏|cc)\b/i);
+      const capacity  = capacityM ? capacityM[0].replace(/\s+/g, '').toUpperCase()
+                                                 .replace('ML','ml').replace('L','L')
+                                  : '';
+
       const namePart = line
         .replace(/반\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*평/g, '')
-        .replace(/\d+(?:\.\d+)?\s*(kg|g|L|ml)/gi, '')
+        .replace(/\d+(?:\.\d+)?\s*(kg|g|L|ml|ℓ|㎖|㎏|cc)/gi, '')
         .replace(/\s+/g, ' ').trim();
+
+      console.log(`[Capacity Check] 제품: ${namePart || line} | 추출된 용량: ${capacity || '(없음)'} | 원본: ${line}`);
 
       if (namePart.length <= 1) return;
 
@@ -3357,16 +4104,21 @@ function parseRxPdfCoords(items) {
         ? `${sizeM[1].trim()}||${sizeM[2].trim()}`
         : `${namePart}||`;
 
+      // 이 제품 행에 배정된 개별 detail 텍스트 (각 줄 trim 후 줄바꿈 결합)
+      const prodDesc = (prodDescMap.get(rr.yAvg) || [])
+        .map(t => t.trim()).filter(t => t).join('\n');
+
       products.push({
         key, qty, unit,
+        capacity,              // 용량: "1kg", "500g", "10L" 등
         // 새 필드
         productTextRaw: line,
         productName: namePart,
-        detailCellRaw,        // stage 공유 detail 텍스트
-        detailCellType,
+        detailCellRaw: prodDesc,
+        detailCellType: prodDesc ? detailCellType : 'empty',
         prodArea,
         // 하위 호환
-        desc: detailCellRaw || '',
+        desc: prodDesc || '',
       });
     });
 
@@ -3408,7 +4160,10 @@ function parseRxPdfCoords(items) {
       products
     });
 
-    console.log(`[Parser v16] page=${sb.page} stageRawCell="${stageRawCell.replace(/\n/g,'|')}" | pageTitle="${pageTitles[sb.page]||''}" | detailCellType=${detailCellType} | products=${products.length} | area=${area}`);
+    console.log(`[Parser v20] page=${sb.page} stageDisplayText="${stageDisplayText.replace(/\n/g,'|')}" | products=${products.length} | area=${area}`);
+    products.forEach((p, pi) => {
+      console.log(`  [v20] product[${pi}] name="${p.productName}" descLen=${p.desc.length} desc="${p.desc.replace(/\n/g,'↵')}"`);
+    });
   });
 
   return stages.filter(s => s.products.length > 0);
@@ -3500,6 +4255,8 @@ function applyRxData(d) {
     dateRange: s.dr||'', purpose: s.p||'', funcTags: s.ft||[], funcColor: s.fc||'#ffffff',
     typeNumOverride: s.to||0, typeNumWord: s.tw||'',
     stageLabelOverride: s.sl||'', stageLabel: s.lb||'',
+    // v18: 표시 텍스트 3종 복원
+    stageDisplayText: s.sdt||'', stageRawCell: s.src||'', stageDisplayOverride: s.sdo||'',
     products: (s.pr||[]).map(p => {
       let desc = p[3] || '';
       if (!desc && s.t !== '엽면') {
@@ -3507,7 +4264,7 @@ function applyRxData(d) {
         const mk = Object.keys(PRODUCT_DEFAULT_DESCS).find(k => prodName.includes(k));
         if (mk) desc = PRODUCT_DEFAULT_DESCS[mk];
       }
-      return { key:p[0], qty:p[1]||0, unit:p[2]||'개', desc, prodArea:p[4]||null };
+      return { key:p[0], qty:p[1]||0, unit:p[2]||'개', desc, prodArea:p[4]||null, capacity:p[5]||'' };
     }),
     area: s.a||null
   }));
@@ -3945,46 +4702,233 @@ function editCoverLine(field) {
   setTimeout(()=>ed.querySelector('#ceText').focus(),50);
 }
 
+function _rxAutoGrowCell(cell) {
+  const table = cell.closest('.rx-table');
+  if (!table) return;
+  const tr = cell.closest('tr');
+  if (!tr) return;
+  const trs = [...table.querySelectorAll('tr')];
+  const trIdx = trs.indexOf(tr);
+  if (trIdx >= trs.length - 1) return; // 마지막 행(푸터) 제외
+
+  const needed  = cell.scrollHeight + 6;
+  const current = parseFloat(tr.style.height) || tr.getBoundingClientRect().height;
+  const delta   = needed - current;
+  if (delta <= 2) return;
+
+  // ── 페이지 경계 체크 ──────────────────────────────────────────────
+  const card  = table.closest('[data-pagekey]');
+  const ci    = card?.querySelector('.content-inner');
+  const ciH   = ci ? ci.clientHeight : 1096;
+  const totalH = trs.reduce((s, t) => s + (parseFloat(t.style.height) || t.getBoundingClientRect().height), 0);
+  const pageSlack = Math.max(0, ciH - totalH - 6);
+
+  // 아래 행에서 뺏어올 수 있는 공간 (푸터 제외)
+  const trsStealable = trs.slice(trIdx + 1, trs.length - 1);
+  const stealable = trsStealable.reduce((sum, t) => {
+    const h = parseFloat(t.style.height) || t.getBoundingClientRect().height;
+    return sum + Math.max(0, h - _MIN_ROW_H);
+  }, 0);
+
+  const maxGrow   = stealable + pageSlack;
+  const actualGrow = Math.min(delta, maxGrow);
+
+  if (actualGrow < 2) {
+    // 더 이상 확장 불가 — 셀 내부 스크롤로 전환
+    cell.style.overflowY = 'auto';
+    return;
+  }
+
+  // 아래 행에서 우선 빼앗고, 부족하면 pageSlack 활용
+  const fromBelow = Math.min(actualGrow, stealable);
+  if (fromBelow > 0 && trsStealable.length > 0) {
+    const totalBelow = trsStealable.reduce((s, t) => s + (parseFloat(t.style.height) || t.getBoundingClientRect().height), 0);
+    trsStealable.forEach(t => {
+      const h = parseFloat(t.style.height) || t.getBoundingClientRect().height;
+      const ratio = totalBelow > 0 ? h / totalBelow : 1 / trsStealable.length;
+      t.style.height = Math.max(_MIN_ROW_H, h - fromBelow * ratio) + 'px';
+    });
+  }
+
+  tr.style.height = (current + actualGrow) + 'px';
+  cell.style.overflowY = '';  // 확장 성공 — 스크롤 해제
+
+  const k = _rxTableKey(table);
+  trs.forEach((t, i) => { _rxResizeStore.rows[k + '_r' + i] = t.style.height || ''; });
+}
+
+// ── 인라인 편집 상태 ──
+let _inlineEditing = false;
+let _pendingPreview = false;
+
 function openRxEdit(el, e) {
   // modifier key → 선택 모드 (편집창 열지 않음)
   if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
     _rxCellSelect(el, e);
     return;
   }
-  // 일반 클릭 → 선택 해제 후 편집
+  // 이미 편집 중인 셀이면 무시
+  if (el.getAttribute('contenteditable') === 'true') return;
   _rxClearSel();
+  // 기존 팝업 닫기
+  const ed = document.getElementById('coverEditor');
+  if (ed) ed.style.display = 'none';
+
   const type = el.dataset.edit;
   const si   = parseInt(el.dataset.si);
   const pi   = parseInt(el.dataset.pi);
   const mk   = el.dataset.monthkey !== undefined ? parseInt(el.dataset.monthkey) : null;
-  _editorCtx = { type, si, pi, mk };
-  const ed = document.getElementById('coverEditor');
-  const cfg = {
-    'page-title': { t:'페이지 제목', h:'이 처방 페이지의 제목',
-      get(){ return groupLabels[mk] || ''; }},
-    'func-tags':  { t:'제품 기능 태그', h:'+ 로 구분  예) 뿌리활착+생장촉진',
-      get(){ return (stages[si].funcTags||[]).join('+'); }},
-    // stage-date 클릭 → 단계명 편집 (날짜는 dateRange 필드로 이동)
-    // 표 셀(stage-td)에는 단계명이 표시되므로 단계명 편집이 더 직관적
-    'stage-date': { t:'시기/단계명', h:'시기/단계 원문 그대로 입력 (줄바꿈 자유)',
-      // 편집기 초기값: stageDisplayOverride(사용자 직접 입력)가 있으면 그것,
-      // 없으면 getStageLabel로 자동 라벨(관주(N번) 등) 표시 → 편집 시작점 제공
-      get(){ return stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || getStageLabel(stages[si]); }},
-    'prod-desc':  { t:'사용방법', h:'예) 물(10말)  주1회 500배액',
-      get(){ const p=stages[si].products[pi]; return p.detailCellDisplayOverride || p.detailCellRaw || p.desc || ''; }},
-    'prod-qty':   { t:'사용량', h:'숫자 입력  예) 1  0.5  2',
-      get(){ return String(stages[si].products[pi].qty||''); }},
-    'prod-name':  { t:'제품명', h:'제품명 변경 (용량은 재고에서 수정)',
-      get(){ return stages[si].products[pi].key.split('||')[0]; }},
+
+  // 편집할 원시 텍스트 가져오기
+  const getters = {
+    'page-title': () => groupLabels[mk] || '',
+    'func-tags':  () => (stages[si].funcTags||[]).join('+'),
+    'stage-date': () => stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || getStageLabel(stages[si]),
+    'prod-desc':  () => { const p=stages[si].products[pi]; return p.detailCellDisplayOverride || p.detailCellRaw || p.desc || ''; },
+    'prod-qty':   () => String(stages[si].products[pi].qty||''),
+    'prod-name':  () => stages[si].products[pi].key.split('||')[0],
+    'prod-size':  () => { const p=stages[si].products[pi]; return p.capacity || p.key.split('||')[1] || ''; },
   };
-  const c = cfg[type]; if (!c) return;
-  ed.querySelector('.ce-title').textContent = c.t;
-  ed.querySelector('.ce-hint').textContent  = c.h;
-  ed.querySelector('#ceText').value = c.get();
-  ed.querySelector('.ce-fs-row').style.display = 'none';
-  ed.querySelector('.ce-clear-btn').style.display = 'none';
-  ed.style.display = 'block';
-  setTimeout(()=>ed.querySelector('#ceText').focus(),50);
+  const getter = getters[type];
+  if (!getter) return;
+  const rawVal = getter();
+
+  _rxHistoryCapture(); // 편집 시작 전 상태 저장 (Ctrl+Z 복원용)
+
+  // 원본 HTML 저장 (Esc 복원용)
+  el._origHtml = el.innerHTML;
+
+  // 셀을 contenteditable로 전환
+  _inlineEditing = true;
+  el.setAttribute('contenteditable', 'true');
+  el.classList.add('rx-editing');
+  el.innerHTML = rawVal.replace(/\n/g, '<br>');
+  // 편집 모드: 스크롤 허용으로 텍스트 잘림 방지
+  el.style.overflow = 'auto';
+  el.style.minHeight = el.style.height || '';
+  el.focus();
+  _rxShowToolbar(el);
+  _tbActiveCell = el;
+
+  // 커서를 맨 뒤로
+  try {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(_){}
+
+  // blur → 저장
+  const finishEdit = (save) => {
+    el.removeEventListener('blur', onBlur);
+    el.removeEventListener('keydown', onKey);
+    el.removeAttribute('contenteditable');
+    el.classList.remove('rx-editing');
+    el.style.overflow = '';
+    el.style.minHeight = '';
+    _inlineEditing = false;
+    _rxHideToolbar();
+
+    if (save) {
+      const newVal = el.innerText.trim();
+      _saveInlineEdit(type, si, pi, mk, newVal);
+      // 즉시 셀 표시 복원
+      _restoreCellHtml(el, type, si, pi, mk);
+      // 셀 내용이 넘치면 아래 행들에서 높이를 빼앗아 자동으로 늘림
+      requestAnimationFrame(() => _rxAutoGrowCell(el));
+    } else {
+      el.innerHTML = el._origHtml;
+    }
+    // 보류된 preview 포함 항상 갱신
+    if (_pendingPreview || save) {
+      _pendingPreview = false;
+      schedulePreview();
+    }
+  };
+
+  const onBlur = () => finishEdit(true);
+  const onKey  = (ev) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      el.blur(); // → onBlur → finishEdit(true)
+    }
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      finishEdit(false);
+    }
+    // Tab → 다음/이전 셀로 이동
+    if (ev.key === 'Tab') {
+      ev.preventDefault();
+      el.blur();
+      const allCells = [...document.querySelectorAll('.rx-table td.rx-editable, .rx-table th.rx-editable')];
+      const idx = allCells.indexOf(el);
+      const next = allCells[ev.shiftKey ? idx - 1 : idx + 1];
+      if (next) setTimeout(() => next.click(), 50);
+    }
+  };
+
+  el.addEventListener('blur', onBlur);
+  el.addEventListener('keydown', onKey);
+}
+
+// ── 인라인 편집 데이터 저장 ──
+function _saveInlineEdit(type, si, pi, mk, val) {
+  if (type === 'page-title') {
+    groupLabels[mk] = val;
+    const inp = document.querySelector(`#monthGrp_${mk} .group-label-input`);
+    if (inp) inp.value = val;
+    const ta = document.getElementById(`groupTitleArea_${mk}`);
+    if (ta) ta.value = val;
+  } else if (type === 'func-tags') {
+    stages[si].funcTags = val ? val.split('+').map(t=>t.trim()).filter(Boolean) : [];
+  } else if (type === 'stage-date') {
+    stages[si].stageDisplayOverride = val;
+    const snArea = document.getElementById(`stageNameArea_${si}`);
+    if (snArea) snArea.value = val;
+  } else if (type === 'prod-desc') {
+    stages[si].products[pi].detailCellDisplayOverride = val;
+    stages[si].products[pi].desc = val;
+  } else if (type === 'prod-qty') {
+    const qty = parseFloat(val);
+    if (!isNaN(qty)) stages[si].products[pi].qty = qty;
+  } else if (type === 'prod-name') {
+    const p = stages[si].products[pi];
+    p.key = val.trim() + '||' + (p.key.split('||')[1]||'');
+  } else if (type === 'prod-size') {
+    const p = stages[si].products[pi];
+    p.capacity = val.trim();
+    // key의 size 부분도 갱신
+    const name = p.key.split('||')[0];
+    p.key = name + '||' + val.trim();
+  }
+}
+
+// ── 셀 HTML 즉시 복원 (전체 re-render 전 임시 표시) ──
+function _restoreCellHtml(el, type, si, pi, mk) {
+  if (type === 'stage-date') {
+    el.innerHTML = '<strong>' + getStageLabel(stages[si]).replace(/\n/g,'<br>') + '</strong>';
+  } else if (type === 'prod-name') {
+    const p = stages[si].products[pi];
+    const name = p.key.split('||')[0];
+    const areaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
+    el.innerHTML = name + areaLine;
+  } else if (type === 'prod-qty') {
+    const p = stages[si].products[pi];
+    el.textContent = p.qty ? formatQty(p.qty, p.unit) : '—';
+  } else if (type === 'prod-size') {
+    const p = stages[si].products[pi];
+    el.textContent = p.capacity || p.key.split('||')[1] || '';
+  } else if (type === 'prod-desc') {
+    const p = stages[si].products[pi];
+    const desc = p.detailCellDisplayOverride || p.detailCellRaw || p.desc || '';
+    el.innerHTML = `<div class="desc-inner">${desc ? desc.replace(/\n/g,'<br>') : '<span style="color:#ccc;font-size:11px;">+</span>'}</div>`;
+  } else if (type === 'page-title') {
+    el.textContent = groupLabels[mk] || '';
+  } else if (type === 'func-tags') {
+    el.innerHTML = (stages[si].funcTags||[]).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  }
 }
 
 function onCeTextInput() {
