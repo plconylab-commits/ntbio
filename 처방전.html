@@ -456,16 +456,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .rx-table{table-layout:fixed;width:100%;}
 .rx-table th,.rx-table td{position:relative;}
 .rx-table th{user-select:none;}
+/* 리사이즈 핸들 시각 힌트 — pointer-events:none 이므로 글자 클릭 방해 안 함 */
+.rx-table td.rx-row-hint::after,.rx-table th.rx-row-hint::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;
+  height:5px;background:rgba(58,172,170,.45);
+  pointer-events:none;z-index:4;border-radius:2px;}
+.rx-table td.rx-col-hint::after,.rx-table th.rx-col-hint::after{
+  content:'';position:absolute;right:-2px;top:0;bottom:0;
+  width:5px;background:rgba(58,172,170,.45);
+  pointer-events:none;z-index:4;border-radius:2px;}
 
 /* 드래그 중 커서 & 선택 잠금 */
 body.col-resizing,body.col-resizing *{cursor:col-resize!important;user-select:none!important;}
 body.row-resizing,body.row-resizing *{cursor:row-resize!important;user-select:none!important;}
 body.grid-selecting,body.grid-selecting *{user-select:none!important;}
 
-/* 스페이서 행 — 페이지 하단 여백 흡수 */
-tr.rx-spacer-tr td{background:#fff;border-left:3.5px solid var(--teal);
-  border-right:3.5px solid var(--teal);border-top:none;border-bottom:none;
-  padding:0;}
 /* 제품/시기 셀 최소 높이 보장 */
 .rx-table .product-td,.rx-table .stage-td,.rx-table .qty-td,
 .rx-table .size-td{min-height:45px;}
@@ -2205,35 +2210,7 @@ function _rxInitTableSizes() {
       // 저장값 없으면 height:auto — 브라우저가 콘텐츠 기반으로 결정
     });
 
-    // ③ 스페이서로 남은 페이지 공간 채우기
-    _rxFillSpacer(table);
   });
-}
-
-// ── 스페이서 행으로 페이지 하단 여백 채우기 ─────────────────────────
-function _rxFillSpacer(table) {
-  const spacer = table.querySelector('tr.rx-spacer-tr');
-  if (!spacer) return;
-  const card = table.closest('[data-pagekey]');
-  const ci   = card?.querySelector('.content-inner');
-  if (!ci) return;
-
-  spacer.style.height = '0px';  // 리셋 후 측정
-  void table.offsetHeight;      // reflow
-
-  const ciH    = Math.floor(ci.getBoundingClientRect().height);
-  const trs    = [...table.querySelectorAll('tr')];
-  const othersH = trs
-    .filter(tr => tr !== spacer)
-    .reduce((sum, tr) => sum + Math.ceil(tr.getBoundingClientRect().height), 0);
-
-  const spacerH = Math.max(0, ciH - othersH - 2);
-  spacer.style.height = spacerH + 'px';
-
-  // 스페이서 높이 저장소 갱신
-  const k = _rxTableKey(table);
-  const idx = trs.indexOf(spacer);
-  if (idx >= 0) _rxResizeStore.rows[k + '_r' + idx] = spacerH + 'px';
 }
 
 // ── Undo / Redo — 완전 상태 스냅샷 (리사이즈 + 텍스트 + 서식 모두 포함) ──
@@ -2344,9 +2321,7 @@ function _rxGridHitTest(e) {
     const tr     = cell.closest('tr');
     const allTrs = [...table.querySelectorAll('tr')];
     const trIdx  = allTrs.indexOf(tr);
-    // 마지막 행(푸터) 하단 경계선은 리사이즈 불가
-    if (trIdx === allTrs.length - 1) return null;
-    // 스페이서 하단 드래그 = 푸터 높이 조절 (허용 — 아래 행이 푸터이면 minPeer=_MIN_ROW_H 적용)
+    if (trIdx === allTrs.length - 1) return null;  // 마지막 행 하단 리사이즈 불가
     const trBelow = allTrs[trIdx + 1];
     return { mode:'row', cell, table, tr, trIdx, trBelow };
   }
@@ -2361,13 +2336,21 @@ function _rxInitColResize(container) {
     if (_gridCol || _gridRow || _pendingDrag) return;
     const hit  = _rxGridHitTest(e);
     const cell = e.target.closest('.rx-table th, .rx-table td');
+    // 이전 hint 클래스 제거
+    container.querySelectorAll('.rx-row-hint,.rx-col-hint')
+      .forEach(el => el.classList.remove('rx-row-hint','rx-col-hint'));
     if (!cell) return;
-    cell.style.cursor = hit ? (hit.mode === 'col' ? 'col-resize' : 'row-resize') : '';
+    if (hit) {
+      cell.style.cursor = hit.mode === 'col' ? 'col-resize' : 'row-resize';
+      cell.classList.add(hit.mode === 'col' ? 'rx-col-hint' : 'rx-row-hint');
+    } else {
+      cell.style.cursor = '';
+    }
   });
   container.addEventListener('mouseleave', () => {
     if (_gridCol || _gridRow) return;
-    container.querySelectorAll('.rx-table th[style*="cursor"],.rx-table td[style*="cursor"]')
-      .forEach(el => (el.style.cursor = ''));
+    container.querySelectorAll('.rx-row-hint,.rx-col-hint,.rx-table th[style*="cursor"],.rx-table td[style*="cursor"]')
+      .forEach(el => { el.classList.remove('rx-row-hint','rx-col-hint'); el.style.cursor=''; });
   });
 
   // 2) mousedown — threshold 대기 시작 (click 이벤트 방해 안 함)
@@ -2441,15 +2424,9 @@ function _rxInitColResize(container) {
       let newH = _gridRow.startH + Δ;
 
       if (_gridRow.trBelow) {
-        // 현재 행이 스페이서면 0까지 축소 가능 (여백이므로), 일반 행은 _MIN_ROW_H
-        const isCurSpacer  = _gridRow.tr.classList.contains('rx-spacer-tr');
-        // 인접 행이 스페이서면 0까지 축소 가능, 일반 행(푸터 포함)은 _MIN_ROW_H
-        const isBelowSpacer = _gridRow.trBelow.classList.contains('rx-spacer-tr');
-        const minCur  = isCurSpacer  ? 0 : _MIN_ROW_H;
-        const minPeer = isBelowSpacer ? 0 : _MIN_ROW_H;
         let newHP = _gridRow.startHBelow - (newH - _gridRow.startH);
-        if (newHP < minPeer) { newHP = minPeer; newH = _gridRow.startH + _gridRow.startHBelow - minPeer; }
-        if (newH  < minCur)  { newH  = minCur;  newHP = _gridRow.startH + _gridRow.startHBelow - minCur; }
+        if (newHP < _MIN_ROW_H) { newHP = _MIN_ROW_H; newH = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
+        if (newH  < _MIN_ROW_H) { newH  = _MIN_ROW_H; newHP = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
         _gridRow.tr.style.height      = newH  + 'px';
         _gridRow.trBelow.style.height = newHP + 'px';
       } else {
@@ -2474,8 +2451,6 @@ function _rxInitColResize(container) {
       [..._gridRow.table.querySelectorAll('tr')].forEach((tr, i) => {
         _rxResizeStore.rows[k + '_r' + i] = tr.style.height || '';
       });
-      // 드래그 후 스페이서 재보정 (부동소수점 오차 등 누적 보정)
-      _rxFillSpacer(_gridRow.table);
       document.body.classList.remove('row-resizing');
       _gridRow = null;
     }
@@ -2552,6 +2527,7 @@ function _rxCreateToolbar() {
     <button class="tb-btn" onclick="_rxHideToolbar()" title="닫기" style="font-size:11px;padding:2px 6px;">✕</button>
   `;
   document.body.appendChild(tb);
+  tb.addEventListener('mousedown', e => e.preventDefault()); // 셀 포커스 유지
   document.getElementById('tbFont').addEventListener('change', rxTbFontFamily);
   document.getElementById('tbSize').addEventListener('change', rxTbFontSize);
   document.getElementById('tbSize').addEventListener('keydown', e => { if (e.key === 'Enter') rxTbFontSize(); });
@@ -2583,7 +2559,7 @@ function _tbSyncState() {
 function rxTbExec(cmd) {
   if (!_tbActiveCell) return;
   _rxHistoryCapture();
-  _tbActiveCell.focus();
+  // mousedown에서 preventDefault로 포커스 유지됨 — 직접 execCommand 실행
   document.execCommand(cmd, false, null);
   _tbSyncState();
 }
@@ -3457,7 +3433,6 @@ function generatePreview() {
               50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
               관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성</td>
             </tr>` : ''}
-            <tr class="rx-spacer-tr"><td colspan="5"></td></tr>
             <tr class="rx-footer-tr">
               <td colspan="5" class="page-footer-bar"><img src="logo.png" style="height:34px;margin-right:6px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</td>
             </tr>
@@ -4817,8 +4792,10 @@ function openRxEdit(el, e) {
   el.classList.add('rx-editing');
   el.innerHTML = rawVal.replace(/\n/g, '<br>');
   // 편집 모드: 스크롤 허용으로 텍스트 잘림 방지
+  el._origHeight = el.style.height;    // 원본 높이 저장
+  el.style.height = 'auto';            // 편집 중 높이 제한 해제
   el.style.overflow = 'auto';
-  el.style.minHeight = el.style.height || '';
+  el.style.minHeight = el._origHeight || '';
   el.focus();
   _rxShowToolbar(el);
   _tbActiveCell = el;
@@ -4839,7 +4816,8 @@ function openRxEdit(el, e) {
     el.removeEventListener('keydown', onKey);
     el.removeAttribute('contenteditable');
     el.classList.remove('rx-editing');
-    el.style.overflow = '';
+    el.style.height    = el._origHeight || '';  // 원본 높이 복원
+    el.style.overflow  = '';
     el.style.minHeight = '';
     _inlineEditing = false;
     _rxHideToolbar();
