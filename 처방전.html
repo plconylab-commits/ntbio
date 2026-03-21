@@ -388,18 +388,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 #coverEditor .optional-hint{font-size:11px;color:#aaa;margin-top:6px;}
 
 /* ── 내용 페이지 ── */
-.content-page{background:var(--teal);padding:14px;height:297mm;
+.content-page{background:var(--teal);padding:14px;height:595px;
   overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;}
 .content-inner{background:#fff;border:3px solid rgba(255,255,255,.6);
-  border-radius:4px;flex:1;overflow:visible;}
+  border-radius:4px;flex:1;overflow:hidden;}
 .page-purpose{background:#fff;color:#111;font-size:22px;font-weight:900;
   padding:0 16px;height:49px;box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;}
-/* page-purpose as td inside merged rx-table */
-.rx-table td.page-purpose{display:table-cell;vertical-align:middle;
-  border:3.5px solid var(--teal);}
+/* page-purpose as td inside merged rx-table — 원본 스타일 완전 복원 */
+.rx-table td.page-purpose{
+  display:table-cell;vertical-align:middle;
+  font-size:22px;font-weight:900;
+  padding:0 16px;height:49px;
+  text-align:center;letter-spacing:1px;
+  color:#111;background:#fff;
+  border:3.5px solid var(--teal);
+  overflow:hidden;
+}
 .rx-table{width:100%;border-collapse:collapse;border:3.5px solid var(--teal);}
 .rx-table th{background:#fff;color:#111;border:3.5px solid var(--teal);
   padding:6px 8px;font-size:19px;font-weight:700;text-align:center;
@@ -469,9 +476,16 @@ tr.rx-spacer-tr td{background:#fff;border-left:3.5px solid var(--teal);
   font-size:22px;font-weight:700;text-align:center;letter-spacing:1px;
   display:flex;align-items:center;justify-content:center;gap:16px;
   border:3.5px solid var(--teal);border-top:none;}
-/* page-footer-bar as td inside merged rx-table */
-.rx-table td.page-footer-bar{display:table-cell;vertical-align:middle;
-  margin-top:0;border:3.5px solid var(--teal);}
+/* page-footer-bar as td inside merged rx-table — 원본 스타일 완전 복원 */
+.rx-table td.page-footer-bar{
+  display:table-cell;vertical-align:middle;
+  font-size:22px;font-weight:700;
+  padding:0 16px;height:49px;
+  text-align:center;letter-spacing:1px;
+  color:#111;background:#fff;
+  border:3.5px solid var(--teal);
+  overflow:visible;  /* 로고 이미지가 overflow:hidden에 잘리지 않도록 */
+}
 /* bottom-note row inside merged rx-table */
 tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   font-size:12px;color:#2A5050;line-height:1.75;padding:8px 16px;}
