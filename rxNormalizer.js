@@ -471,6 +471,7 @@ function normalizeStageLabel(raw) {
     type: '기타',
     order: 0,
     timing: '',
+    monthInfo: '',   // "3월", "3-5월", "3~4월" 형태의 월 정보
     purpose: [],
     isDescriptionRow: false,
     warnings,
@@ -519,7 +520,45 @@ function normalizeStageLabel(raw) {
     parseLog.push(`STAGE_ALIAS 미매칭 — 기타로 분류: "${flat}"`);
   }
 
-  // ── 4단계: 정규화 라벨 조립 ──────────────────────────────────────
+  // ── 4단계: 월 정보 추출 ────────────────────────────────────────────
+  // raw 원문 전체(줄바꿈 포함)에서 월 범위를 추출한다.
+  // 패턴 A: N월, N월-M월, N월~M월
+  // 패턴 B: N-M월, N~M월 (월자가 끝에만 붙는 경우 — "3-4월", "3~5월")
+  {
+    const months = [];
+    let mm;
+
+    // 패턴 A: "3월", "3월-4월", "3월~5월"
+    const RE_A = /(\d{1,2})\s*월(?:\s*[-~]\s*(\d{1,2})\s*월)?/g;
+    while ((mm = RE_A.exec(raw)) !== null) {
+      const start = parseInt(mm[1], 10);
+      if (start < 1 || start > 12) continue;
+      if (mm[2]) {
+        const end = parseInt(mm[2], 10);
+        months.push((end >= 1 && end <= 12) ? `${start}-${end}월` : `${start}월`);
+      } else {
+        months.push(`${start}월`);
+      }
+    }
+
+    // 패턴 B: "3-4월", "3~5월", "3-4", "3~5" (월 생략 허용 — 월 맥락 있을 때)
+    const rawHasMonthCtx = /월|달|시기|개월/.test(raw);
+    const RE_B = /(\d{1,2})\s*[-~]\s*(\d{1,2})\s*(월)?/g;
+    while ((mm = RE_B.exec(raw)) !== null) {
+      const s = parseInt(mm[1], 10), e = parseInt(mm[2], 10);
+      if (s < 1 || s > 12 || e < 1 || e > 12) continue;
+      if (!mm[3] && !rawHasMonthCtx) continue;  // 월 자 없이 숫자-숫자만이면 월 맥락 필요
+      const label = `${s}-${e}월`;
+      if (!months.includes(label) && !months.includes(`${s}월`)) months.push(label);
+    }
+
+    if (months.length > 0) {
+      base.monthInfo = months.join(', ');
+      parseLog.push(`월 정보 추출: "${base.monthInfo}"`);
+    }
+  }
+
+  // ── 5단계: 정규화 라벨 조립 ──────────────────────────────────────
   base.normalized = buildNormalizedStageLabel({
     type:   base.type,
     order:  base.order,
@@ -640,17 +679,24 @@ function decomposeProductText(rawText) {
     remaining = remaining.replace(areaResult.raw, '').trim();
   }
 
-  // ── 3단계: 용량 전체 추출 → 첫 번째 사용 ─────────────────────────
-  const allSizes = extractPackageSizes(remaining);
+  // ── 3단계: 용량 추출 ───────────────────────────────────────────────
+  // ★ 형태 서술어 (펠렛)(입상)(분상) 등을 임시로 제거한 텍스트에서 용량을 탐색.
+  //   이 접미사들은 제품 '형식'이며 용량이 아님 → 없애야 뒤에 오는 실제 kg/L 패턴이 보임.
+  //   단, remaining 자체(→ 최종 제품명 기반)는 수정하지 않고 사본에서만 제거.
+  const FORM_STRIP_RE = /[（(]\s*(펠렛|입상|분상|분말|과립|액상|액체|수용성|기비|추비|기화)\s*[)）]/g;
+  const remainingForSize = remaining.replace(FORM_STRIP_RE, ' ').replace(/\s+/g, ' ').trim();
+
+  const allSizes = extractPackageSizes(remainingForSize);
   let packageSize = emptyPkgSize;
 
   if (allSizes.length > 0) {
-    // 첫 번째 용량을 정규화
-    packageSize = normalizePackageSize(allSizes[0]);
-    parseLog.push(`용량 추출: "${allSizes[0]}" (전체 발견: ${allSizes.join(', ')})`);
+    // 숫자+단위 중 kg/L 등 중량·용량 단위를 최우선으로 선택
+    const priority = allSizes.find(s => /kg|㎏|L|ℓ/i.test(s)) || allSizes[0];
+    packageSize = normalizePackageSize(priority);
+    parseLog.push(`용량 추출: "${priority}" (전체 발견: ${allSizes.join(', ')})`);
     warnings.push(...packageSize.warnings);
 
-    // 발견된 모든 용량 패턴 제거
+    // 원본 remaining에서도 발견된 패턴 제거 (제품명에서 용량 숫자 제거)
     for (const sz of allSizes) {
       remaining = remaining.replace(sz, '').trim();
     }
@@ -856,6 +902,39 @@ function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackAre
   warnings.push(...decomp.warnings);
   parseLog.push(...decomp.parseLog.map(l => `[decomp] ${l}`));
 
+  // ── productDB 용량 폴백 ───────────────────────────────────────────
+  // decomposeProductText에서 용량을 찾지 못했을 때,
+  // PRODUCT_DB(전역)에서 제품명으로 조회해 기본 용량을 자동 보충한다.
+  if (decomp.packageSize.value === null && typeof PRODUCT_DB !== 'undefined') {
+    // 형태 서술어를 제거한 순수 제품명으로 비교 (예: "옥토팜(펠렛)" → "옥토팜")
+    const FORM_BRACKET_RE = /[（(]\s*(펠렛|입상|분상|분말|과립|액상|액체|수용성|기비|추비|기화)\s*[)）]/g;
+    const cleanName = decomp.productName.replace(FORM_BRACKET_RE, '').replace(/\s+/g, ' ').trim();
+
+    const dbMatch = PRODUCT_DB.find(p => {
+      const pClean = p.name.replace(FORM_BRACKET_RE, '').replace(/\s+/g, ' ').trim();
+      // 순수 이름 일치 or 원본 이름 일치 or aliases 포함
+      return pClean === cleanName
+        || p.name === decomp.productName
+        || (p.aliases || []).some(a => {
+          const aClean = a.replace(/\s+/g, '');
+          const nClean = cleanName.replace(/\s+/g, '');
+          return nClean.includes(aClean) || aClean.includes(nClean);
+        });
+    });
+
+    if (dbMatch && dbMatch.size) {
+      const fallback = normalizePackageSize(dbMatch.size);
+      if (fallback.value !== null) {
+        decomp.packageSize = fallback;
+        parseLog.push(`[db-fallback] "${decomp.productName}" → 용량 ${dbMatch.size} (DB 보충)`);
+      }
+    }
+  }
+
+  // ── productDB 기준평수 폴백 ───────────────────────────────────────
+  // baseArea가 없고 PRODUCT_DB에 baseArea 정보가 있으면 보충
+  // (현재 DB 스키마에 baseArea 없음 → 향후 확장용 훅으로만 유지)
+
   // ── v14: 사용법 결정 (우선순위: 인라인 > usageContext > 블록 > stage.type) ──
   // baseArea 결정보다 먼저 실행해야 effectiveUsage.baseArea를 폴백으로 사용 가능
   let effectiveUsage = usageContext;
@@ -936,6 +1015,7 @@ function buildRxRow({ stageRaw, productRaw, sourcePage, sourceBlock, fallbackAre
     stageType:       stage.type,
     stageOrder:      stage.order,
     stageTiming:     stage.timing,
+    stageMonthInfo:  stage.monthInfo,  // "3월", "3-5월" 등 시기 정보
     stagePurpose:    stage.purpose,
 
     // 제품 기본 정보
@@ -1037,6 +1117,32 @@ function classifyDetailCell(text) {
   if (isComposition) return 'composition';
   if (isInstruction) return 'instruction';
   return 'instruction'; // 기타 설명문
+}
+
+/**
+ * 비용 페이지 추출 데이터를 정규화하고 평당 단가 자동 계산 보정을 수행한다.
+ *
+ * @param {{ totalCost: number|null, unitPricePerPyeong: number|null }|null} costData
+ * @param {{ totalArea: number|null }} farmInfo
+ * @returns {{ totalCost: number|null, unitPricePerPyeong: number|null, isCalculated: boolean }}
+ */
+function normalizeCostData(costData, farmInfo) {
+  if (!costData) return { totalCost: null, unitPricePerPyeong: null, isCalculated: false };
+
+  const result = {
+    totalCost:          costData.totalCost          ?? null,
+    unitPricePerPyeong: costData.unitPricePerPyeong ?? null,
+    isCalculated:       false
+  };
+
+  // 평당 단가가 없고 totalCost + 면적 정보가 있으면 자동 계산
+  if (!result.unitPricePerPyeong && result.totalCost && farmInfo && farmInfo.totalArea > 0) {
+    result.unitPricePerPyeong = Math.round(result.totalCost / farmInfo.totalArea);
+    result.isCalculated       = true;
+    console.log(`[Normalizer] 평당 단가 자동 계산: ${result.totalCost} ÷ ${farmInfo.totalArea}평 = ${result.unitPricePerPyeong}원`);
+  }
+
+  return result;
 }
 
 /**

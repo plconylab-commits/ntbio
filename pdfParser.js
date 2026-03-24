@@ -46,6 +46,103 @@ const COUNT_UNITS_RE = /(\d|반)\s*(포|병|봉|통|개)/;
 // 이런 텍스트는 단계명이 아니라 PDF 표 구조 행에서 온 것
 const LEFT_TABLE_HEADER_RE = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단계명?|시기명?|품\s*목|규\s*격|수\s*량|제품명?|용\s*량|사용량|물량\s*[\/\/]?\s*평수|합\s*계|소\s*계|비\s*고|구\s*분|내\s*용|번호|No\.)$/i;
 
+// ─── 비용 페이지 감지 키워드 ────────────────────────────────────────────────
+const COST_PAGE_KEYWORDS  = ['소매가','공급가','단가','합계','총액','금액','계','평당'];
+const COST_PAGE_MIN_HITS  = 1;   // 이 개수 이상의 키워드가 있어야 비용 페이지로 판정 (v16: 2→1 완화)
+
+/**
+ * 페이지 행 텍스트 배열을 받아 '비용 요약 페이지'인지 판별한다.
+ * @param {string[]} rowTexts  — joinRowText(row.items) 결과 배열
+ * @returns {boolean}
+ */
+function detectCostPage(rowTexts) {
+  const allText = rowTexts.join(' ');
+  const hits = COST_PAGE_KEYWORDS.filter(kw => allText.includes(kw)).length;
+  return hits >= COST_PAGE_MIN_HITS;
+}
+
+/**
+ * 비용 페이지에서 totalCost(합계 금액)와 unitPricePerPyeong(평당 단가)를 추출한다.
+ *
+ * 완화된 추출 규칙:
+ *  - '소매가' 또는 '공급가' 단어가 하나만 있는 행도 숫자를 수집한다.
+ *  - 공급가 행 숫자들의 합산을 totalCost 후보로 사용한다.
+ *  - 합계/총액 행의 최대 숫자를 우선한다.
+ *
+ * @param {{ items: object[], y: number }[]} rows  — groupByRowsLocal 결과
+ * @returns {{ totalCost: number|null, unitPricePerPyeong: number|null }}
+ */
+function extractCostPageData(rows) {
+  const PYEONG_RE    = /평\s*당|단\s*가/;  // "평당" 또는 "단가" 행 → 단가 추출
+  const TOTAL_RE     = /합\s*계|총\s*액|총\s*계|총\s*금\s*액/;
+  const RETAIL_RE    = /소\s*매\s*가/;   // 소매가 행 → 숫자 수집
+  const SUPPLY_RE    = /공\s*급\s*가/;   // 공급가 행 → 숫자 수집 + 누산
+
+  let totalCost          = null;
+  let unitPricePerPyeong = null;
+  let supplySum          = 0;   // 공급가 행 숫자 누산
+
+  // 숫자 추출 헬퍼 (쉼표 제거 후 정수 변환)
+  const parseNums = (text, min, max) =>
+    (text.match(/[\d,]+/g) || [])
+      .map(n => parseInt(n.replace(/,/g, ''), 10))
+      .filter(n => n >= min && n <= max);
+
+  for (const row of rows) {
+    const text = joinRowText(row.items);
+
+    // ── 평당 단가 행 ─────────────────────────────────────────────
+    if (PYEONG_RE.test(text)) {
+      const nums = parseNums(text, 100, 10_000_000);
+      if (nums.length) unitPricePerPyeong = nums[nums.length - 1];
+    }
+
+    // ── 합계/총액 행 → totalCost 최우선 ─────────────────────────
+    if (TOTAL_RE.test(text)) {
+      const nums = parseNums(text, 10_000, 999_999_999);
+      if (nums.length) {
+        const mx = Math.max(...nums);
+        if (!totalCost || mx > totalCost) totalCost = mx;
+      }
+    }
+
+    // ── 공급가 행: '소매가' 또는 '공급가' 단어 하나만으로도 추출 ──
+    // 단일 행 숫자 → 해당 제품의 단가로 간주, 합산해 총비용 후보 산출
+    if (SUPPLY_RE.test(text)) {
+      const nums = parseNums(text, 100, 10_000_000);
+      if (nums.length) supplySum += nums[nums.length - 1]; // 공급가(맨 오른쪽 숫자)
+    }
+
+    // ── 소매가 행: 단독으로도 숫자 수집 (totalCost 후보) ────────
+    if (RETAIL_RE.test(text) && !SUPPLY_RE.test(text)) {
+      const nums = parseNums(text, 10_000, 999_999_999);
+      if (nums.length) {
+        const mx = Math.max(...nums);
+        if (!totalCost || mx > totalCost) totalCost = mx;
+      }
+    }
+  }
+
+  // 공급가 누산이 합계 행보다 크면 공급가 합계를 우선
+  if (supplySum > 0 && (!totalCost || supplySum > totalCost * 0.5)) {
+    // 합계 행이 없거나, 누산값이 합계의 50% 이상이면 누산값 채택
+    if (!totalCost) totalCost = supplySum;
+  }
+
+  // 합계 행도 없고 공급가 누산도 없으면 큰 숫자(≥ 50,000) 중 최대값을 후보로
+  if (!totalCost) {
+    let maxNum = 0;
+    for (const row of rows) {
+      const text = joinRowText(row.items);
+      const nums = parseNums(text, 50_000, 100_000_000);
+      if (nums.length) maxNum = Math.max(maxNum, ...nums);
+    }
+    if (maxNum > 0) totalCost = maxNum;
+  }
+
+  return { totalCost, unitPricePerPyeong };
+}
+
 /* ─── 1. 행 아이템 → 자연스러운 텍스트 조합 ─────────────────────── */
 
 /**
@@ -213,6 +310,51 @@ function classifyBlockRole(sb) {
   return coreLines.some(l => /관주|엽면/.test(l)) ? 'stage' : 'group';
 }
 
+/**
+ * 블록 내 모든 lines[]에서 월 정보를 추출한다.
+ * "3월-4월", "3~5월", "3-4월", "3월" 등을 인식한다.
+ *
+ * @param {string[]} lines - stageBlock.lines 배열
+ * @returns {string}  예: "3월", "3-5월", "" (없으면 빈 문자열)
+ */
+function _extractMonthInfoFromLines(lines) {
+  if (!lines || !lines.length) return '';
+  const full = lines.join(' ');
+  const months = [];
+
+  // 패턴 A: N월-M월 / N월~M월 / N월 (월 앞에 숫자)
+  const RE_A = /(\d{1,2})\s*월(?:\s*[-~]\s*(\d{1,2})\s*월)?/g;
+  let m;
+  while ((m = RE_A.exec(full)) !== null) {
+    const s = parseInt(m[1], 10);
+    if (s < 1 || s > 12) continue;
+    if (m[2]) {
+      const e = parseInt(m[2], 10);
+      months.push((e >= 1 && e <= 12) ? `${s}-${e}월` : `${s}월`);
+    } else {
+      months.push(`${s}월`);
+    }
+  }
+
+  // 패턴 B: N-M월? / N~M월? (월이 끝에만 붙거나 생략, 예: "3-4월", "3~5", "3-4")
+  // 단, 숫자 범위만 있는 경우(월 없음)는 앞뒤 맥락에 월/달/시기가 있어야 인정
+  const fullHasMonthCtx = /월|달|시기|개월/.test(full);
+  const RE_B = /(\d{1,2})\s*[-~]\s*(\d{1,2})\s*(월)?/g;
+  while ((m = RE_B.exec(full)) !== null) {
+    const s = parseInt(m[1], 10), e = parseInt(m[2], 10);
+    if (s < 1 || s > 12 || e < 1 || e > 12) continue;
+    // 월 자 없이 숫자-숫자만 있으면 월 맥락이 있어야 허용
+    if (!m[3] && !fullHasMonthCtx) continue;
+    const label = `${s}-${e}월`;
+    // 중복 방지
+    if (!months.includes(label) && !months.includes(`${s}월`)) {
+      months.push(label);
+    }
+  }
+
+  return months.join(', ');
+}
+
 /** 그룹 헤더 라벨로 그룹 타입을 분류한다. */
 function detectGroupType(label) {
   if (/감사|수확/.test(label))        return '감사비료';
@@ -332,6 +474,7 @@ async function parsePdfToJSON(pdfFile) {
     const allPrescriptions = [];
     const allRxRows        = [];  // v7 신규: 모든 페이지의 RxRow 누적
     const allRxGroups      = [];  // v9 신규: 2계층 그룹 (groupHeader > stages)
+    let   costData         = null; // 비용 페이지 데이터 (감지 시 설정)
 
     // ── 페이지별 독립 처리 ──────────────────────────────────────────
     // v11: 첫 번째 페이지(p=1)는 표지('사용방법'/'농가명' 텍스트 포함)로 간주해 스킵
@@ -353,6 +496,23 @@ async function parsePdfToJSON(pdfFile) {
       if (!items.length) continue;
       items.sort((a, b) => a.y - b.y || a.x - b.x);
       const rows = groupByRowsLocal(items);
+
+      // ── 비용 페이지 감지 → 스킵 (처방 단계 파싱에서 제외) ──────────
+      // '소매가' 또는 '공급가' 단어 하나만 있어도 비용 관련 페이지로 간주
+      // (기존 hitCount >= 3 → 완화: 핵심 가격 키워드 1개 이상 OR 전체 2개 이상)
+      {
+        const rawRows = items.map(it => it.text.trim()).filter(s => s.length > 0);
+        const allText = rawRows.join(' ');
+        const hasPriceKw   = /소\s*매\s*가|공\s*급\s*가/.test(allText);  // 핵심 가격 키워드
+        const hasNumericKw = /(?:평\s*당|단\s*가)\D{0,5}\d{3,}/.test(allText);  // 평당·단가 + 숫자 근접
+        const hitCount     = COST_PAGE_KEYWORDS.filter(k => allText.includes(k)).length;
+        if (hasPriceKw || hasNumericKw || hitCount >= COST_PAGE_MIN_HITS) {
+          console.log(`[Parser] page ${p} → 비용 페이지 감지 (hit:${hitCount}, priceKw:${hasPriceKw}, numKw:${hasNumericKw}), 단계 파싱 스킵`);
+          costData = extractCostPageData(rows);
+          console.log('[Parser] costData:', costData);
+          continue; // 이 페이지는 처방 단계로 처리하지 않음
+        }
+      }
 
       // ── 좌측/우측 열 분리 ────────────────────────────────────────
       // 적응형 열 경계 감지: 아이템 x좌표 분포를 보고 자동으로 경계 결정
@@ -830,6 +990,8 @@ async function parsePdfToJSON(pdfFile) {
             curRxGroup = {
               groupHeader:    label,
               groupType:      detectGroupType(label),
+              // 블록 내 모든 행에서 월 정보 추출 (상단 행뿐 아니라 하단 날짜 행도 포함)
+              monthInfo:      _extractMonthInfoFromLines(sb.lines),
               pageTitle:      pageTitle || '',    // v14: 페이지 상단 타이틀 (stageLabel과 분리)
               sourcePage:     p,
               pageGroup:      1000 + p,
@@ -840,11 +1002,17 @@ async function parsePdfToJSON(pdfFile) {
             pageRxGroups.push(curRxGroup);
           }
 
+          const stageMonthInfo = _extractMonthInfoFromLines(sb.lines);
+          // 하위 단계에서 월 정보 발견 시 상위 그룹에도 병합 (그룹 헤더가 없을 수 있으므로)
+          if (stageMonthInfo && curRxGroup && !curRxGroup.monthInfo) {
+            curRxGroup.monthInfo = stageMonthInfo;
+          }
           curRxGroup.stages.push({
             stageName:     role === 'stage' ? label : null,
             stageLabel:    label,             // Y 최상단 stage_core 텍스트
             stageLabelFull: labelFull,        // 전체 정제 텍스트
             leftCellLines: sb.lines,
+            monthInfo:     stageMonthInfo,    // 이 단계의 월 정보
             stageType:     role === 'stage' ? detectStageType(label) : detectGroupType(label),
             stageOrder:    role === 'stage' ? extractStageOrder(label) : null,
             rxRows:        blockRxRows,
@@ -886,7 +1054,7 @@ async function parsePdfToJSON(pdfFile) {
         return null;
       }
       return {
-        farmInfo: { farmName: null, cropName: null, totalArea: null },
+        farmInfo:      { farmName: null, cropName: null, totalArea: null },
         prescriptions: [{
           stageType:  '기타',
           stageLabel: '(자동 인식 불가 — 직접 입력)',
@@ -897,7 +1065,11 @@ async function parsePdfToJSON(pdfFile) {
             .map(t => ({ originalName: t, mappedId: null, baseQty: null, unit: '', baseArea: null }))
             .filter(i => i.originalName.length > 1)
         }],
-        rxRows: []
+        rxRows:      [],
+        rxGroups:    [],
+        allRxGroups: [],
+        costData:    costData,
+        success:     true
       };
     }
 
@@ -929,7 +1101,10 @@ async function parsePdfToJSON(pdfFile) {
       farmInfo:      { farmName: null, cropName: null, totalArea: inferredArea },
       prescriptions: allPrescriptions,   // 하위 호환 유지
       rxRows:        allRxRows,          // v7 flat rows
-      rxGroups:      allRxGroups         // v9 2계층 구조
+      rxGroups:      allRxGroups,        // v9 하위 호환 키 유지
+      allRxGroups:   allRxGroups,        // UI에서 기대하는 그룹 데이터
+      costData:      costData,           // 비용 페이지 데이터 (없으면 null)
+      success:       true
     };
 
   } catch (e) {

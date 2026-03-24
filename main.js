@@ -43,7 +43,40 @@ async function handlePrescriptionUpload(pdfFile) {
       if (el) el.value = fi.totalArea;
     }
 
-    // 3. 검증 모달 열기 — 사용자가 확인/수정 후 [적용] 클릭
+    // 3. 비용 데이터에서 평당 단가 자동 입력
+    const cd = prescriptionJSON.costData;
+    console.log('[main] costData:', cd);
+    if (cd) {
+      let unitPrice = cd.unitPricePerPyeong || 0;
+      // unitPricePerPyeong 없을 경우 totalCost / totalArea 로 직접 계산
+      if (!unitPrice && cd.totalCost && fi.totalArea) {
+        unitPrice = Math.round(cd.totalCost / fi.totalArea);
+        console.log('[main] 평당 단가 역산:', cd.totalCost, '÷', fi.totalArea, '=', unitPrice);
+      }
+      if (unitPrice) {
+        // ID 후보: 'unitPrice', 'unit-price', 'pricePerPyeong', 'pyeongPrice'
+        const UNIT_PRICE_IDS = ['unitPrice', 'unit-price', 'pricePerPyeong', 'pyeongPrice'];
+        let injected = false;
+        for (const id of UNIT_PRICE_IDS) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.value = unitPrice;
+            console.log(`[main] 평당 단가 자동 입력 → #${id}:`, unitPrice, '원/평');
+            injected = true;
+            break;
+          }
+        }
+        if (!injected) {
+          console.warn('[main] 평당 단가 입력창을 찾지 못함. 확인된 ID 후보:', UNIT_PRICE_IDS, '| 계산된 값:', unitPrice);
+        }
+      } else {
+        console.warn('[main] costData 있으나 평당 단가 계산 불가:', cd);
+      }
+    } else {
+      console.log('[main] costData 없음 — 비용 페이지 미감지 또는 PDF에 금액 정보 없음');
+    }
+
+    // 4. 검증 모달 열기 — 사용자가 확인/수정 후 [적용] 클릭
     openValidationModal(prescriptionJSON);
 
   } catch (err) {

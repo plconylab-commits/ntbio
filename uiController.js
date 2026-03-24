@@ -414,12 +414,18 @@ function _buildVldRowsFromRxGroups(rxGroups, totalArea) {
     );
 
     // ── 그룹 헤더 sentinel (테이블에 구분선 행으로 렌더됨) ──────────
+    // monthInfo: 그룹 자체 + 모든 하위 단계에서 추출한 월 정보 합산
+    const allMonthInfos = [group.monthInfo || ''];
+    group.stages.forEach(s => { if (s.monthInfo) allMonthInfos.push(s.monthInfo); });
+    const groupMonthInfo = [...new Set(allMonthInfos.join(', ').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
+
     rows.push({
       _rowKind:      'group-header',
       _cellId:       group.cellId,        // 선택형 병합용 ID
       _merged:       group.merged || false,
       _groupHeader:  group.groupHeader,
       _groupType:    group.groupType,
+      _monthInfo:    groupMonthInfo,      // 시기 정보 (pdfParser에서 추출)
       _sourcePage:   group.sourcePage,
       _productCount: productCount
     });
@@ -663,8 +669,39 @@ function _buildTbodyHtml(rows, optionsHTML) {
       const cnt     = `<span style="color:#888;font-size:11px;margin-left:10px;">제품 ${r._productCount}개</span>`;
       const mergeMk = r._merged ? `<span style="font-size:10px;color:#e67e22;margin-left:8px;">🔗병합됨</span>` : '';
       const txt     = (r._groupHeader || '').replace(/\n/g, ' / ').replace(/</g,'&lt;');
-      return `<tr class="vld-group-hdr-row${selCls}" data-cell-id="${r._cellId||''}">
-        <td colspan="12">${badge}${txt}${pgInfo}${cnt}${mergeMk}</td></tr>`;
+
+      // 월 정보: _monthInfo(pdfParser 추출) 우선, 없으면 헤더 텍스트에서 즉석 파싱
+      let monthInfo = r._monthInfo || '';
+      if (!monthInfo) {
+        const src = r._groupHeader || '';
+        const _months = [];
+        let _mm;
+        // 패턴 A: "3월", "3월-4월"
+        const _RE_A = /(\d{1,2})\s*월(?:\s*[-~]\s*(\d{1,2})\s*월)?/g;
+        while ((_mm = _RE_A.exec(src)) !== null) {
+          const s = parseInt(_mm[1], 10);
+          if (s < 1 || s > 12) continue;
+          _months.push(_mm[2] ? `${s}-${parseInt(_mm[2],10)}월` : `${s}월`);
+        }
+        // 패턴 B: "3-4월", "3~5월"
+        const _RE_B = /(\d{1,2})\s*[-~]\s*(\d{1,2})\s*월/g;
+        while ((_mm = _RE_B.exec(src)) !== null) {
+          const s = parseInt(_mm[1], 10), e = parseInt(_mm[2], 10);
+          if (s < 1 || s > 12 || e < 1 || e > 12) continue;
+          const lbl = `${s}-${e}월`;
+          if (!_months.includes(lbl)) _months.push(lbl);
+        }
+        monthInfo = _months.join(', ');
+      }
+      const monthBadge = monthInfo
+        ? `<span style="margin-left:8px;padding:2px 9px;background:#dbeafe;color:#1d4ed8;border-radius:10px;font-size:12px;font-weight:700;border:1px solid #93c5fd;">📅 시기: ${monthInfo}</span>`
+        : '';
+      // 월 정보 있으면 헤더 행 배경색·상단 보더를 파란 계열로 강조
+      const rowBg = monthInfo
+        ? 'background:#f0f7ff;border-top:3px solid #3b82f6;'
+        : 'border-top:2px solid #e5e7eb;';
+      return `<tr class="vld-group-hdr-row${selCls}" data-cell-id="${r._cellId||''}" style="${rowBg}">
+        <td colspan="12">${badge}${txt}${monthBadge}${pgInfo}${cnt}${mergeMk}</td></tr>`;
     }
     // ── 2계층: 하위 단계 헤더 행 ────────────────────────────────────
     if (r._rowKind === 'stage-header') {
