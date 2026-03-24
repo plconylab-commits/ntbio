@@ -29,7 +29,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Vision API 응답이 JSON이 아닌 형태로 오더라도 앱이 멈추지 않고 사용자에게 재시도 안내 메시지를 보여준다
   4. `계=홍보용` 항목은 거래명세표 합계에 0원으로 반영된다
   5. localStorage에 `fertilizer_customers`, `fertilizer_prescriptions`, `fertilizer_transactions` 키가 초기화되고 JSON 전체 내보내기/가져오기 버튼이 작동한다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — PDF 파싱 버그 4건 수정 (PARSE-01~04)
+- [ ] 01-02-PLAN.md — localStorage 기반 인프라 + JSON 내보내기/가져오기
 
 ### Phase 2: 고객 DB + 할인율
 **Goal**: 고객 정보를 저장하고 재사용할 수 있으며, 고객별 할인율이 자동으로 적용된다
@@ -76,7 +79,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. PDF 파싱 수정 + 기반 인프라 | 0/TBD | Not started | - |
+| 1. PDF 파싱 수정 + 기반 인프라 | 0/2 | Planning complete | - |
 | 2. 고객 DB + 할인율 | 0/TBD | Not started | - |
 | 3. 처방이력 + 템플릿 | 0/TBD | Not started | - |
 | 4. 거래이력 + 미수금 + 매출 | 0/TBD | Not started | - |
