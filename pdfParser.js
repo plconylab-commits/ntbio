@@ -81,6 +81,8 @@ function extractCostPageData(rows) {
   let totalCost          = null;
   let unitPricePerPyeong = null;
   let supplySum          = 0;   // 공급가 행 숫자 누산
+  let pyeongFromTotal    = null;  // PARSE-01: 합계 행에서 추출한 평당가 (최우선)
+  let pyeongLastSeen     = null;  // PARSE-01: 마지막으로 본 평당가 (fallback)
 
   // 숫자 추출 헬퍼 (쉼표 제거 후 정수 변환)
   const parseNums = (text, min, max) =>
@@ -92,9 +94,16 @@ function extractCostPageData(rows) {
     const text = joinRowText(row.items);
 
     // ── 평당 단가 행 ─────────────────────────────────────────────
+    // PARSE-01: 합계 행의 평당가(pyeongFromTotal)를 우선, 그 외는 pyeongLastSeen에 보관
     if (PYEONG_RE.test(text)) {
       const nums = parseNums(text, 100, 10_000_000);
-      if (nums.length) unitPricePerPyeong = nums[nums.length - 1];
+      if (nums.length) {
+        const val = nums[nums.length - 1];
+        pyeongLastSeen = val;
+        if (TOTAL_RE.test(text)) {
+          pyeongFromTotal = val;
+        }
+      }
     }
 
     // ── 합계/총액 행 → totalCost 최우선 ─────────────────────────
@@ -140,6 +149,8 @@ function extractCostPageData(rows) {
     if (maxNum > 0) totalCost = maxNum;
   }
 
+  // PARSE-01: 합계 행 평당가 우선, 없으면 마지막으로 본 평당가 사용
+  unitPricePerPyeong = pyeongFromTotal !== null ? pyeongFromTotal : pyeongLastSeen;
   return { totalCost, unitPricePerPyeong };
 }
 
@@ -507,10 +518,10 @@ async function parsePdfToJSON(pdfFile) {
         const hasNumericKw = /(?:평\s*당|단\s*가)\D{0,5}\d{3,}/.test(allText);  // 평당·단가 + 숫자 근접
         const hitCount     = COST_PAGE_KEYWORDS.filter(k => allText.includes(k)).length;
         if (hasPriceKw || hasNumericKw || hitCount >= COST_PAGE_MIN_HITS) {
-          console.log(`[Parser] page ${p} → 비용 페이지 감지 (hit:${hitCount}, priceKw:${hasPriceKw}, numKw:${hasNumericKw}), 단계 파싱 스킵`);
+          console.log(`[Parser] page ${p} → 비용 페이지 감지 (hit:${hitCount}, priceKw:${hasPriceKw}, numKw:${hasNumericKw}), 이후 모든 페이지 스킵 (break)`);
           costData = extractCostPageData(rows);
           console.log('[Parser] costData:', costData);
-          continue; // 이 페이지는 처방 단계로 처리하지 않음
+          break; // 비용 페이지 이후 광고/홍보 페이지 포함 모든 페이지 스킵 (PARSE-02)
         }
       }
 
@@ -1050,7 +1061,7 @@ async function parsePdfToJSON(pdfFile) {
         });
       }
       if (!allTexts.length) {
-        alert('처방전에서 텍스트를 추출할 수 없습니다.\n스캔 이미지 PDF는 지원되지 않습니다.');
+        alert('처방전에서 텍스트를 추출할 수 없습니다.\n\n다시 시도해 주세요.\n스캔 이미지(사진) PDF인 경우 텍스트 PDF로 변환 후 업로드해 주세요.');
         return null;
       }
       return {
@@ -1109,7 +1120,7 @@ async function parsePdfToJSON(pdfFile) {
 
   } catch (e) {
     console.error('[Parser] ❌ 오류:', e);
-    alert(`처방전 파싱 오류\n\n${e.name}: ${e.message}`);
+    alert(`처방전 파싱 중 오류가 발생했습니다.\n\n다시 시도해 주세요.\n반복 실패 시 PDF를 새로 저장하거나 담당자에게 문의하세요.`);
     return null;
   }
 }
