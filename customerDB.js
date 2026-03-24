@@ -48,8 +48,36 @@
     list:       function() { return _get(KEYS.customers); },
     findById:   function(id) { return _get(KEYS.customers).find(function(c) { return c.id === id; }) || null; },
     findByName: function(name) { return _get(KEYS.customers).find(function(c) { return c.name && c.name.includes(name); }) || null; },
-    save:       function(c) { /* Phase 2 */ },
-    delete:     function(id) { /* Phase 2 */ },
+    save: function(customer) {
+      if (!customer || !customer.name || !customer.name.trim()) return null;
+      customer.discountRate = Math.max(0, Math.min(100, Math.round(Number(customer.discountRate) || 0)));
+      var now = new Date().toISOString();
+      var list = _get(KEYS.customers);
+      if (customer.id) {
+        var idx = -1;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === customer.id) { idx = i; break; }
+        }
+        if (idx !== -1) {
+          var updated = Object.assign({}, list[idx], customer, { updatedAt: now });
+          list[idx] = updated;
+          _set(KEYS.customers, list);
+          return updated;
+        }
+      }
+      var newCustomer = Object.assign({}, customer, {
+        id: 'c_' + Date.now(),
+        createdAt: now,
+        updatedAt: now
+      });
+      list.push(newCustomer);
+      _set(KEYS.customers, list);
+      return newCustomer;
+    },
+    delete: function(id) {
+      var list = _get(KEYS.customers);
+      _set(KEYS.customers, list.filter(function(c) { return c.id !== id; }));
+    },
 
     /** 전체 데이터 내보내기 — JSON 객체 반환 */
     exportAll: function() {
