@@ -638,6 +638,16 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
 
         <!-- 푸터 -->
         <div class="vld-footer">
+          <!-- 운송비/지원금 + 평당가 재계산 -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;padding:8px 10px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+            <span style="font-size:12px;font-weight:700;color:#555;">📦 운송비/지원금</span>
+            <input id="vld-shipping" type="number" value="0" step="1000"
+              style="width:110px;padding:5px 8px;border:1.5px solid #cbd5e1;border-radius:5px;font-size:13px;text-align:right;"
+              placeholder="0 (음수=지원)"
+              oninput="_recalcVldUnitPrice()">
+            <span style="font-size:11px;color:#94a3b8;">양수 = 농가 부담 / 음수 = 회사 지원</span>
+            <span id="vld-unitprice-display" style="margin-left:auto;font-size:13px;font-weight:700;color:#1d4ed8;"></span>
+          </div>
           <button class="vld-apply-btn" onclick="_applyToCart()">
             ✅ 검토 완료 — 명세표에 적용하기
           </button>
@@ -652,6 +662,9 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
   // 전역 optionsHTML 저장 (리렌더 시 사용)
   window._vldOptionsHTML = optionsHTML;
   window._vldFarmInfo    = { fi, totalArea };
+
+  // 모달 열림 직후 평당가 초기 계산
+  setTimeout(_recalcVldUnitPrice, 50);
 }
 
 /* ───────────────────────────────────────────
@@ -659,6 +672,16 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
    ─────────────────────────────────────────── */
 function _buildTbodyHtml(rows, optionsHTML) {
   const showOnly = window._vldShowWarningsOnly;
+
+  // ── 사전 패스: 그룹별 소계 (finalQty × price) 계산 ────────────────
+  const _groupSubtotals = {};
+  let _curGIdx = -1;
+  rows.forEach((r, i) => {
+    if (r._rowKind === 'group-header') { _curGIdx = i; _groupSubtotals[i] = 0; }
+    else if (r._rowKind === 'product' && _curGIdx >= 0) {
+      _groupSubtotals[_curGIdx] += (r.finalQty || 0) * (r.price || 0);
+    }
+  });
 
   return rows.map((r, i) => {
     // ── 2계층: 그룹 헤더 행 ──────────────────────────────────────────
@@ -669,6 +692,12 @@ function _buildTbodyHtml(rows, optionsHTML) {
       const cnt     = `<span style="color:#888;font-size:11px;margin-left:10px;">제품 ${r._productCount}개</span>`;
       const mergeMk = r._merged ? `<span style="font-size:10px;color:#e67e22;margin-left:8px;">🔗병합됨</span>` : '';
       const txt     = (r._groupHeader || '').replace(/\n/g, ' / ').replace(/</g,'&lt;');
+
+      // 그룹 소계 배지
+      const sub = _groupSubtotals[i] || 0;
+      const subBadge = sub > 0
+        ? `<span style="margin-left:8px;padding:2px 8px;background:#ecfdf5;color:#065f46;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #6ee7b7;">₩${sub.toLocaleString()}</span>`
+        : '';
 
       // 월 정보: _monthInfo(pdfParser 추출) 우선, 없으면 헤더 텍스트에서 즉석 파싱
       let monthInfo = r._monthInfo || '';
@@ -701,7 +730,7 @@ function _buildTbodyHtml(rows, optionsHTML) {
         ? 'background:#f0f7ff;border-top:3px solid #3b82f6;'
         : 'border-top:2px solid #e5e7eb;';
       return `<tr class="vld-group-hdr-row${selCls}" data-cell-id="${r._cellId||''}" style="${rowBg}">
-        <td colspan="12">${badge}${txt}${monthBadge}${pgInfo}${cnt}${mergeMk}</td></tr>`;
+        <td colspan="12">${badge}${txt}${monthBadge}${subBadge}${pgInfo}${cnt}${mergeMk}</td></tr>`;
     }
     // ── 2계층: 하위 단계 헤더 행 ────────────────────────────────────
     if (r._rowKind === 'stage-header') {
@@ -801,6 +830,8 @@ function _bindTableEvents() {
       // 하이라이트 갱신
       const tr = this.closest('tr');
       if (tr) tr.className = (this.value ? '' : 'vld-row-red');
+      // 평당가 재계산
+      _recalcVldUnitPrice();
     });
   });
 
@@ -1024,6 +1055,49 @@ function _recalcFinalQty(idx) {
   if (!overlay) return;
   const qtyInp = overlay.querySelector(`.vld-qty[data-idx="${idx}"]`);
   if (qtyInp) qtyInp.value = newQty;
+}
+
+/* ───────────────────────────────────────────
+   평당가 실시간 재계산
+   공식: (제품총합 - 할인액 + 운송비) / 총면적
+   ─────────────────────────────────────────── */
+function _recalcVldUnitPrice() {
+  const rows      = window._vldRows || [];
+  const totalArea = window._vldTotalArea || 0;
+  if (!totalArea) return; // 면적 없으면 조용히 종료
+
+  const shipping = Number(document.getElementById('vld-shipping')?.value || 0);
+
+  // 제품 행 합계: finalQty × price
+  const totalProductCost = rows
+    .filter(r => r._rowKind === 'product')
+    .reduce((s, r) => s + (r.finalQty || 0) * (r.price || 0), 0);
+
+  // index.html 전체 할인율 반영 (gDisc 없으면 0%)
+  const discPct = Number(document.getElementById('gDisc')?.value || 0);
+  const discAmt = Math.round(totalProductCost * discPct / 100);
+
+  const finalCost = totalProductCost - discAmt + shipping;
+  const unitPrice = totalArea > 0 ? Math.round(finalCost / totalArea) : 0;
+
+  console.log(
+    `[VLD] 평당가: (${totalProductCost.toLocaleString()} - ${discAmt.toLocaleString()} + ${shipping.toLocaleString()}) / ${totalArea}평 = ${unitPrice.toLocaleString()}원`
+  );
+
+  // 모달 내 표시
+  const disp = document.getElementById('vld-unitprice-display');
+  if (disp) {
+    disp.textContent = unitPrice > 0
+      ? `⚡ 평당가 ₩${unitPrice.toLocaleString()} (총 ₩${finalCost.toLocaleString()})`
+      : '';
+  }
+
+  // 외부 unitPrice 입력창에 주입 (처방전.html 또는 index.html에 있을 경우)
+  const UNIT_PRICE_IDS = ['unitPrice', 'unit-price', 'pricePerPyeong', 'pyeongPrice'];
+  for (const id of UNIT_PRICE_IDS) {
+    const el = document.getElementById(id);
+    if (el) { el.value = unitPrice; break; }
+  }
 }
 
 /* ───────────────────────────────────────────
