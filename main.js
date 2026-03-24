@@ -81,7 +81,12 @@ async function handlePrescriptionUpload(pdfFile) {
 
   } catch (err) {
     console.error('처방전 처리 오류:', err);
-    alert('처방전 처리 중 오류가 발생했습니다: ' + err.message);
+    const msg = err.message || '';
+    if (msg.includes('JSON') || msg.includes('parse') || msg.includes('Unexpected token')) {
+      alert('처방전 파싱에 실패했습니다.\n\n다시 시도해 주세요.\n반복 실패 시 PDF를 새로 저장하거나 담당자에게 문의하세요.');
+    } else {
+      alert('처방전 처리 중 오류가 발생했습니다.\n\n다시 시도해 주세요.\n' + msg);
+    }
   }
 }
 
