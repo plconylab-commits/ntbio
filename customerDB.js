@@ -79,6 +79,23 @@
       _set(KEYS.customers, list.filter(function(c) { return c.id !== id; }));
     },
 
+    /** 이름 부분 검색 — 1자 이상이면 실행, 대소문자 무시 */
+    search: function(query) {
+      if (!query || !query.trim()) return [];
+      var q = query.trim().toLowerCase();
+      return _get(KEYS.customers).filter(function(c) {
+        return c.name && c.name.toLowerCase().includes(q);
+      });
+    },
+
+    /** 해당 고객의 처방이력 건수 반환 */
+    countPrescriptions: function(customerId) {
+      if (!customerId) return 0;
+      return _get(KEYS.prescriptions).filter(function(p) {
+        return p.customerId === customerId;
+      }).length;
+    },
+
     /** 전체 데이터 내보내기 — JSON 객체 반환 */
     exportAll: function() {
       return {
