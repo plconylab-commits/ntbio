@@ -669,6 +669,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <button class="btn-rx" onclick="goToPrescription()">📋&nbsp; 처방전 처방</button>
         <button class="btn-clear" onclick="clearAll()">🗑&nbsp; 전체 초기화</button>
       </div>
+      <div class="act-divider"></div>
+      <div class="act-group">
+        <div class="act-row">
+          <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
+          <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
+        </div>
+        <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="doImportJSON(this)">
+      </div>
     </div>
   </div><!-- /right -->
 </div>
@@ -794,6 +802,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="pdfParser.js?v=16"></script>
 <script src="uiController.js?v=3"></script>
 <script src="main.js?v=2"></script>
+<script src="customerDB.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -3147,6 +3156,47 @@ function printAllUnpaid(){
   </div>
   <div class="au-content" id="auContent"></div>
 </div>
+
+<script>
+/** JSON 전체 내보내기 — Blob 다운로드 */
+function doExportJSON() {
+  try {
+    var data = CustomerDB.exportAll();
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'fertilizer_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log('[Export] JSON 내보내기 완료');
+  } catch (e) {
+    alert('내보내기 실패: ' + e.message);
+  }
+}
+
+/** JSON 전체 가져오기 — FileReader */
+function doImportJSON(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (!confirm('기존 데이터를 덮어씁니다. 계속하시겠습니까?')) return;
+      CustomerDB.importAll(data);
+      alert('데이터 가져오기 완료!');
+    } catch (e) {
+      alert('가져오기 실패: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = ''; // 같은 파일 재선택 허용
+}
+</script>
 
 </body>
 </html>
