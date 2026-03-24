@@ -7,10 +7,10 @@
 
 ### PDF 파싱 개선
 
-- [ ] **PARSE-01**: 복합형 처방전(천혜향 등 여러 기간/평당가 포함)에서 마지막 합계 행의 `합계=... 평당(...)` 값을 정확히 추출한다
-- [ ] **PARSE-02**: 광고/홍보 페이지(처방 내용 없는 이미지 페이지)를 자동으로 건너뛴다
-- [ ] **PARSE-03**: Vision API 응답에서 JSON 파싱 실패 시 재시도 또는 명확한 오류 메시지를 표시한다
-- [ ] **PARSE-04**: 홍보용(`계=홍보용`) 항목을 금액 0으로 처리하여 합계에서 제외한다
+- [x] **PARSE-01**: 복합형 처방전(천혜향 등 여러 기간/평당가 포함)에서 마지막 합계 행의 `합계=... 평당(...)` 값을 정확히 추출한다
+- [x] **PARSE-02**: 광고/홍보 페이지(처방 내용 없는 이미지 페이지)를 자동으로 건너뛴다
+- [x] **PARSE-03**: Vision API 응답에서 JSON 파싱 실패 시 재시도 또는 명확한 오류 메시지를 표시한다
+- [x] **PARSE-04**: 홍보용(`계=홍보용`) 항목을 금액 0으로 처리하여 합계에서 제외한다
 
 ### 고객 DB
 
@@ -67,10 +67,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-01 | Phase 1 | Pending |
-| PARSE-02 | Phase 1 | Pending |
-| PARSE-03 | Phase 1 | Pending |
-| PARSE-04 | Phase 1 | Pending |
+| PARSE-01 | Phase 1 | Complete |
+| PARSE-02 | Phase 1 | Complete |
+| PARSE-03 | Phase 1 | Complete |
+| PARSE-04 | Phase 1 | Complete |
 | CUST-01 | Phase 2 | Pending |
 | CUST-02 | Phase 2 | Pending |
 | CUST-03 | Phase 2 | Pending |
