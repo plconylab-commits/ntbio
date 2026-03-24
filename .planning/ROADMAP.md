@@ -44,7 +44,10 @@ Plans:
   3. 할인율을 세션 중 임시로 바꿔도 저장 버튼을 누르지 않으면 기존 고객 기본값이 변경되지 않는다
   4. 고객 DB 전체를 JSON 파일로 내보낼 수 있고, 그 파일을 가져오면 데이터가 복원된다
   5. 특정 고객을 선택했을 때 그 고객의 처방이력 건수를 볼 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — customerDB.js CRUD 완성 (save/delete/search/countPrescriptions)
+- [ ] 02-02-PLAN.md — customerUI.js 자동완성 + 할인율 상태 + 저장/삭제 UI
 **UI hint**: yes
 
 ### Phase 3: 처방이력 + 템플릿
@@ -75,11 +78,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. PDF 파싱 수정 + 기반 인프라 | 2/2 | Complete   | 2026-03-24 |
-| 2. 고객 DB + 할인율 | 0/TBD | Not started | - |
+| 2. 고객 DB + 할인율 | 0/2 | Planning complete | - |
 | 3. 처방이력 + 템플릿 | 0/TBD | Not started | - |
 | 4. 거래이력 + 미수금 + 매출 | 0/TBD | Not started | - |
