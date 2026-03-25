@@ -601,6 +601,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="cust-actions">
         <button class="cust-save-btn" id="custSaveBtn">고객 저장</button>
         <button class="cust-del-btn" id="custDelBtn" style="display:none">고객 삭제</button>
+        <button class="cust-del-btn" id="custListBtn" style="min-width:90px;background:#f0f7ff;color:var(--g-btn);border-color:#b3d4f7;">📋 고객 목록</button>
+      </div>
+    </div>
+
+    <!-- 고객 목록 패널 -->
+    <div id="custListOverlay">
+      <div id="custListPanel">
+        <div class="clp-head">
+          <span class="clp-title">📋 저장된 고객 목록</span>
+          <button class="clp-close" id="custListClose">✕</button>
+        </div>
+        <input id="custListSearch" type="text" placeholder="고객명 검색...">
+        <div id="custListBody"></div>
       </div>
     </div>
 

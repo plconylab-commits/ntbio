@@ -67,8 +67,25 @@
       '  font-size:10px; background:var(--g-pale); color:var(--g-mid);',
       '  border-radius:9px; padding:1px 6px; margin-left:6px; display:none;',
       '}',
+      '.cust-ac-sub { font-size:11px; color:var(--muted); margin-left:5px; }',
       '.cust-fill-flash { transition:background 0.4s ease; }',
-      '.cname-ac-open { border-color:var(--g-btn) !important; border-radius:7px 7px 0 0 !important; }'
+      '.cname-ac-open { border-color:var(--g-btn) !important; border-radius:7px 7px 0 0 !important; }',
+      /* 고객 목록 패널 */
+      '#custListOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:900; display:none; align-items:flex-start; justify-content:center; padding-top:60px; }',
+      '#custListOverlay.on { display:flex; }',
+      '#custListPanel { background:#fff; border-radius:14px; width:min(680px,95vw); max-height:75vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.2); }',
+      '#custListPanel .clp-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1.5px solid var(--border); }',
+      '#custListPanel .clp-title { font-size:17px; font-weight:700; }',
+      '#custListPanel .clp-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1; }',
+      '#custListSearch { width:100%; padding:10px 14px; border:none; border-bottom:1.5px solid var(--border); font-size:14px; outline:none; }',
+      '#custListBody { overflow-y:auto; flex:1; }',
+      '.cust-row { display:flex; align-items:center; padding:11px 18px; border-bottom:1px solid var(--border); cursor:pointer; gap:10px; }',
+      '.cust-row:hover { background:var(--g-pale); }',
+      '.cust-row-name { font-size:15px; font-weight:700; min-width:80px; }',
+      '.cust-row-meta { font-size:13px; color:var(--muted); flex:1; }',
+      '.cust-row-disc { font-size:13px; font-weight:600; color:var(--g-btn); white-space:nowrap; }',
+      '.cust-row-hist { font-size:11px; color:#fff; background:var(--g-btn); border-radius:9px; padding:1px 7px; white-space:nowrap; }',
+      '#custListEmpty { padding:40px; text-align:center; color:var(--muted); font-size:15px; }'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -106,7 +123,9 @@
         item.setAttribute('data-id', customer.id);
         var count = CustomerDB.countPrescriptions(customer.id);
         var badge = count > 0 ? '<span class="cust-ac-badge">' + count + '건</span>' : '';
-        item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + badge;
+        var sub = [customer.crop, customer.region].filter(Boolean).join(' / ');
+        var subHtml = sub ? '<span class="cust-ac-sub">' + _esc(sub) + '</span>' : '';
+        item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + subHtml + badge;
         item.addEventListener('mousedown', function(e) {
           e.preventDefault(); // blur 전에 클릭 처리
           _onAcItemClick(customer.id);
@@ -378,6 +397,53 @@
     if (delBtn && _currentCustomerId) delBtn.style.display = '';
   }
 
+  // ── 고객 목록 패널 ────────────────────────────────────────────────────────
+  function openCustomerList() {
+    var overlay = document.getElementById('custListOverlay');
+    if (!overlay) return;
+    overlay.classList.add('on');
+    _renderCustomerList('');
+    var search = document.getElementById('custListSearch');
+    if (search) { search.value = ''; setTimeout(function(){ search.focus(); }, 50); }
+  }
+
+  function closeCustomerList() {
+    var overlay = document.getElementById('custListOverlay');
+    if (overlay) overlay.classList.remove('on');
+  }
+
+  function _renderCustomerList(query) {
+    var body = document.getElementById('custListBody');
+    if (!body) return;
+    var all = CustomerDB.list();
+    var filtered = query.trim()
+      ? all.filter(function(c){ return c.name && c.name.toLowerCase().includes(query.trim().toLowerCase()); })
+      : all;
+
+    if (!filtered.length) {
+      body.innerHTML = '<div id="custListEmpty">저장된 고객이 없습니다.</div>';
+      return;
+    }
+    body.innerHTML = filtered.map(function(c) {
+      var meta = [c.crop, c.region, c.area ? c.area + '평' : ''].filter(Boolean).join(' · ');
+      var hist = CustomerDB.countPrescriptions(c.id);
+      var histHtml = hist > 0 ? '<span class="cust-row-hist">' + hist + '건</span>' : '';
+      var discHtml = c.discountRate > 0 ? '<span class="cust-row-disc">' + c.discountRate + '%↓</span>' : '';
+      return '<div class="cust-row" data-id="' + _esc(c.id) + '">' +
+        '<span class="cust-row-name">' + _esc(c.name) + '</span>' +
+        '<span class="cust-row-meta">' + _esc(meta) + '</span>' +
+        discHtml + histHtml +
+        '</div>';
+    }).join('');
+
+    Array.from(body.querySelectorAll('.cust-row')).forEach(function(row) {
+      row.addEventListener('click', function() {
+        var c = CustomerDB.findById(row.getAttribute('data-id'));
+        if (c) { _onCustomerSelect(c); closeCustomerList(); }
+      });
+    });
+  }
+
   // ── 초기화 ───────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     injectCustomerCSS();
@@ -409,6 +475,20 @@
 
     var discSaveLink = document.getElementById('discSaveLink');
     if (discSaveLink) discSaveLink.addEventListener('click', _onSaveDiscountAsDefault);
+
+    var listBtn = document.getElementById('custListBtn');
+    if (listBtn) listBtn.addEventListener('click', openCustomerList);
+
+    var listClose = document.getElementById('custListClose');
+    if (listClose) listClose.addEventListener('click', closeCustomerList);
+
+    var listSearch = document.getElementById('custListSearch');
+    if (listSearch) listSearch.addEventListener('input', function() { _renderCustomerList(listSearch.value); });
+
+    var listOverlay = document.getElementById('custListOverlay');
+    if (listOverlay) listOverlay.addEventListener('click', function(e) {
+      if (e.target === listOverlay) closeCustomerList();
+    });
 
     // 외부 클릭 닫기
     document.addEventListener('click', function(e) {
