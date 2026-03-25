@@ -22,9 +22,9 @@
 
 ### 처방이력 저장
 
-- [ ] **HIST-01**: 거래명세표 발행(인쇄/저장) 시 처방 스냅샷이 자동으로 저장된다
+- [x] **HIST-01**: 거래명세표 발행(인쇄/저장) 시 처방 스냅샷이 자동으로 저장된다
 - [ ] **HIST-02**: 저장된 처방이력을 불러와 수정 후 재발행할 수 있다 (원본 유지, 복사본 편집)
-- [ ] **HIST-03**: 처방이력은 고객, 작물, 날짜로 검색·필터링할 수 있다
+- [x] **HIST-03**: 처방이력은 고객, 작물, 날짜로 검색·필터링할 수 있다
 
 ### 처방 템플릿
 
@@ -78,9 +78,9 @@
 | CUST-05 | Phase 2 | Complete |
 | DISC-01 | Phase 2 | Complete |
 | DISC-02 | Phase 2 | Complete |
-| HIST-01 | Phase 3 | Pending |
+| HIST-01 | Phase 3 | Complete |
 | HIST-02 | Phase 3 | Pending |
-| HIST-03 | Phase 3 | Pending |
+| HIST-03 | Phase 3 | Complete |
 | TMPL-01 | Phase 3 | Pending |
 | TMPL-02 | Phase 3 | Pending |
 | SALE-01 | Phase 4 | Pending |

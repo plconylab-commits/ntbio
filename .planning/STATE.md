@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 02 complete — ready for Phase 03
-stopped_at: "Completed 02-02 (checkpoint approved)"
-last_updated: "2026-03-25T03:00:00Z"
+status: Ready to execute
+stopped_at: Completed 03-history-01 (처방이력 데이터 레이어 + 발행 후킹)
+last_updated: "2026-03-25T04:23:56.293Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** 처방전 PDF(또는 기존 처방 데이터)를 불러오면 거래명세표가 자동으로 완성되어야 한다 — 최소한의 수작업으로.
-**Current focus:** Phase 02 — 고객 DB + 할인율
+**Current focus:** Phase 3 — 처방이력 + 템플릿
 
 ## Current Position
 
-Phase: 02 (고객 DB + 할인율) — EXECUTING
+Phase: 3 (처방이력 + 템플릿) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -50,6 +50,7 @@ Plan: 2 of 2
 | Phase 01-pdf P02 | 5 | 2 tasks | 2 files |
 | Phase 02 P01 | 10 | 2 tasks | 1 files |
 | Phase 02-db P02 | 5 | 2 tasks | 2 files |
+| Phase 03-history P01 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting current work:
 - [Phase 02]: CustomerDB.search(): 빈 쿼리 시 [] 반환, trim+toLowerCase로 공백·대소문자 무시
 - [Phase 02-db]: customerUI.js: mousedown on ac items prevents blur-before-click race condition
 - [Phase 02-db]: _savedDiscount closure variable tracks DB baseline for gDisc temp/saved state comparison
+- [Phase 03-history]: 발행 시 자동 저장 trigger: saveInvoice() 직후 _savePrescrSnapshotSafe() 호출 — 별도 저장 버튼 불필요
+- [Phase 03-history]: window.CustomerUI IIFE 안 DOMContentLoaded 밖 배치 — closure 접근 + DOM 불필요 조기 노출
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T03:00:00Z
-Stopped at: Completed 02-02 (브라우저 검증 승인 — Phase 02 완료)
+Last session: 2026-03-25T04:23:56.291Z
+Stopped at: Completed 03-history-01 (처방이력 데이터 레이어 + 발행 후킹)
 Resume file: None
