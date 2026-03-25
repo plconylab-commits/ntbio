@@ -390,6 +390,9 @@
     var cCropEl = document.getElementById('cCrop');
     if (cCropEl) cCropEl.addEventListener('change', _onCropChange);
 
+    // 페이지 로드 시 작물이 이미 입력된 경우 자동 체크
+    setTimeout(_onCropChange, 300);
+
     // 템플릿 배너 버튼 이벤트 (동적 삽입 후 document delegation 방식)
     document.addEventListener('click', function(e) {
       if (e.target && e.target.id === 'tmplUseBtn') {
@@ -409,8 +412,9 @@
 
   // ── 13. 공개 API ─────────────────────────────────────────────────────────
   window.PrescriptionHistoryUI = {
-    openModal:  _openHistoryModal,
-    closeModal: _closeHistoryModal
+    openModal:      _openHistoryModal,
+    closeModal:     _closeHistoryModal,
+    checkCropBanner: _onCropChange   // 외부에서 배너 체크 트리거용
   };
 
 })();

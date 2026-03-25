@@ -219,6 +219,11 @@
     // 처방이력 배지
     _updateHistoryBadge(customer.id);
 
+    // 작물 자동입력 후 템플릿 배너 체크
+    if (typeof PrescriptionHistoryUI !== 'undefined' && PrescriptionHistoryUI.checkCropBanner) {
+      setTimeout(PrescriptionHistoryUI.checkCropBanner, 50);
+    }
+
     // 폼 필드 flash 효과
     ['cName','cPhone','cAddr','cRegion','cArea','cCrop','gDisc'].forEach(function(id) {
       var el = document.getElementById(id);
