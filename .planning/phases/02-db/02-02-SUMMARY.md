@@ -77,6 +77,7 @@ Each task was committed atomically:
 
 1. **Task 1: customerUI.js 생성** - `ef9d4f3` (feat)
 2. **Task 2: index.html DOM 마크업 + script 태그** - `f52e030` (feat)
+3. **Task 3: 브라우저 검증 후 수정사항** - `cbe9076` (feat), `7e52b6a` (fix), `317bbb8` (fix)
 
 ## Files Created/Modified
 
@@ -92,15 +93,33 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+### Auto-fixed Issues (Post-Checkpoint)
+
+**1. [Rule 1 - Bug] render() TypeError: it.i.startsWith 숫자 타입 체크 추가**
+- **Found during:** Task 3 (브라우저 검증)
+- **Issue:** `it.i`가 숫자일 때 `.startsWith()` 호출 시 TypeError 발생
+- **Fix:** `typeof it.i === 'string'` 조건 추가로 타입 가드
+- **Commit:** `7e52b6a`
+
+**2. [Rule 1 - Bug] UI 레이블 오류: 지원가 → 공급가**
+- **Found during:** Task 3 (브라우저 검증)
+- **Issue:** 가격 레이블이 "지원가"로 표시되어 사용자 확인 시 지적
+- **Fix:** 레이블을 "공급가"로 변경
+- **Commit:** `317bbb8`
+
+**3. [Rule 2 - Feature] 동명이인 구분 + 고객 목록 패널**
+- **Found during:** Task 3 (브라우저 검증)
+- **Issue:** 동명이인이 있을 경우 자동완성에서 구분 불가
+- **Fix:** 자동완성 드롭다운에 작물/지역 정보 표시, 고객 목록 패널(고객 목록 버튼) 추가
+- **Commit:** `cbe9076`
 
 ## Known Stubs
 
 None — all functions are fully implemented and wired to CustomerDB API.
 
-## Checkpoint Pending
+## Checkpoint Status: APPROVED
 
-Task 3 (브라우저 검증)은 human-verify 체크포인트로, 사용자의 브라우저 직접 확인이 필요합니다.
+Task 3 (브라우저 검증) — 사용자가 브라우저에서 직접 확인 후 승인 완료 (2026-03-25).
 
 ## Self-Check: PASSED
 
