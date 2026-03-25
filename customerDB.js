@@ -96,6 +96,65 @@
       }).length;
     },
 
+    /** 처방이력 스냅샷 저장 */
+    savePrescrSnapshot: function(snapshot) {
+      if (!snapshot || !snapshot.items || !snapshot.items.length) return null;
+      snapshot.id = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      snapshot.savedAt = new Date().toISOString();
+      try {
+        var list = _get(KEYS.prescriptions);
+        list.push(snapshot);
+        _set(KEYS.prescriptions, list);
+        return snapshot;
+      } catch(e) {
+        console.error('[CustomerDB] 저장 실패:', e);
+        return null;
+      }
+    },
+
+    /** 고객별 또는 전체 이력 조회 (최신순) */
+    listPrescriptions: function(customerId) {
+      var all = _get(KEYS.prescriptions);
+      if (customerId) {
+        all = all.filter(function(p) { return p.customerId === customerId; });
+      }
+      return all.sort(function(a, b) { return b.savedAt.localeCompare(a.savedAt); });
+    },
+
+    /** 복합 필터 검색 — name, crop, dateFrom, dateTo */
+    searchPrescriptions: function(opts) {
+      opts = opts || {};
+      var list = _get(KEYS.prescriptions);
+      if (opts.name) {
+        var n = opts.name.trim().toLowerCase();
+        list = list.filter(function(p) { return p.customer && p.customer.name && p.customer.name.toLowerCase().includes(n); });
+      }
+      if (opts.crop) {
+        list = list.filter(function(p) { return p.customer && p.customer.crop === opts.crop; });
+      }
+      if (opts.dateFrom) {
+        list = list.filter(function(p) { return p.savedAt >= opts.dateFrom; });
+      }
+      if (opts.dateTo) {
+        list = list.filter(function(p) { return p.savedAt <= opts.dateTo + 'T23:59:59'; });
+      }
+      return list.sort(function(a, b) { return b.savedAt.localeCompare(a.savedAt); });
+    },
+
+    /** 작물별 검색 — 템플릿 추천용 */
+    searchPrescriptionsByCrop: function(crop) {
+      if (!crop) return [];
+      return _get(KEYS.prescriptions).filter(function(p) {
+        return p.customer && p.customer.crop === crop;
+      }).sort(function(a, b) { return b.savedAt.localeCompare(a.savedAt); });
+    },
+
+    /** 개별 처방이력 삭제 */
+    deletePrescription: function(id) {
+      var list = _get(KEYS.prescriptions);
+      _set(KEYS.prescriptions, list.filter(function(p) { return p.id !== id; }));
+    },
+
     /** 전체 데이터 내보내기 — JSON 객체 반환 */
     exportAll: function() {
       return {

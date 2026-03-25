@@ -501,4 +501,10 @@
     });
   });
 
+  // ── 외부 API ──────────────────────────────────────────────────────────────
+  window.CustomerUI = {
+    getCurrentCustomerId: function() { return _currentCustomerId; },
+    refreshHistoryBadge: function(customerId) { _updateHistoryBadge(customerId || _currentCustomerId); }
+  };
+
 })();
