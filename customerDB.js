@@ -183,6 +183,68 @@
       _set(KEYS.prescriptions, list.filter(function(p) { return p.id !== id; }));
     },
 
+    /** 거래 저장 — 동일 id가 있으면 덮어쓰기, 없으면 추가 */
+    saveTransaction: function(record) {
+      if (!record || !record.id) return;
+      var list = _get(KEYS.transactions);
+      var idx = -1;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === record.id) { idx = i; break; }
+      }
+      if (idx !== -1) { list[idx] = record; }
+      else { list.push(record); }
+      _set(KEYS.transactions, list);
+    },
+
+    /** 거래 업데이트 — saveTransaction과 동일 로직 */
+    updateTransaction: function(record) {
+      this.saveTransaction(record);
+    },
+
+    /** 거래 목록 조회 — opts: { name, phone, dateFrom, dateTo, statusFilter } */
+    listTransactions: function(opts) {
+      opts = opts || {};
+      var list = _get(KEYS.transactions);
+      list = list.filter(function(h) {
+        if (!opts.statusFilter && h.status === '삭제됨') return false;
+        if (opts.statusFilter === 'unpaid' && h.status !== '미입금' && h.status !== '일부입금') return false;
+        if (opts.dateFrom) {
+          var d = (h.savedAt || '').slice(0, 10);
+          if (d < opts.dateFrom) return false;
+        }
+        if (opts.dateTo) {
+          var d2 = (h.savedAt || '').slice(0, 10);
+          if (d2 > opts.dateTo) return false;
+        }
+        if (opts.name && opts.phone) {
+          var qKey = (opts.name.trim() + '|' + opts.phone.replace(/\D/g, '')).toLowerCase();
+          var hKey = ((h.customer && h.customer.name || '').trim() + '|' + (h.customer && h.customer.phone || '').replace(/\D/g, '')).toLowerCase();
+          if (hKey !== qKey) return false;
+        }
+        return true;
+      });
+      return list.sort(function(a, b) { return (b.savedAt || '').localeCompare(a.savedAt || ''); });
+    },
+
+    /** 고객별 거래 집계 — { count, totalAmount, totalPaid, unpaid, invoices } */
+    getCustomerSummary: function(name, phone) {
+      var qKey = (name.trim() + '|' + phone.replace(/\D/g, '')).toLowerCase();
+      var invoices = _get(KEYS.transactions).filter(function(h) {
+        if (h.status === '삭제됨') return false;
+        var hKey = ((h.customer && h.customer.name || '').trim() + '|' + (h.customer && h.customer.phone || '').replace(/\D/g, '')).toLowerCase();
+        return hKey === qKey;
+      });
+      var totalAmount = invoices.reduce(function(s, h) { return s + (h.totals && h.totals.grandTotal || 0); }, 0);
+      var totalPaid = invoices.reduce(function(s, h) { return s + (h.paidAmount || 0); }, 0);
+      return {
+        count: invoices.length,
+        totalAmount: totalAmount,
+        totalPaid: totalPaid,
+        unpaid: totalAmount - totalPaid,
+        invoices: invoices
+      };
+    },
+
     /** 전체 데이터 내보내기 — JSON 객체 반환 */
     exportAll: function() {
       return {
