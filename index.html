@@ -718,8 +718,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <input type="number" id="mQty" value="1" min="1" max="999" oninput="calcModal()"></div>
       <div class="mf"><label>할인율 (%)</label>
         <input type="number" id="mDisc" value="0" min="0" max="100" class="di" oninput="onMDiscChange()"></div>
-      <div class="mf-or">── 또는 지원가 직접 입력 ──</div>
-      <div class="mf"><label>지원가 직접 입력 (원) — 입력 시 할인율 자동 계산</label>
+      <div class="mf-or">── 또는 공급가 직접 입력 ──</div>
+      <div class="mf"><label>공급가 직접 입력 (원) — 입력 시 할인율 자동 계산</label>
         <input type="number" id="mDirectPrice" placeholder="예: 20000" min="0"
           class="sp-direct" oninput="onMDirectChange()"></div>
       <div class="mcomputed">
@@ -1311,7 +1311,7 @@ function render(){
         <span class="ord-retail-unit">원${it.customRetail?' ✏️':''}</span>
       </div>
       <div class="ord-supp-row">
-        <span class="ord-supp-lbl">지원가</span>
+        <span class="ord-supp-lbl">공급가</span>
         <input type="number" class="ord-supp-input" value="${it.sp}"
           onchange="chgSp(${i},this.value)" placeholder="직접입력">
         <span class="ord-supp-unit">원${it.customSp?' ✏️':''}</span>
