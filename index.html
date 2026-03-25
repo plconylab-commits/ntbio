@@ -3118,7 +3118,7 @@ function onRestoreInvoice(id,from){
 function openAllUnpaid(){
   const history=getInvoiceHistory();
   const unpaid=history.filter(h=>{
-    if(h.deleted)return false;
+    if(h.status==='삭제됨')return false;
     const paid=(h.payments||[]).filter(p=>!p.cancelled).reduce((s,p)=>s+p.amount,0);
     return (h.totals.grandTotal-paid)>0;
   });

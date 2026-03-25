@@ -134,7 +134,9 @@
         } else {
           // DB에 저장된 고객
           item.setAttribute('data-id', customer.id);
-          var count = CustomerDB.countPrescriptions(customer.id);
+          var count = (CustomerDB.searchPrescriptions && customer.name)
+            ? CustomerDB.searchPrescriptions({ name: customer.name }).length
+            : CustomerDB.countPrescriptions(customer.id);
           var badge = count > 0 ? '<span class="cust-ac-badge">' + count + '건</span>' : '';
           item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + subHtml + badge;
           item.addEventListener('mousedown', function(e) {
