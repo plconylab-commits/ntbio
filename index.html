@@ -684,6 +684,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="onPdfSelected(this)">
         <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; PDF 업로드 (거래명세표 / 처방전)</button>
         <button class="btn-all-unpaid" onclick="openAllUnpaid()">📋&nbsp; 미수금 전체 목록</button>
+        <button class="btn-all-unpaid" onclick="SalesHistoryUI.openSalesPanel()" style="background:#E3F2FD;color:#1565C0;border-color:#1565C0;">📊&nbsp; 매출 집계</button>
         <button class="btn-check-unpaid" onclick="checkUnpaidOnCustomer()">🔍&nbsp; 미수금 확인</button>
         <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
       </div>
@@ -828,6 +829,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="customerDB.js?v=1"></script>
 <script src="customerUI.js?v=1"></script>
 <script src="prescriptionHistoryUI.js?v=1"></script>
+<script src="salesHistoryUI.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
