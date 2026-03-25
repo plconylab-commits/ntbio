@@ -166,6 +166,7 @@
       '    <div class="sales-stat-item">',
       '      <div class="sales-stat-label">미수금</div>',
       '      <div class="sales-stat-value unpaid" id="salesUnpaid">-</div>',
+      '      <a id="salesUnpaidLink" href="#" style="display:none;font-size:11px;color:#C62828;text-decoration:underline;margin-top:2px;">전체 목록 보기 →</a>',
       '    </div>',
       '  </div>',
       '</div>'
@@ -225,6 +226,19 @@
     document.getElementById('salesTotal').textContent  = _fmt(result.total) + '원';
     document.getElementById('salesPaid').textContent   = _fmt(result.paid) + '원';
     document.getElementById('salesUnpaid').textContent = _fmt(result.unpaid) + '원';
+    var unpaidLink = document.getElementById('salesUnpaidLink');
+    if (unpaidLink) {
+      if (result.unpaid > 0) {
+        unpaidLink.style.display = 'block';
+        unpaidLink.onclick = function(e) {
+          e.preventDefault();
+          _closeSalesPanel();
+          if (typeof openAllUnpaid === 'function') openAllUnpaid();
+        };
+      } else {
+        unpaidLink.style.display = 'none';
+      }
+    }
   }
 
   function openSalesPanel() {
