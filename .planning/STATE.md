@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-25T02:28:21.825Z"
+status: Phase complete — ready for verification
+stopped_at: "Checkpoint: 02-02 Task 3 human-verify"
+last_updated: "2026-03-25T02:35:35.006Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 2 of 2
 | Phase 01-pdf P01 | 15 | 2 tasks | 3 files |
 | Phase 01-pdf P02 | 5 | 2 tasks | 2 files |
 | Phase 02 P01 | 10 | 2 tasks | 1 files |
+| Phase 02-db P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ Recent decisions affecting current work:
 - [Phase 01-pdf]: customerDB.js IIFE 패턴으로 window.CustomerDB 네임스페이스 노출 — 빌드 도구 없이 전역 접근 가능
 - [Phase 02]: discountRate 0-100 정수 강제: save() 진입 시점에서 Math.max/min/round로 단일 처리
 - [Phase 02]: CustomerDB.search(): 빈 쿼리 시 [] 반환, trim+toLowerCase로 공백·대소문자 무시
+- [Phase 02-db]: customerUI.js: mousedown on ac items prevents blur-before-click race condition
+- [Phase 02-db]: _savedDiscount closure variable tracks DB baseline for gDisc temp/saved state comparison
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T02:28:21.818Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-25T02:35:35.003Z
+Stopped at: Checkpoint: 02-02 Task 3 human-verify
 Resume file: None

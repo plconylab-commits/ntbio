@@ -15,8 +15,8 @@
 ### 고객 DB
 
 - [x] **CUST-01**: 고객 정보(이름, 작물, 면적, 할인율, 연락처)를 localStorage에 저장한다
-- [ ] **CUST-02**: 거래명세표 작성 시 고객 이름 자동완성으로 기존 고객을 빠르게 선택한다
-- [ ] **CUST-03**: 기존 고객 선택 시 할인율이 자동으로 적용된다
+- [x] **CUST-02**: 거래명세표 작성 시 고객 이름 자동완성으로 기존 고객을 빠르게 선택한다
+- [x] **CUST-03**: 기존 고객 선택 시 할인율이 자동으로 적용된다
 - [x] **CUST-04**: 고객 DB를 JSON 파일로 내보내기/가져오기 할 수 있다 (데이터 백업)
 - [x] **CUST-05**: 고객별 처방이력 목록을 볼 수 있다
 
@@ -33,8 +33,8 @@
 
 ### 할인율 관리
 
-- [ ] **DISC-01**: 고객별 기본 할인율을 저장하고 고객 선택 시 자동 적용한다
-- [ ] **DISC-02**: 세션 내에서 임시로 할인율을 변경해도 저장된 기본값은 덮어쓰지 않는다 (별도 저장 확인 필요)
+- [x] **DISC-01**: 고객별 기본 할인율을 저장하고 고객 선택 시 자동 적용한다
+- [x] **DISC-02**: 세션 내에서 임시로 할인율을 변경해도 저장된 기본값은 덮어쓰지 않는다 (별도 저장 확인 필요)
 
 ### 거래이력 및 매출
 
@@ -72,12 +72,12 @@
 | PARSE-03 | Phase 1 | Complete |
 | PARSE-04 | Phase 1 | Complete |
 | CUST-01 | Phase 2 | Complete |
-| CUST-02 | Phase 2 | Pending |
-| CUST-03 | Phase 2 | Pending |
+| CUST-02 | Phase 2 | Complete |
+| CUST-03 | Phase 2 | Complete |
 | CUST-04 | Phase 2 | Complete |
 | CUST-05 | Phase 2 | Complete |
-| DISC-01 | Phase 2 | Pending |
-| DISC-02 | Phase 2 | Pending |
+| DISC-01 | Phase 2 | Complete |
+| DISC-02 | Phase 2 | Complete |
 | HIST-01 | Phase 3 | Pending |
 | HIST-02 | Phase 3 | Pending |
 | HIST-03 | Phase 3 | Pending |

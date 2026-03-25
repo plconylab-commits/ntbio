@@ -13,7 +13,7 @@
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: PDF 파싱 수정 + 기반 인프라** - 평당가 버그 수정 및 localStorage 스키마/JSON export 기반 구축 (completed 2026-03-24)
-- [ ] **Phase 2: 고객 DB + 할인율** - 고객 자동완성, 할인율 저장/자동 적용, JSON 백업
+- [x] **Phase 2: 고객 DB + 할인율** - 고객 자동완성, 할인율 저장/자동 적용, JSON 백업 (completed 2026-03-25)
 - [ ] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천
 - [ ] **Phase 4: 거래이력 + 미수금 + 매출** - 납부 기록, 미수금 목록, 기간별 매출 집계
 
@@ -44,10 +44,10 @@ Plans:
   3. 할인율을 세션 중 임시로 바꿔도 저장 버튼을 누르지 않으면 기존 고객 기본값이 변경되지 않는다
   4. 고객 DB 전체를 JSON 파일로 내보낼 수 있고, 그 파일을 가져오면 데이터가 복원된다
   5. 특정 고객을 선택했을 때 그 고객의 처방이력 건수를 볼 수 있다
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 02-01-PLAN.md — customerDB.js CRUD 완성 (save/delete/search/countPrescriptions)
-- [ ] 02-02-PLAN.md — customerUI.js 자동완성 + 할인율 상태 + 저장/삭제 UI
+- [x] 02-02-PLAN.md — customerUI.js 자동완성 + 할인율 상태 + 저장/삭제 UI
 **UI hint**: yes
 
 ### Phase 3: 처방이력 + 템플릿
@@ -83,6 +83,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. PDF 파싱 수정 + 기반 인프라 | 2/2 | Complete   | 2026-03-24 |
-| 2. 고객 DB + 할인율 | 1/2 | In Progress|  |
+| 2. 고객 DB + 할인율 | 2/2 | Complete   | 2026-03-25 |
 | 3. 처방이력 + 템플릿 | 0/TBD | Not started | - |
 | 4. 거래이력 + 미수금 + 매출 | 0/TBD | Not started | - |
