@@ -468,6 +468,7 @@
     // 이벤트 리스너 등록
     if (nameEl) {
       nameEl.addEventListener('keyup',  _onNameInput);
+      nameEl.addEventListener('input',  _onNameInput);  // 한글 IME 조합 후에도 작동
       nameEl.addEventListener('keydown', _onNameKeydown);
       nameEl.addEventListener('blur', function() {
         setTimeout(_closeAutocomplete, 150);
