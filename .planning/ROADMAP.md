@@ -75,7 +75,10 @@ Plans:
   2. 미수금 목록 화면에서 납부 완료되지 않은 거래 전체를 조회할 수 있다
   3. 기간(이번 달 / 지난 달 / 직접 입력)을 선택하면 해당 기간의 매출 합계가 표시된다
   4. 특정 고객을 선택하면 총 거래금액과 현재 미수금 잔액을 볼 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — 거래 데이터 레이어: customerId + fertilizer_transactions 미러 쓰기 + CustomerDB CRUD 메서드
+- [ ] 04-02-PLAN.md — salesHistoryUI.js: 매출 집계 오버레이 + 고객별 요약 배지 + script 연결
 **UI hint**: yes
 
 ## Backlog
@@ -112,4 +115,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. PDF 파싱 수정 + 기반 인프라 | 2/2 | Complete   | 2026-03-24 |
 | 2. 고객 DB + 할인율 | 2/2 | Complete   | 2026-03-25 |
 | 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
-| 4. 거래이력 + 미수금 + 매출 | 0/TBD | Not started | - |
+| 4. 거래이력 + 미수금 + 매출 | 0/2 | Not started | - |
