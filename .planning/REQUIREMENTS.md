@@ -23,13 +23,13 @@
 ### 처방이력 저장
 
 - [x] **HIST-01**: 거래명세표 발행(인쇄/저장) 시 처방 스냅샷이 자동으로 저장된다
-- [ ] **HIST-02**: 저장된 처방이력을 불러와 수정 후 재발행할 수 있다 (원본 유지, 복사본 편집)
+- [x] **HIST-02**: 저장된 처방이력을 불러와 수정 후 재발행할 수 있다 (원본 유지, 복사본 편집)
 - [x] **HIST-03**: 처방이력은 고객, 작물, 날짜로 검색·필터링할 수 있다
 
 ### 처방 템플릿
 
-- [ ] **TMPL-01**: 저장된 처방이력에서 유사 처방(같은 작물, 비슷한 면적)을 검색해 새 처방의 시작점으로 사용한다
-- [ ] **TMPL-02**: 처방 항목(제품, 수량)을 불러온 뒤 면적에 맞게 수량을 자동 비례 조정한다
+- [x] **TMPL-01**: 저장된 처방이력에서 유사 처방(같은 작물, 비슷한 면적)을 검색해 새 처방의 시작점으로 사용한다
+- [x] **TMPL-02**: 처방 항목(제품, 수량)을 불러온 뒤 면적에 맞게 수량을 자동 비례 조정한다
 
 ### 할인율 관리
 
@@ -79,10 +79,10 @@
 | DISC-01 | Phase 2 | Complete |
 | DISC-02 | Phase 2 | Complete |
 | HIST-01 | Phase 3 | Complete |
-| HIST-02 | Phase 3 | Pending |
+| HIST-02 | Phase 3 | Complete |
 | HIST-03 | Phase 3 | Complete |
-| TMPL-01 | Phase 3 | Pending |
-| TMPL-02 | Phase 3 | Pending |
+| TMPL-01 | Phase 3 | Complete |
+| TMPL-02 | Phase 3 | Complete |
 | SALE-01 | Phase 4 | Pending |
 | SALE-02 | Phase 4 | Pending |
 | SALE-03 | Phase 4 | Pending |

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: PDF 파싱 수정 + 기반 인프라** - 평당가 버그 수정 및 localStorage 스키마/JSON export 기반 구축 (completed 2026-03-24)
 - [x] **Phase 2: 고객 DB + 할인율** - 고객 자동완성, 할인율 저장/자동 적용, JSON 백업 (completed 2026-03-25)
-- [ ] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천
+- [x] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천 (completed 2026-03-25)
 - [ ] **Phase 4: 거래이력 + 미수금 + 매출** - 납부 기록, 미수금 목록, 기간별 매출 집계
 
 ## Phase Details
@@ -60,10 +60,10 @@ Plans:
   3. 처방이력을 고객명, 작물, 날짜 조건으로 필터링해서 찾을 수 있다
   4. 같은 작물의 기존 처방을 새 처방의 템플릿으로 지정하면, 새 고객 작물 입력 시 추천 배너가 나타난다
   5. 템플릿에서 불러온 처방 항목의 수량이 새 고객의 면적에 맞게 자동으로 비례 조정된다
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 03-01-PLAN.md — CustomerDB 처방이력 CRUD + 발행 함수 스냅샷 후킹
-- [ ] 03-02-PLAN.md — 처방이력 UI 모달 + 템플릿 배너 + 면적 비례 조정
+- [x] 03-02-PLAN.md — 처방이력 UI 모달 + 템플릿 배너 + 면적 비례 조정
 **UI hint**: yes
 
 ### Phase 4: 거래이력 + 미수금 + 매출
@@ -87,5 +87,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. PDF 파싱 수정 + 기반 인프라 | 2/2 | Complete   | 2026-03-24 |
 | 2. 고객 DB + 할인율 | 2/2 | Complete   | 2026-03-25 |
-| 3. 처방이력 + 템플릿 | 1/2 | In Progress|  |
+| 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
 | 4. 거래이력 + 미수금 + 매출 | 0/TBD | Not started | - |
