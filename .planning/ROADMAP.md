@@ -78,6 +78,19 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+## Backlog
+
+### Phase 999.1: 거래명세표 처방전 PDF 업로드 오류 (BACKLOG)
+
+**Goal:** 거래명세표 화면에서 처방전 PDF를 업로드할 때 발생하는 오류 원인 파악 및 설계 재검토
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd:review-backlog when ready)
+
+---
+
 ## Progress
 
 **Execution Order:**
