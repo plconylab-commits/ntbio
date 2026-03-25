@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase complete — ready for verification
-stopped_at: "Checkpoint: 03-history-02 Task 2 — 처방이력 브라우저 검증 대기"
-last_updated: "2026-03-25T04:27:36.435Z"
+stopped_at: Completed 04-sales-history-01-PLAN.md
+last_updated: "2026-03-25T11:02:01.991Z"
 progress:
-  total_phases: 4
+  total_phases: 7
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
 ---
 
 # Project State
@@ -52,6 +52,7 @@ Plan: 2 of 2
 | Phase 02-db P02 | 5 | 2 tasks | 2 files |
 | Phase 03-history P01 | 5 | 2 tasks | 3 files |
 | Phase 03-history P02 | 3 | 1 tasks | 1 files |
+| Phase 04-sales-history P01 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 03-history]: 발행 시 자동 저장 trigger: saveInvoice() 직후 _savePrescrSnapshotSafe() 호출 — 별도 저장 버튼 불필요
 - [Phase 03-history]: window.CustomerUI IIFE 안 DOMContentLoaded 밖 배치 — closure 접근 + DOM 불필요 조기 노출
 - [Phase 03-history]: 템플릿 배너 버튼 이벤트: document click delegation 방식 — 동적 삽입 요소 이벤트 안전 처리
+- [Phase 04-sales-history]: listTransactions statusFilter: 없으면 삭제됨 제외, 'unpaid'이면 미입금/일부입금만 포함
+- [Phase 04-sales-history]: customerKey 로직을 customerDB.js 내부에 인라인 구현 — index.html 전역 함수 의존 없이 독립 동작
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T04:27:36.433Z
-Stopped at: Checkpoint: 03-history-02 Task 2 — 처방이력 브라우저 검증 대기
+Last session: 2026-03-25T11:02:01.986Z
+Stopped at: Completed 04-sales-history-01-PLAN.md
 Resume file: None

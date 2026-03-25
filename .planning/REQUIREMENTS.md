@@ -38,9 +38,9 @@
 
 ### 거래이력 및 매출
 
-- [ ] **SALE-01**: 발행된 거래명세표(고객, 날짜, 금액, 품목)를 저장한다
-- [ ] **SALE-02**: 거래별 납부 여부(납부완료/미납)를 기록한다
-- [ ] **SALE-03**: 미납 거래를 목록으로 조회한다 (미수금 관리)
+- [x] **SALE-01**: 발행된 거래명세표(고객, 날짜, 금액, 품목)를 저장한다
+- [x] **SALE-02**: 거래별 납부 여부(납부완료/미납)를 기록한다
+- [x] **SALE-03**: 미납 거래를 목록으로 조회한다 (미수금 관리)
 - [ ] **SALE-04**: 기간별(월/분기) 매출 합계를 조회한다
 - [ ] **SALE-05**: 고객별 총 거래금액 및 미수금을 조회한다
 
@@ -83,9 +83,9 @@
 | HIST-03 | Phase 3 | Complete |
 | TMPL-01 | Phase 3 | Complete |
 | TMPL-02 | Phase 3 | Complete |
-| SALE-01 | Phase 4 | Pending |
-| SALE-02 | Phase 4 | Pending |
-| SALE-03 | Phase 4 | Pending |
+| SALE-01 | Phase 4 | Complete |
+| SALE-02 | Phase 4 | Complete |
+| SALE-03 | Phase 4 | Complete |
 | SALE-04 | Phase 4 | Pending |
 | SALE-05 | Phase 4 | Pending |
 
