@@ -827,6 +827,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="main.js?v=2"></script>
 <script src="customerDB.js?v=1"></script>
 <script src="customerUI.js?v=1"></script>
+<script src="prescriptionHistoryUI.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -1557,6 +1558,7 @@ function getDocTitle(){
 
 function doPrint(){
   saveInvoice();
+  _savePrescrSnapshotSafe();
   const orig = document.title;
   document.title = getDocTitle();
   window.print();
@@ -1565,6 +1567,7 @@ function doPrint(){
 
 function doPdf(){
   saveInvoice();
+  _savePrescrSnapshotSafe();
   const filename = getDocTitle() + '.pdf';
   const source = document.getElementById('printDoc');
   if(!source){ alert('저장할 거래명세표가 없습니다.'); return; }
@@ -1660,6 +1663,7 @@ function doPdf(){
 
 function doEmail(){
   saveInvoice();
+  _savePrescrSnapshotSafe();
   const name = document.getElementById('cName').value.trim() || '고객명';
   const phone = document.getElementById('cPhone').value || '';
   const phone2 = document.getElementById('cPhone2').value || '';
@@ -1844,6 +1848,44 @@ function syncFromServer(){
     })
     .finally(()=>{_syncPromise=null;});
   return _syncPromise;
+}
+
+/** 처방이력 스냅샷 빌드 — doPrint/doPdf/doEmail에서 호출 */
+function _buildPrescrSnapshot(){
+  if(!cart.length) return null;
+  var custId = (typeof CustomerUI !== 'undefined' && CustomerUI.getCurrentCustomerId)
+    ? CustomerUI.getCurrentCustomerId() : null;
+  return {
+    customerId: custId,
+    customer: {
+      name:   (document.getElementById('cName')   || {}).value || '',
+      crop:   (document.getElementById('cCrop')   || {}).value || '',
+      area:   parseFloat((document.getElementById('cArea') || {}).value) || 0,
+      region: (document.getElementById('cRegion') || {}).value || '',
+      phone:  (document.getElementById('cPhone')  || {}).value || ''
+    },
+    items: cart.map(function(c){
+      return { name:c.name, size:c.size, retail:c.retail, sp:c.sp, qty:c.qty, gift:c.gift||false };
+    }),
+    discountRate: parseFloat((document.getElementById('gDisc') || {}).value) || 0,
+    vatIncluded: (document.getElementById('vatChk') || {}).checked || false,
+    totals: {
+      supply:     cart.filter(function(c){return !c.gift;}).reduce(function(s,c){return s+c.sp*c.qty;},0),
+      grandTotal: Math.round(cart.filter(function(c){return !c.gift;}).reduce(function(s,c){return s+c.sp*c.qty;},0) * ((document.getElementById('vatChk')||{}).checked ? 1.1 : 1))
+    }
+  };
+}
+
+function _savePrescrSnapshotSafe(){
+  var snap = _buildPrescrSnapshot();
+  if(!snap) return;
+  if(typeof CustomerDB !== 'undefined' && CustomerDB.savePrescrSnapshot){
+    CustomerDB.savePrescrSnapshot(snap);
+    // 배지 갱신
+    if(typeof CustomerUI !== 'undefined' && CustomerUI.refreshHistoryBadge){
+      CustomerUI.refreshHistoryBadge();
+    }
+  }
 }
 
 function saveInvoice(){
