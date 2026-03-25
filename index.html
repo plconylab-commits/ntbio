@@ -1928,12 +1928,17 @@ function saveInvoice(){
       date:document.getElementById('cDate').value||''
     },
     items:cart.map(c=>({name:c.name,size:c.size,retail:c.retail,sp:c.sp,qty:c.qty,gift:c.gift||false,date:c.date||''})),
+    customerId: (typeof CustomerUI !== 'undefined' && CustomerUI.getCurrentCustomerId)
+      ? CustomerUI.getCurrentCustomerId() : null,
     totals:{retail,supply,vatIncluded:vm>1,vatAmount:vatAmt,grandTotal}
   };
   history.push(record);
   setInvoiceHistory(history);
   updateUnpaidBadge();
   pushToServer('save',record);
+  if (typeof CustomerDB !== 'undefined' && CustomerDB.saveTransaction) {
+    CustomerDB.saveTransaction(record);
+  }
 }
 
 function addPayment(id,amount,payDate,payer){
@@ -1955,6 +1960,9 @@ function addPayment(id,amount,payDate,payer){
   setInvoiceHistory(history);
   updateUnpaidBadge();
   pushToServer('update',inv);
+  if (typeof CustomerDB !== 'undefined' && CustomerDB.updateTransaction) {
+    CustomerDB.updateTransaction(inv);
+  }
 }
 
 function removePayment(invId,payIdx){
@@ -1972,6 +1980,9 @@ function removePayment(invId,payIdx){
   setInvoiceHistory(history);
   updateUnpaidBadge();
   pushToServer('update',inv);
+  if (typeof CustomerDB !== 'undefined' && CustomerDB.updateTransaction) {
+    CustomerDB.updateTransaction(inv);
+  }
 }
 
 function deleteInvoice(id){
