@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Completed 01-pdf-02-PLAN.md
-last_updated: "2026-03-24T19:12:29.223Z"
+status: Ready to execute
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-25T02:28:21.825Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** 처방전 PDF(또는 기존 처방 데이터)를 불러오면 거래명세표가 자동으로 완성되어야 한다 — 최소한의 수작업으로.
-**Current focus:** Phase 01 — PDF 파싱 수정 + 기반 인프라
+**Current focus:** Phase 02 — 고객 DB + 할인율
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 02 (고객 DB + 할인율) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: Not started
 *Updated after each plan completion*
 | Phase 01-pdf P01 | 15 | 2 tasks | 3 files |
 | Phase 01-pdf P02 | 5 | 2 tasks | 2 files |
+| Phase 02 P01 | 10 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 01-pdf]: 홍보용 항목 0원 처리: productRaw/productName/stageRaw 세 필드 모두 검사
 - [Phase 01-pdf]: localStorage로 고객 DB 시작 — 서버 없이 단독 실행 가능, 추후 서버 DB로 이전 가능
 - [Phase 01-pdf]: customerDB.js IIFE 패턴으로 window.CustomerDB 네임스페이스 노출 — 빌드 도구 없이 전역 접근 가능
+- [Phase 02]: discountRate 0-100 정수 강제: save() 진입 시점에서 Math.max/min/round로 단일 처리
+- [Phase 02]: CustomerDB.search(): 빈 쿼리 시 [] 반환, trim+toLowerCase로 공백·대소문자 무시
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T19:08:57.253Z
-Stopped at: Completed 01-pdf-02-PLAN.md
+Last session: 2026-03-25T02:28:21.818Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
