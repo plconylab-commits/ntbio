@@ -246,7 +246,12 @@
 
   // ── 처방이력 배지 ────────────────────────────────────────────────────────
   function _updateHistoryBadge(customerId) {
-    var count = CustomerDB.countPrescriptions(customerId);
+    // 이름 기준으로 집계 — customerId 없이 저장된 이전 처방도 포함
+    var nameEl = document.getElementById('cName');
+    var name = nameEl ? nameEl.value.trim() : '';
+    var count = name
+      ? CustomerDB.searchPrescriptions({ name: name }).length
+      : CustomerDB.countPrescriptions(customerId);
     var pill = document.getElementById('historyPill');
     if (!pill) return;
     if (count > 0) {
