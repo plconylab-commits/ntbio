@@ -1284,7 +1284,7 @@ function render(){
     const lt=it.sp*it.qty;
     const dateDisp=it.date?it.date.slice(5).replace('-','/'):'';
     // ★ cost 항목: 'cost_' prefix OR 비용 항목명 직접 매칭 (##TN## 재임포트 시 i 복원 전 호환)
-    const isCost=(it.i&&it.i.startsWith('cost_'))||/^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/.test(it.name);
+    const isCost=(typeof it.i==='string'&&it.i.startsWith('cost_'))||/^(운송비|지게차|운반비|하차비|상차비|배송비|포장비)$/.test(it.name);
     const byeoldoBorder=isCost&&it.byeoldo?'border:2px solid #1565C0;':'';
     const byeoldoBadge=isCost?`<button onclick="toggleByeoldoItem(${i})"
       style="font-size:11px;padding:3px 10px;border-radius:20px;border:1.5px solid ${it.byeoldo?'#1565C0':'#bbb'};
