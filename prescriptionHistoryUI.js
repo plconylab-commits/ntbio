@@ -286,20 +286,12 @@
       };
     });
 
-    _setVal('cName',   (copy.customer && copy.customer.name)   || '');
-    _setVal('cRegion', (copy.customer && copy.customer.region) || '');
-    _setVal('cArea',   (copy.customer && copy.customer.area)   || '');
-    _setVal('gDisc',   copy.discountRate || 0);
-
-    var cropEl = document.getElementById('cCrop');
-    if (cropEl && copy.customer && copy.customer.crop) {
-      cropEl.value = copy.customer.crop;
-    }
-
+    // 템플릿 사용: 제품 목록만 교체 — 고객 정보(이름/주소/면적/할인율)는 현재 입력값 유지
     if (typeof applyGlobalDisc === 'function') applyGlobalDisc();
     if (typeof render          === 'function') render();
     if (typeof syncPrint       === 'function') syncPrint();
 
+    if (typeof showToast === 'function') showToast('템플릿 제품 불러옴 — 수정 후 발행하세요');
     _hideTmplBanner();
   }
 
