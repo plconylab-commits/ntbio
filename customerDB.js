@@ -149,6 +149,34 @@
       }).sort(function(a, b) { return b.savedAt.localeCompare(a.savedAt); });
     },
 
+    /** 처방이력에서 고객명 검색 — DB에 없는 고객도 포함 */
+    searchFromHistory: function(query) {
+      if (!query) return [];
+      var q = query.trim().toLowerCase();
+      var savedNames = _get(KEYS.customers).reduce(function(m, c) {
+        m[c.name] = true; return m;
+      }, {});
+      var seen = {};
+      var results = [];
+      _get(KEYS.prescriptions).forEach(function(p) {
+        if (!p.customer || !p.customer.name) return;
+        var name = p.customer.name;
+        if (!name.toLowerCase().includes(q)) return;
+        if (savedNames[name] || seen[name]) return;
+        seen[name] = true;
+        results.push({
+          fromHistory: true,
+          name: name,
+          crop: (p.customer.crop) || '',
+          region: (p.customer.region) || '',
+          area: (p.customer.area) || 0,
+          phone: (p.customer.phone) || '',
+          addr: (p.customer.addr) || ''
+        });
+      });
+      return results;
+    },
+
     /** 개별 처방이력 삭제 */
     deletePrescription: function(id) {
       var list = _get(KEYS.prescriptions);

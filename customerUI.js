@@ -120,16 +120,28 @@
       results.forEach(function(customer) {
         var item = document.createElement('div');
         item.className = 'cust-ac-item';
-        item.setAttribute('data-id', customer.id);
-        var count = CustomerDB.countPrescriptions(customer.id);
-        var badge = count > 0 ? '<span class="cust-ac-badge">' + count + '건</span>' : '';
         var sub = [customer.crop, customer.region].filter(Boolean).join(' / ');
         var subHtml = sub ? '<span class="cust-ac-sub">' + _esc(sub) + '</span>' : '';
-        item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + subHtml + badge;
-        item.addEventListener('mousedown', function(e) {
-          e.preventDefault(); // blur 전에 클릭 처리
-          _onAcItemClick(customer.id);
-        });
+
+        if (customer.fromHistory) {
+          // 처방이력에만 있는 고객
+          var histBadge = '<span class="cust-ac-badge" style="background:#e8a000">이력</span>';
+          item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + subHtml + histBadge;
+          item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            _fillFormFromHistory(customer);
+          });
+        } else {
+          // DB에 저장된 고객
+          item.setAttribute('data-id', customer.id);
+          var count = CustomerDB.countPrescriptions(customer.id);
+          var badge = count > 0 ? '<span class="cust-ac-badge">' + count + '건</span>' : '';
+          item.innerHTML = '<span class="cust-ac-name">' + _highlightMatch(customer.name, query) + '</span>' + subHtml + badge;
+          item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            _onAcItemClick(customer.id);
+          });
+        }
         ac.appendChild(item);
       });
     }
@@ -154,8 +166,9 @@
     var query = (document.getElementById('cName') || {}).value || '';
     query = query.trim();
     if (query.length < 1) { _closeAutocomplete(); return; }
-    var results = CustomerDB.search(query);
-    _renderAutocomplete(results, query);
+    var dbResults = CustomerDB.search(query);
+    var histResults = CustomerDB.searchFromHistory ? CustomerDB.searchFromHistory(query) : [];
+    _renderAutocomplete(dbResults.concat(histResults), query);
   }
 
   function _onNameKeydown(e) {
@@ -188,6 +201,23 @@
   function _onAcItemClick(id) {
     var customer = CustomerDB.findById(id);
     if (customer) _onCustomerSelect(customer);
+  }
+
+  /** 처방이력에만 있는 고객 — 폼 채우고 저장 안내 */
+  function _fillFormFromHistory(data) {
+    _setVal('cName',   data.name || '');
+    _setVal('cPhone',  data.phone || '');
+    _setVal('cAddr',   data.addr || '');
+    _setVal('cRegion', data.region || '');
+    _setVal('cArea',   data.area != null ? data.area : '');
+    var cropEl = document.getElementById('cCrop');
+    if (cropEl && data.crop) {
+      var opt = Array.from(cropEl.options).find(function(o) { return o.value === data.crop; });
+      if (opt) cropEl.value = data.crop;
+    }
+    _closeAutocomplete();
+    _updateHistoryBadge(null);
+    if (typeof showToast === 'function') showToast('처방이력에서 불러왔습니다. "고객 저장"을 누르면 DB에 등록됩니다.');
   }
 
   // ── 고객 선택 및 폼 채우기 ──────────────────────────────────────────────────
