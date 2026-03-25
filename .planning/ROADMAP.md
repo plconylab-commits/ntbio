@@ -91,6 +91,17 @@ Plans:
 
 ---
 
+### Phase 999.2: 클라우드 동기화 (BACKLOG)
+
+**Goal:** 여러 장소(집/회사/외부)에서 동일한 고객 DB·처방이력·거래 데이터를 공유할 수 있도록 localStorage를 클라우드 DB(Firebase 또는 Supabase)로 이전한다
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd:review-backlog when ready)
+
+---
+
 ## Progress
 
 **Execution Order:**
