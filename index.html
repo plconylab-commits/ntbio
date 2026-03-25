@@ -540,8 +540,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="cust-bar">
       <div class="sec-title">① 고객 정보</div>
       <div class="cust-row1">
-        <div class="fg"><label>고객명</label>
-          <input id="cName" placeholder="홍길동" oninput="syncPrint()" onblur="checkUnpaidOnCustomer()"></div>
+        <div class="fg" style="position:relative"><label>고객명</label>
+          <input id="cName" placeholder="홍길동" oninput="syncPrint()" onblur="checkUnpaidOnCustomer()" autocomplete="off">
+          <span id="historyPill" class="cust-history-pill" style="display:none"></span>
+          <div id="custAutocomplete" style="display:none"></div>
+        </div>
         <div class="fg"><label>연락처</label>
           <input id="cPhone" placeholder="010-0000-0000" oninput="fmtPhone(this,'cPhone');syncPrint()" onblur="checkUnpaidOnCustomer()" maxlength="14"></div>
       </div>
@@ -557,8 +560,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="cust-row2">
         <div class="fg"><label>주소</label>
           <input id="cAddr" placeholder="경기도 이천시" oninput="syncPrint()"></div>
-        <div class="fg disc"><label>할인율 (%)</label>
-          <input id="gDisc" type="number" value="0" min="0" max="100" oninput="applyGlobalDisc()"></div>
+        <div class="fg disc" style="position:relative"><label>할인율 (%)</label>
+          <input id="gDisc" type="number" value="0" min="0" max="100" oninput="applyGlobalDisc()">
+          <span id="discTempBadge" style="display:none">임시 변경 — 저장 안됨</span>
+          <a id="discSaveLink" style="display:none">이 할인율을 기본값으로 저장</a>
+        </div>
       </div>
       <div class="cust-row2">
         <div class="fg"><label>계산서 발행일</label>
@@ -591,6 +597,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
             <option>캠벨(포도)</option><option>콩</option><option>콩나물</option>
             <option>파프리카</option>
           </select></div>
+      </div>
+      <div class="cust-actions">
+        <button class="cust-save-btn" id="custSaveBtn">고객 저장</button>
+        <button class="cust-del-btn" id="custDelBtn" style="display:none">고객 삭제</button>
       </div>
     </div>
 
@@ -803,6 +813,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="uiController.js?v=3"></script>
 <script src="main.js?v=2"></script>
 <script src="customerDB.js?v=1"></script>
+<script src="customerUI.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -1733,8 +1744,17 @@ function goToPrescription(){
     crop:document.getElementById('cCrop').value||'',
     cart:cart
   };
-  // 이전 처방 단계 초기화 — 새 고객 처방전은 항상 빈 상태로 시작
-  localStorage.removeItem('rxStages');
+  // ★ rxStages 삭제 금지 — 처방전에서 작업 중이던 단계가 유실됨
+  // 기존 고객과 동일한 처방인지 비교: 이름이 다르면 newPrescription 플래그로 처방전에 알림
+  const savedStages = localStorage.getItem('rxStages');
+  if(savedStages){
+    try{
+      const sv=JSON.parse(savedStages);
+      const savedName=sv.rxName||'';
+      // 고객명이 다르면 "새 처방" 플래그 전달, 처방전이 확인 후 결정
+      if(savedName && savedName !== data.name) data._newPrescription=true;
+    }catch(e){}
+  }
   localStorage.setItem('rxData',JSON.stringify(data));
   window.location.href='처방전.html';
 }
