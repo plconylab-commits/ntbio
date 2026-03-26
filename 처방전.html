@@ -3552,26 +3552,53 @@ function generateSummaryCardHtml(areaNum) {
 
   if (!orderedMks.length) return '';
 
-  // 그룹 레이블 스마트 추출: 단계의 month → "N월", 아니면 groupLabel에서 숫자월 추출
+  // 그룹 레이블 스마트 추출
+  // 우선순위: realMonth → st.month → purpose/stageLabel 텍스트 → groupLabel 텍스트 → 기비용
   function getMonthLabel(mk) {
     const stagesInGroup = groups[mk] || [];
-    // 1. st.month 기준으로 다수결 추출
-    const months = stagesInGroup.map(st => parseInt(st.month)).filter(m => m >= 1 && m <= 12);
-    if (months.length) {
+
+    // 1. realMonth (PDF 파싱 시 가짜 월 부여 전 보존된 진짜 월) 우선
+    //    그 다음 st.month (1-12 범위 직접)
+    const realMonths = stagesInGroup.map(st => {
+      const rm = parseInt(st.realMonth);
+      if (rm >= 1 && rm <= 12) return rm;
+      const m = parseInt(st.month);
+      if (m  >= 1 && m  <= 12) return m;
+      return null;
+    }).filter(Boolean);
+    if (realMonths.length) {
       const freq = {};
-      months.forEach(m => { freq[m] = (freq[m]||0) + 1; });
-      const top = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+      realMonths.forEach(m => { freq[m] = (freq[m]||0)+1; });
+      const top = parseInt(Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]);
       return top + '월';
     }
-    // 2. groupLabel에서 숫자월 패턴 추출 ("5월", "5 월", "5월:01")
+
+    // 2. stage 필드(purpose·stageLabel·stageLabelOverride)에서 "N월" 패턴
+    for (const st of stagesInGroup) {
+      for (const text of [st.purpose||'', st.stageLabel||'', st.stageLabelOverride||'']) {
+        const pm = text.match(/(\d{1,2})\s*월/);
+        if (pm) return parseInt(pm[1]) + '월';
+      }
+    }
+
+    // 3. groupLabel에서 "N월" 패턴
     const lbl = groupLabels[mk] || '';
     const mMatch = lbl.match(/(\d{1,2})\s*월/);
-    if (mMatch) return mMatch[1] + '월';
-    // 3. mk 자체가 월 번호
+    if (mMatch) return parseInt(mMatch[1]) + '월';
+
+    // 4. mk 자체가 월 번호 (1-12)
     if (mk >= 1 && mk <= 12) return mk + '월';
-    // 4. 짧은 레이블 그대로 ('기비용', '기비', '기타' 등)
-    if (lbl) return lbl.length <= 5 ? lbl : lbl.substring(0, 4);
-    return String(mk);
+
+    // 5. 기비용: month=0 이거나 기비/경운/토양 키워드
+    const hasBase = stagesInGroup.some(st =>
+      parseInt(st.month) === 0 ||
+      /기비|밑거름|경운|토양/.test((st.stageLabel||'')+(st.purpose||''))
+    );
+    if (hasBase || mk === 0 || !stagesInGroup.length) return '기비용';
+
+    // 6. 짧은 레이블 그대로 (기타 케이스)
+    if (lbl && lbl.length <= 6) return lbl;
+    return '기비용';
   }
 
   function groupTotal(mk) {
@@ -5043,9 +5070,11 @@ function parseRxPdfText(pageTexts) {
     // 경운전/경운후(기비)는 month=0 고정
     const isBasePage = hits.every(h => h.type === '경운전' || h.type === '경운후');
     let pageMonth = 0;
+    let realPageMonth = 0; // 요약카드용 진짜 월 (가짜 월 할당 전 보존)
     if (!isBasePage) {
       const mm = pg.match(/(\d{1,2})월/);
       pageMonth = mm ? parseInt(mm[1]) : 0;
+      realPageMonth = pageMonth; // ← 진짜 월 기억
       // 같은 월이 이미 다른 페이지에서 사용됐으면 가상의 고유 월 부여 (100+페이지인덱스)
       if (usedMonths[pageMonth] !== undefined) {
         pageMonth = 100 + result.stages.length;
@@ -5060,7 +5089,8 @@ function parseRxPdfText(pageTexts) {
       const section = pg.slice(sh.end, nextPos);
 
       // sh.label이 있으면 purpose로 사용 (없으면 기비 페이지에서 나중에 채워짐)
-      const stage = { type: sh.type, month: pageMonth, products: [], purpose: sh.label || '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
+      // realMonth: 요약카드에서 "5월" 레이블 추출용 (가짜 pageGroup 번호와 무관)
+      const stage = { type: sh.type, month: pageMonth, realMonth: realPageMonth, products: [], purpose: sh.label || '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
       result.stages.push(stage);
       stagesThisPage.push(stage);
 
@@ -5599,7 +5629,7 @@ function _saveRxStages() {
   try {
     localStorage.setItem('rxStages', JSON.stringify({
       stages: stages.map(s => ({
-        type: s.type, month: s.month||0, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType||'', days: s.days||'', dateRange: s.dateRange||'',
+        type: s.type, month: s.month||0, realMonth: s.realMonth??null, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType||'', days: s.days||'', dateRange: s.dateRange||'',
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null,
         typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',
