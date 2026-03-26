@@ -338,6 +338,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   body.print-au .au-tb-btn{display:none!important;}
   body.print-au .au-topbar{position:static!important;}
   .ord-item{display:none!important;}  /* 화면용 카드 숨김 */
+
+  /* 푸터가 표와 같은 페이지에 유지 */
+  .p-footer-tbl{page-break-inside:avoid;break-inside:avoid;}
+  .p-wrap{page-break-inside:avoid;break-inside:avoid;page-break-after:always;break-after:always;min-height:254mm;}
+  .p-wrap:last-child{page-break-after:auto;break-after:auto;}
 }
 
 /* 인쇄 문서 (화면에서는 숨김) */
@@ -353,7 +358,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   width:100%;
   display:flex;
   flex-direction:column;
-  min-height:254mm; /* A4(297mm) - 상하여백(24mm) - 여유(19mm) */
   box-sizing:border-box;
 }
 .p-body{flex:1;display:flex;flex-direction:column;}
