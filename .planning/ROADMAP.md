@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: 고객 DB + 할인율** - 고객 자동완성, 할인율 저장/자동 적용, JSON 백업 (completed 2026-03-25)
 - [x] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천 (completed 2026-03-25)
 - [x] **Phase 4: 거래이력 + 미수금 + 매출** - 납부 기록, 미수금 목록, 기간별 매출 집계 (completed 2026-03-25)
+- [ ] **Phase 5: 거래명세표 인쇄/PDF 버그 수정** - 구버전 PDF 불러오기, 푸터 오버플로 방지, ##TN## 숨김, 다중 페이지 양식 반복
 
 ## Phase Details
 
@@ -81,6 +82,19 @@ Plans:
 - [ ] 04-02-PLAN.md — salesHistoryUI.js: 매출 집계 오버레이 + 고객별 요약 배지 + script 연결
 **UI hint**: yes
 
+### Phase 5: 거래명세표 인쇄/PDF 버그 수정
+**Goal**: 거래명세표의 인쇄·PDF 저장이 정확하게 동작하고, 구버전 PDF도 불러올 수 있다
+**Depends on**: Phase 4
+**Requirements**: PRINT-01, PRINT-02, PRINT-03, PRINT-04
+**Success Criteria** (what must be TRUE):
+  1. ##TN## 마커가 없는 구버전 외부 거래명세표 PDF를 업로드하면 적절히 안내하거나 파싱 시도한다
+  2. 14행 이하 제품일 때 인쇄하면 푸터가 항상 같은 페이지 표 아래에 붙어 출력된다
+  3. 브라우저 인쇄 및 PDF 저장 어느 방식으로도 ##TN## 코드 페이지가 출력물에 나타나지 않는다
+  4. 15행 이상 제품이 있을 때 2페이지 이상으로 나뉘며 각 페이지에 헤더·표·푸터가 완전히 반복된다
+**Plans:** 0/1 plans
+Plans:
+- [ ] 05-01-PLAN.md — 거래명세표 인쇄/PDF 4가지 버그 수정
+
 ## Backlog
 
 ### Phase 999.1: 거래명세표 처방전 PDF 업로드 오류 (BACKLOG)
@@ -116,3 +130,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. 고객 DB + 할인율 | 2/2 | Complete   | 2026-03-25 |
 | 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
 | 4. 거래이력 + 미수금 + 매출 | 1/2 | Complete    | 2026-03-25 |
+| 5. 거래명세표 인쇄/PDF 버그 수정 | 0/1 | Pending | — |
