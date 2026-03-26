@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Completed 04-sales-history-01-PLAN.md
-last_updated: "2026-03-25T14:10:59.377Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05-pdf-01-PLAN.md
+last_updated: "2026-03-26T02:22:28.016Z"
 progress:
-  total_phases: 7
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** 처방전 PDF(또는 기존 처방 데이터)를 불러오면 거래명세표가 자동으로 완성되어야 한다 — 최소한의 수작업으로.
-**Current focus:** Phase 3 — 처방이력 + 템플릿
+**Current focus:** Phase 5 — 거래명세표 인쇄/PDF 버그 수정
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
+Phase: 5 (거래명세표 인쇄/PDF 버그 수정) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Plan: Not started
 | Phase 03-history P01 | 5 | 2 tasks | 3 files |
 | Phase 03-history P02 | 3 | 1 tasks | 1 files |
 | Phase 04-sales-history P01 | 8 | 2 tasks | 2 files |
+| Phase 05-pdf P01 | 2 | 4 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 03-history]: 템플릿 배너 버튼 이벤트: document click delegation 방식 — 동적 삽입 요소 이벤트 안전 처리
 - [Phase 04-sales-history]: listTransactions statusFilter: 없으면 삭제됨 제외, 'unpaid'이면 미입금/일부입금만 포함
 - [Phase 04-sales-history]: customerKey 로직을 customerDB.js 내부에 인라인 구현 — index.html 전역 함수 의존 없이 독립 동작
+- [Phase 05-pdf]: ##TN## 저장 방식: addPage(연한회색) → pdf.setProperties(subject) 메타데이터로 이동 — 출력물 완전 불가시
+- [Phase 05-pdf]: doPdf async 전환: .then() 체인 제거, .p-wrap별 개별 html2canvas 캡처로 다중 페이지 정확 분리
 
 ### Pending Todos
 
@@ -91,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T11:02:01.986Z
-Stopped at: Completed 04-sales-history-01-PLAN.md
+Last session: 2026-03-26T02:22:28.013Z
+Stopped at: Completed 05-pdf-01-PLAN.md
 Resume file: None

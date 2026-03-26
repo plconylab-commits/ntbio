@@ -46,10 +46,10 @@
 
 ### 거래명세표 인쇄/PDF
 
-- [ ] **PRINT-01**: 구버전 외부 거래명세표 PDF(##TN## 마커 없음)를 업로드하면 올바르게 불러온다
-- [ ] **PRINT-02**: 인쇄 시 푸터(합계/서명란)가 페이지 경계에서 잘리거나 다음 페이지로 단독 넘어가지 않는다
-- [ ] **PRINT-03**: PDF 저장 및 인쇄 시 ##TN## 데이터 코드 페이지가 출력물에 나타나지 않는다
-- [ ] **PRINT-04**: 제품이 많아 2페이지 이상 필요할 때 각 페이지에 헤더·표·푸터가 포함된 완전한 양식이 반복된다
+- [x] **PRINT-01**: 구버전 외부 거래명세표 PDF(##TN## 마커 없음)를 업로드하면 올바르게 불러온다
+- [x] **PRINT-02**: 인쇄 시 푸터(합계/서명란)가 페이지 경계에서 잘리거나 다음 페이지로 단독 넘어가지 않는다
+- [x] **PRINT-03**: PDF 저장 및 인쇄 시 ##TN## 데이터 코드 페이지가 출력물에 나타나지 않는다
+- [x] **PRINT-04**: 제품이 많아 2페이지 이상 필요할 때 각 페이지에 헤더·표·푸터가 포함된 완전한 양식이 반복된다
 
 ## v2 Requirements
 
@@ -95,10 +95,10 @@
 | SALE-03 | Phase 4 | Complete |
 | SALE-04 | Phase 4 | Pending |
 | SALE-05 | Phase 4 | Pending |
-| PRINT-01 | Phase 5 | Pending |
-| PRINT-02 | Phase 5 | Pending |
-| PRINT-03 | Phase 5 | Pending |
-| PRINT-04 | Phase 5 | Pending |
+| PRINT-01 | Phase 5 | Complete |
+| PRINT-02 | Phase 5 | Complete |
+| PRINT-03 | Phase 5 | Complete |
+| PRINT-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
