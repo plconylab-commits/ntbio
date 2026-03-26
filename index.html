@@ -2501,6 +2501,11 @@ function onPdfSelected(input){
         applyParsedInvoice(parsed);
         return;
       }
+      // 2.5순위: ##TN## 없지만 거래명세표 텍스트가 포함된 PDF (구버전)
+      if(/거래명세표/.test(text)||/거래명세표/.test(compact)){
+        showToast('구버전 거래명세표는 자동 불러오기를 지원하지 않습니다.\n앱에서 직접 입력해 주세요.', true);
+        return;
+      }
       // 3순위: 나머지 모든 PDF → Vision AI (스캔 처방전 포함)
       handlePrescriptionUpload(file);
     }).catch(err=>{
