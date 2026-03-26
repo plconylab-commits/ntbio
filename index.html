@@ -3254,10 +3254,9 @@ function _applyOldInv(append){
     if(typeof shortenRegion==='function')
       document.getElementById('cRegion').value=shortenRegion(op.addr);
   }
-  // 카트 적용
+  // 카트 적용 — PDF 순서 그대로 유지 (sortCart 미호출)
   if(!append) cart=[];
   op.items.forEach(it=>cart.push(it));
-  if(typeof sortCart==='function') sortCart();
   if(typeof render==='function') render();
   if(typeof syncPrint==='function') syncPrint();
   if(typeof checkUnpaidOnCustomer==='function') checkUnpaidOnCustomer();
