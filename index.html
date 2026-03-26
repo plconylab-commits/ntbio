@@ -1641,18 +1641,16 @@ function doPdf(){
       if(remaining > 0){ pdf.addPage(); y = 6; }
     }
 
-    // ── 마지막에 ##TN## 데이터를 별도 페이지 텍스트로 삽입
-    // (pdf.js는 모든 페이지 텍스트를 읽으므로 가장 신뢰성 높음)
+    // ── ##TN## 데이터를 PDF 메타데이터에 저장 (페이지에 보이지 않음)
     if(_tnLines.length>0){
       try{
-        pdf.addPage();
-        pdf.setFontSize(5);
-        pdf.setTextColor(240,240,240); // 연한 회색 - 사람 눈에는 거의 안 보임
-        for(var li=0;li<_tnLines.length;li++){
-          pdf.text(_tnLines[li],2,5+li*4);
-        }
-        pdf.setTextColor(0,0,0);
-      }catch(e){console.error('##TN## 페이지 삽입 실패:',e);}
+        const tnFull=_tnLines.join('');
+        pdf.setProperties({
+          title: filename.replace('.pdf',''),
+          subject: tnFull,
+          keywords: 'TN_DATA'
+        });
+      }catch(e){console.error('##TN## 메타데이터 삽입 실패:',e);}
     }
 
     pdf.save(filename);
@@ -2481,9 +2479,10 @@ function onPdfSelected(input){
   if(cart.length&&!confirm('기존 카트를 비우고 PDF를 불러올까요?'))return;
 
   const reader=new FileReader();
-  reader.onload=function(e){
+  reader.onload=async function(e){
     const data=new Uint8Array(e.target.result);
-    extractPdfText(data).then(text=>{
+    try{
+      const text=await extractPdfText(data);
       // 1순위: 처방전 PDF 감지 (##RX## 임베드)
       const compact=text.replace(/\s+/g,'');
       const rxm=compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
@@ -2493,13 +2492,23 @@ function onPdfSelected(input){
         catch(e){console.error('[PDF] ##RX## JSON 파싱 실패:',e);}
         if(d){
           console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
-          applyRxPdfEmbed(d); // 에러 발생 시 아래 .catch()로 전달
+          applyRxPdfEmbed(d);
           return;
         }
       }
+      // 메타데이터에서 ##TN## 데이터 추출 시도 (신규 PDF 포맷)
+      let metaText='';
+      try{
+        const pdfDoc=await pdfjsLib.getDocument({data}).promise;
+        const meta=await pdfDoc.getMetadata();
+        if(meta&&meta.info&&meta.info.Subject){
+          metaText=meta.info.Subject;
+        }
+      }catch(e){}
+      const combined=compact+(metaText?metaText.replace(/\s+/g,''):'');
       // 2순위: 거래명세표 PDF (##TN## 마커 있을 때만 텍스트 파싱)
-      if(compact.includes('##TN##')){
-        const parsed=parsePdfInvoice(text);
+      if(combined.includes('##TN##')){
+        const parsed=parsePdfInvoice(text+'\n'+metaText);
         window._invConfirmParsed=parsed;      // 모달에서 참조
         window._invParsedItems=parsed.items; // items 보존
         applyParsedInvoice(parsed);
@@ -2512,10 +2521,10 @@ function onPdfSelected(input){
       }
       // 3순위: 나머지 모든 PDF → Vision AI (스캔 처방전 포함)
       handlePrescriptionUpload(file);
-    }).catch(err=>{
+    }catch(err){
       console.error('[PDF] 오류:', err);
       showToast('PDF 읽기 실패: '+err.message, true);
-    });
+    }
   };
   reader.readAsArrayBuffer(file);
 }
