@@ -1301,8 +1301,8 @@ function render(){
              cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">별도</button>`:'';
     return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()" style="${byeoldoBorder}">
       <div class="ord-top">
-        <input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
         ${it.size?`<span class="ord-size">${it.size}</span>`:''}
+        <input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
         <button class="del-btn" onclick="removeItem(${i})">✕</button>
       </div>
       <div class="ord-ctrl">
