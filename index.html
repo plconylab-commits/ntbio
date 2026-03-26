@@ -2566,70 +2566,78 @@ function extractPdfText(data){
  * 순수 숫자 토큰 4개(qty, retail, supply, total)로 파싱
  */
 function parseOldInvoice(text){
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
-  let customerName='', phone='', addr='';
+  // pdfjs는 줄바꿈 없이 공백으로 이어붙이므로 토큰 스트림으로 파싱
+  const isNum=t=>/^\d+(,\d{3})*$/.test(t);
 
-  // 고객명: "XXX님(귀하)" 또는 "XXX(귀하)" 패턴
-  for(const line of lines){
-    const m=line.match(/(.+?)님?\(귀하\)/);
-    if(m){ customerName=m[1].replace(/\s/g,''); break; }
+  // 고객명: 한글만 허용해 greedy 오탐 방지 — "박봉태님(귀하)" → "박봉태"
+  let customerName='';
+  const nameM=text.match(/([가-힣]+)\s*님?\s*\(\s*귀\s*하\s*\)/);
+  if(nameM) customerName=nameM[1].replace(/\s/g,'');
+
+  // 연락처+주소: 전화번호 바로 앞 한글·숫자 문자열을 주소로 추출
+  let phone='', addr='';
+  const phoneAddrM=text.match(/([가-힣][가-힣\s\d\-\.]+\d)\s*[\(（](0\d{2}-\d{3,4}-\d{4})[\)）]/);
+  if(phoneAddrM){
+    addr=phoneAddrM[1].replace(/\s+/g,' ').trim();
+    phone=phoneAddrM[2];
+  }else{
+    const phoneM=text.match(/(0\d{2}-\d{3,4}-\d{4})/);
+    if(phoneM) phone=phoneM[1];
   }
 
-  // 연락처·주소: 전화번호가 포함된 행
-  for(const line of lines){
-    const pm=line.match(/(0\d{2}-\d{3,4}-\d{4})/);
-    if(pm){
-      phone=pm[1];
-      addr=line.replace(/[\(\)]/g,' ').replace(pm[1],'').trim();
-      break;
-    }
-  }
+  // 제품 테이블: 토큰 스트림에서 "수량" 이후를 파싱
+  const allToks=text.split(/\s+/).filter(t=>t.length>0);
+  const HDR=new Set(['소비자','공급가','합','계','소비자가','공급가액']);
+  const STOP=/^(천연비료회사|농협|합계금액)/;
 
-  // 제품 테이블: "품목"+"수량" 헤더 행 이후
-  let tableStart=-1;
-  for(let i=0;i<lines.length;i++){
-    if(/품목/.test(lines[i])&&/수량/.test(lines[i])){ tableStart=i+1; break; }
+  let hi=-1;
+  for(let i=0;i<allToks.length;i++){
+    if(allToks[i]==='수량'){ hi=i+1; break; }
   }
+  if(hi<0) return{customerName,phone,addr,items:[]};
+  // 헤더 잔여 토큰(소비자 공급가 합 계 등) 건너뜀
+  while(hi<allToks.length && HDR.has(allToks[hi])) hi++;
 
   const items=[];
-  if(tableStart>=0){
-    for(let i=tableStart;i<lines.length;i++){
-      const line=lines[i];
-      if(/합계금액|합\s*계\s*금액|천연비료회사|농협/.test(line)) break;
+  let i=hi;
+  while(i<allToks.length){
+    if(STOP.test(allToks[i])) break;
 
-      const tokens=line.split(/\s+/).filter(t=>t.length>0);
-      // 순수 숫자 토큰(1,000 형식 포함)과 텍스트 토큰 분리
-      const numToks=tokens.filter(t=>/^\d+(,\d{3})*$/.test(t))
-                          .map(t=>parseInt(t.replace(/,/g,''),10));
-      const txtToks=tokens.filter(t=>!/^\d+(,\d{3})*$/.test(t));
-
-      // qty | retail | supply | total — 최소 4개 숫자 필요
-      if(numToks.length<4) continue;
-      const qty    =numToks[numToks.length-4];
-      const supply =numToks[numToks.length-2]; // 공급가(단가)
-      const total  =numToks[numToks.length-1];
-      if(!qty||qty>9999||total<=0) continue;
-
-      // 규격: 마지막 텍스트 토큰이 숫자+단위 형태이면 spec으로 분리
-      let spec='', name='';
-      const lastTxt=txtToks[txtToks.length-1]||'';
-      if(txtToks.length>1&&/^\d+[a-zA-Z가-힣]+$/i.test(lastTxt)){
-        spec=lastTxt;
-        name=txtToks.slice(0,-1).join(' ');
-      }else{
-        name=txtToks.join(' ');
-      }
-      if(!name) continue;
-
-      items.push({
-        i:'old_'+Date.now()+'_'+Math.random().toString(36).slice(2),
-        name, size:spec,
-        retail:supply, disc:0, sp:supply,
-        qty, gift:false, custom:true
-      });
+    // 텍스트 토큰 수집 (제품명·규격)
+    const txtBuf=[];
+    while(i<allToks.length && !isNum(allToks[i]) && !STOP.test(allToks[i])){
+      txtBuf.push(allToks[i]); i++;
     }
+    if(STOP.test(allToks[i])) break;
+
+    // 연속 숫자 토큰 수집 (qty retail supply total)
+    const numBuf=[];
+    while(i<allToks.length && isNum(allToks[i])){
+      numBuf.push(parseInt(allToks[i].replace(/,/g,''),10)); i++;
+    }
+
+    if(numBuf.length>=4 && txtBuf.length>0){
+      const qty   =numBuf[numBuf.length-4];
+      const supply=numBuf[numBuf.length-2];
+      const total =numBuf[numBuf.length-1];
+      if(qty>0 && qty<=9999 && total>0){
+        const lastTxt=txtBuf[txtBuf.length-1]||'';
+        let spec='',name='';
+        if(txtBuf.length>1 && /^\d+[a-zA-Z가-힣]+$/i.test(lastTxt)){
+          spec=lastTxt; name=txtBuf.slice(0,-1).join(' ');
+        }else{
+          name=txtBuf.join(' ');
+        }
+        if(name) items.push({
+          i:'old_'+Date.now()+'_'+Math.random().toString(36).slice(2),
+          name, size:spec, retail:supply, disc:0, sp:supply,
+          qty, gift:false, custom:true
+        });
+      }
+    }
+    // txtBuf만 있고 숫자 없으면 → 다음 토큰으로 (날짜·잡문 스킵)
   }
-  return{customerName, phone, addr, items};
+  return{customerName,phone,addr,items};
 }
 
 function parsePdfInvoice(text){
