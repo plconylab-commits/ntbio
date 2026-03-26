@@ -3580,28 +3580,6 @@ function generateSummaryCardHtml(areaNum) {
     </tr>`;
   }).join('');
 
-  // 단계별 제품 상세 행
-  const stageRows = orderedMks.flatMap(mk => {
-    return (groups[mk]||[]).flatMap(st => {
-      const prods = (st.products||[]).filter(p => p.key);
-      if (!prods.length) return [];
-      const lbl = getStageLabelRaw(st);
-      return prods.map((p, i) => {
-        const [pName, pSize] = p.key.split('||');
-        const spAmt    = getSpAmt(p.key);
-        const retAmt   = getRetailAmt(p.key);
-        const qty      = parseFloat(p.qty) || 0;
-        const tot      = Math.round(spAmt * qty);
-        const unit     = p.unit || '병';
-        const detail   = `${pName}${pSize ? ' ' + pSize : ''}　소매(${retAmt ? retAmt.toLocaleString() : '-'})　공급가${spAmt ? spAmt.toLocaleString() : ''}　수량(${qty}${unit})　계=${tot ? tot.toLocaleString() + '원' : '-'}`;
-        return `<tr>
-          ${i === 0 ? `<td class="sc-stage" rowspan="${prods.length}">${lbl.replace(/\n/g,'<br>')}</td>` : ''}
-          <td class="sc-prod-detail" colspan="2">${detail}</td>
-        </tr>`;
-      });
-    });
-  }).join('');
-
   const title = `${region||''}지역 ${crop||''}${area ? '(' + area + '평)' : ''}농사 ${name||''}님 처방전`;
 
   return `<div class="page-card" data-pagekey="cost">
@@ -3613,7 +3591,6 @@ function generateSummaryCardHtml(areaNum) {
           </thead>
           <tbody>
             ${monthRows}
-            ${stageRows}
             <tr class="sc-cust-row">
               <td colspan="3">${name||''}님&nbsp;&nbsp;전화:${phone||'-'}&nbsp;&nbsp;${addr||''}</td>
             </tr>
