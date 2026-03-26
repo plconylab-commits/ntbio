@@ -1885,7 +1885,8 @@ function _buildPrescrSnapshot(){
     totals: {
       supply:     cart.filter(function(c){return !c.gift;}).reduce(function(s,c){return s+c.sp*c.qty;},0),
       grandTotal: Math.round(cart.filter(function(c){return !c.gift;}).reduce(function(s,c){return s+c.sp*c.qty;},0) * ((document.getElementById('vatChk')||{}).checked ? 1.1 : 1))
-    }
+    },
+    rxStages: (function(){ try{ return JSON.parse(localStorage.getItem('rxStages')); } catch(e){ return null; } })()
   };
 }
 

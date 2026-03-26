@@ -342,33 +342,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   outline-offset:-2px;
 }
 
-/* ── floating bottom menu ── */
-#rx-cell-menu{position:fixed;z-index:9998;background:#fff;border-radius:8px;
-  box-shadow:0 4px 20px rgba(0,0,0,.25);padding:6px 8px;display:none;gap:6px;
-  flex-direction:row;align-items:center;}
-#rx-cell-menu.on{display:flex;}
-#rx-cell-menu button{padding:5px 11px;border:1.5px solid var(--teal);border-radius:6px;
-  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
-#rx-cell-menu .rxm-merge{background:var(--teal);color:#fff;}
-#rx-cell-menu .rxm-merge:hover{background:var(--teal-dark);}
-#rx-cell-menu .rxm-split{background:#fff;color:var(--teal-dark);}
-#rx-cell-menu .rxm-split:hover{background:var(--teal-light);}
-#rx-cell-menu .rxm-clear{background:#fff;color:#888;border-color:#ccc;}
-#rx-cell-menu .rxm-clear:hover{background:#f5f5f5;}
-
-/* ── 우클릭 컨텍스트 메뉴 ── */
-#rx-ctx-menu{position:fixed;z-index:10000;display:none;background:#fff;
-  border-radius:8px;min-width:148px;padding:4px 0;
-  box-shadow:0 4px 24px rgba(0,0,0,.22);border:1px solid #e0e0e0;}
-#rx-ctx-menu .rxctx-item{display:flex;align-items:center;gap:8px;
-  padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
-  color:#333;transition:background .1s,color .1s;}
-#rx-ctx-menu .rxctx-item:hover{background:#f0f9f9;color:var(--teal-dark);}
-#rx-ctx-menu .rxctx-item.rxctx-danger{color:#c62828;}
-#rx-ctx-menu .rxctx-item.rxctx-danger:hover{background:#fff5f5;}
-#rx-ctx-menu .rxctx-item:disabled,
-#rx-ctx-menu .rxctx-item[data-disabled]{opacity:.35;pointer-events:none;}
-#rx-ctx-menu .rxctx-sep{height:1px;background:#eee;margin:4px 0;}
 #coverEditor{position:fixed;z-index:9999;background:#fff;border-radius:14px;
   box-shadow:0 6px 32px rgba(0,0,0,.28);padding:18px 20px;width:300px;display:none;
   top:50%;left:50%;transform:translate(-50%,-50%);}
@@ -397,7 +370,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;}
-/* page-purpose as td inside merged rx-table — 원본 스타일 완전 복원 */
+/* page-purpose as td inside merged rx-table */
 .rx-table td.page-purpose{
   display:table-cell;vertical-align:middle;
   font-size:22px;font-weight:900;
@@ -407,29 +380,48 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border:3.5px solid var(--teal);
   overflow:hidden;
 }
-.rx-table{width:100%;border-collapse:collapse;border:3.5px solid var(--teal);}
-.rx-table th{background:#fff;color:#111;border:3.5px solid var(--teal);
+/* ── border-collapse:collapse 전략 — 셀 벌어짐 완전 차단 ── */
+.rx-table{
+  width:100%;height:100%;table-layout:fixed;
+  border-collapse:collapse!important;
+  border:3.5px solid var(--teal);
+}
+.rx-table th{
+  background:#fff;color:#111;
+  border:3.5px solid var(--teal);
+  box-sizing:border-box;
   padding:6px 8px;font-size:19px;font-weight:700;text-align:center;
   vertical-align:middle;overflow:hidden;}
-.rx-table td{border:3.5px solid var(--teal);padding:6px 8px;font-size:var(--rx-fs,17px);
+.rx-table td{
+  border:3.5px solid var(--teal);
+  box-sizing:border-box;
+  padding:6px 8px;font-size:var(--rx-fs,17px);
   font-weight:700;vertical-align:middle;background:#fff;text-align:center;color:#111;
   overflow:hidden;}
+/* stage-td */
 .rx-table .stage-td{background:#E0F5F5;text-align:center;font-size:var(--rx-fs,17px);
-  font-weight:900;width:110px;color:#111;line-height:1.4;
-  border-right:3.5px solid var(--teal);}
+  font-weight:900;color:#111;line-height:1.4;
+  box-sizing:border-box;vertical-align:middle;
+  /* ★ 날짜·여러줄 텍스트 잘림 방지 — !important로 다른 규칙 완전 차단 */
+  height:auto!important;
+  overflow:visible!important;
+  white-space:pre-wrap;
+  word-break:break-word;}
 .rx-table .product-td{font-size:var(--rx-fs,17px);font-weight:700;color:#111;text-align:center;}
 .rx-table .size-td{text-align:center;color:#111;font-size:var(--rx-fs,17px);font-weight:700;}
-.rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;white-space:nowrap;}
+.rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;word-break:break-all;overflow-wrap:break-word;}
 .rx-table .desc-td{
   font-size:var(--rx-fs,17px);color:#111;font-weight:600;
-  vertical-align:middle;padding:6px 8px;overflow:visible;
+  vertical-align:middle;padding:6px 8px;overflow:hidden;
 }
 .rx-table .desc-td .desc-inner{
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   text-align:center;line-height:1.6;
   font-size:var(--rx-fs,17px);
-  word-break:keep-all;
+  word-break:break-all;
+  white-space:normal;
+  overflow-wrap:break-word;
 }
 /* 관주/엽면 병합 셀 — 행을 여러 개 합치므로 글씨를 더 크게, 줄간격 넓게 */
 .rx-table .desc-td-merged .desc-inner{
@@ -437,6 +429,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   line-height:1.9;
   font-weight:700;
   gap:6px;
+  word-break:break-all;
+  white-space:normal;
+  overflow-wrap:break-word;
 }
 .rx-table tbody tr:hover td{background:#f0fbfb;}
 
@@ -453,7 +448,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .rx-table th[contenteditable]:focus{outline:2.5px solid var(--teal)!important;}
 
 /* ── 격자 리사이즈 — mousemove 근접감지 방식 ── */
-.rx-table{table-layout:fixed;width:100%;}
+.rx-table{table-layout:fixed;width:100%;height:100%;}
 .rx-table th,.rx-table td{position:relative;}
 .rx-table th{user-select:none;}
 /* 리사이즈 핸들 시각 힌트 — pointer-events:none 이므로 글자 클릭 방해 안 함 */
@@ -475,21 +470,43 @@ body.grid-selecting,body.grid-selecting *{user-select:none!important;}
 .rx-table .product-td,.rx-table .stage-td,.rx-table .qty-td,
 .rx-table .size-td{min-height:45px;}
 /* 인쇄: table-layout 유지 */
-@media print{.rx-table{table-layout:fixed;width:100%;}}
-.page-footer-bar{background:#fff;color:#111;padding:0 16px;margin-top:auto;
-  height:49px;box-sizing:border-box;
+@media print{.rx-table{table-layout:fixed;width:100%;height:100%;}}
+/* ── 스페이서 행: 여백 흡수, 선 없음 ── */
+tr.rx-spacer-tr{height:auto;}
+tr.rx-spacer-tr td{border:none!important;background:#fff;padding:0;}
+tr.rx-spacer-tr:hover td{background:#fff!important;}
+
+/* ── 푸터 행: height는 JS가 관리 (고정 잠금 없음) ── */
+tr.rx-footer-tr td{box-sizing:border-box;}
+
+/* 비처방전 페이지(비용표 등)의 일반 footer bar */
+.page-footer-bar{
+  background:#fff;color:#111;padding:6px 16px;
+  box-sizing:border-box;
   font-size:22px;font-weight:700;text-align:center;letter-spacing:1px;
-  display:flex;align-items:center;justify-content:center;gap:16px;
   border:3.5px solid var(--teal);border-top:none;}
-/* page-footer-bar as td inside merged rx-table — 원본 스타일 완전 복원 */
+
+/* ── rx-table 푸터 셀: height 는 JS 가 td.style.height 로만 관리 ── */
 .rx-table td.page-footer-bar{
-  display:table-cell;vertical-align:middle;
-  font-size:22px;font-weight:700;
-  padding:0 16px;height:49px;
-  text-align:center;letter-spacing:1px;
+  display:table-cell;             /* td 이미 table-cell 이나 명시 (flex 완전 차단) */
+  vertical-align:middle;          /* td 높이 안에서 콘텐츠 상하 정중앙 */
+  text-align:center;
+  padding:6px 16px;
   color:#111;background:#fff;
   border:3.5px solid var(--teal);
-  overflow:visible;  /* 로고 이미지가 overflow:hidden에 잘리지 않도록 */
+  border-top:none;
+  overflow:hidden;
+  box-sizing:border-box;
+  font-size:22px;font-weight:700;letter-spacing:1px;
+  /* height: JS 가 td.style.height 로 직접 설정 — CSS 에서 지정 안 함 */
+}
+.rx-table td.page-footer-bar .footer-inner{
+  display:flex;
+  justify-content:center;  /* 가로 중앙 */
+  align-items:center;      /* 세로 중앙 (td 높이 안에서) */
+  gap:10px;
+  line-height:1.5;
+  width:100%;
 }
 /* bottom-note row inside merged rx-table */
 tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
@@ -516,6 +533,13 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
 #rxFloatToolbar .tb-clr-wrap span{font-size:12px;font-weight:700;}
 #rxFloatToolbar input[type="color"]{width:22px;height:22px;padding:0;
   border:1px solid #ccc;border-radius:3px;cursor:pointer;vertical-align:middle;}
+/* 합치기/분할 버튼 — 선택 없을 때 흐리게 */
+#rxFloatToolbar .tb-merge-btn{background:var(--teal-light);color:var(--teal-dark);
+  border-color:var(--teal);font-size:12px;}
+#rxFloatToolbar .tb-merge-btn:disabled{opacity:.35;cursor:not-allowed;}
+#rxFloatToolbar .tb-split-btn{background:#fff;color:var(--teal-dark);
+  border-color:var(--teal);font-size:12px;}
+#rxFloatToolbar .tb-split-btn:disabled{opacity:.35;cursor:not-allowed;}
 
 /* ── 플로팅 재고 패널 ── */
 .inv-float{position:fixed;top:60px;left:416px;z-index:500;
@@ -879,25 +903,122 @@ function getStageGroupKey(st) {
 let _dragGroupMk = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  const raw = localStorage.getItem('rxData');
-  if (raw) {
-    rxData = JSON.parse(raw);
-    localStorage.removeItem('rxData'); // 한 번만 소비
-    // 표지 정보 자동 채우기
-    document.getElementById('bName').value = rxData.name || '';
-    document.getElementById('bRegion').value = rxData.region || '';
-    document.getElementById('bArea').value = rxData.area || '';
-    if (rxData.crop) {
-      const sel = document.getElementById('bCrop');
-      for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === rxData.crop) { sel.selectedIndex = i; break; }
+  // ══════════════════════════════════════════════════════════════════════
+  //  초기화 우선순위:
+  //  1순위 — rxStages (처방전 전용 영속 저장소, 항상 최신 상태)
+  //  2순위 — rxData  (index.html 일회성 전달, cart·고객정보만 병합)
+  //  ※ rxData 가 와도 이미 복원된 stages 는 절대 건드리지 않음
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── 1순위: rxStages 최우선 복원 ──────────────────────────────────────
+  let hadSavedWork = false;
+  const rawStages = localStorage.getItem('rxStages');
+  if (rawStages) {
+    try {
+      const saved = JSON.parse(rawStages);
+      if (saved.stages && saved.stages.length > 0) {
+        hadSavedWork = true;
+        stageIdCnt = 0;
+        stages = saved.stages.map(s => {
+          const base = {
+            ...s, id: ++stageIdCnt,
+            pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '',
+            stageDisplayText:    s.stageDisplayText    || '',
+            stageRawCell:        s.stageRawCell        || '',
+            stageDisplayOverride: s.stageDisplayOverride || ''
+          };
+          // v17 migration: stageDisplayText 누락 보정
+          if (!base.stageDisplayText && base.stageRawCell) base.stageDisplayText = base.stageRawCell;
+          if (base.stageLabelOverride && base.stageLabelOverride === base.stageRawCell && base.stageDisplayText)
+            base.stageLabelOverride = base.stageDisplayText;
+          return base;
+        });
+        pageOrder       = saved.pageOrder       || [];
+        costVisible     = saved.costVisible     || false;
+        groupLabels     = saved.groupLabels     || {};
+        stageGroupOrder = saved.stageGroupOrder || [];
+        priceOverrides  = saved.priceOverrides  || {};
+        if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
+        if (saved.coverCustomText) {
+          const ct = { ...saved.coverCustomText };
+          delete ct.rx; // 이전 고객명은 복원 금지
+          rxData.coverCustomText = ct;
+        }
       }
+      // rxData 핵심 필드 복원 (아직 index.html 데이터 미도착 상태에서 기본값 설정)
+      if (saved.rxCart     && saved.rxCart.length > 0) rxData.cart     = saved.rxCart;
+      if (saved.rxName)     rxData.name     = saved.rxName;
+      if (saved.rxRegion)   rxData.region   = saved.rxRegion;
+      if (saved.rxArea)     rxData.area     = saved.rxArea;
+      if (saved.rxCrop)     rxData.crop     = saved.rxCrop;
+      if (saved.rxAreaType) rxData.areaType = saved.rxAreaType;
+      // PDF 비용 페이지 추출 데이터 복원
+      if (saved.extractedTotalCost != null) rxData.extractedTotalCost = saved.extractedTotalCost;
+      if (saved.extractedUnitPrice != null) rxData.extractedUnitPrice = saved.extractedUnitPrice;
+    } catch(e) {}
+  }
+
+  // ── 2순위: index.html 전달 rxData — cart·고객정보만 병합, stages 절대 불변 ──
+  const rawRxData = localStorage.getItem('rxData');
+  if (rawRxData) {
+    try {
+      const incoming = JSON.parse(rawRxData);
+      const isNewCustomer = !!incoming._newPrescription; // index.html 이 다른 고객임을 알림
+
+      // 기존 처방 단계가 있고 '다른 고객' 플래그가 온 경우 → 사용자에게 선택권 부여
+      if (isNewCustomer && stages.length > 0) {
+        const keep = confirm(
+          `⚠️ 기존 처방 단계 (${stages.length}개) 가 저장되어 있습니다.\n\n` +
+          `[확인]  → 기존 단계를 유지하면서 새 고객 정보만 적용\n` +
+          `[취소]  → 기존 단계를 지우고 새 고객 처방전으로 시작`
+        );
+        if (!keep) {
+          stages = [];
+          stageIdCnt = 0;
+          groupLabels = {};
+          stageGroupOrder = [];
+          pageOrder = [];
+        }
+        // keep=true 면 stages 유지, cart·고객정보만 아래에서 덮어씀
+      }
+
+      // cart: index.html 의 최신 cart 반영 (재고 수량·가격)
+      if (incoming.cart && incoming.cart.length > 0) {
+        rxData.cart = incoming.cart;
+        // retail/sp → priceOverrides 병합 (index.html 가격 수정 반영)
+        incoming.cart.forEach(c => {
+          const key = c.name + '||' + (c.size || '');
+          if (c.retail || c.sp) {
+            priceOverrides[key] = priceOverrides[key] || {};
+            if (c.retail) priceOverrides[key].retail = c.retail;
+            if (c.sp)     priceOverrides[key].sp     = c.sp;
+          }
+        });
+      }
+      // 고객정보 업데이트
+      if (incoming.name)     rxData.name     = incoming.name;
+      if (incoming.region)   rxData.region   = incoming.region;
+      if (incoming.area)     rxData.area     = incoming.area;
+      if (incoming.crop)     rxData.crop     = incoming.crop;
+      if (incoming.areaType) rxData.areaType = incoming.areaType;
+      // ★★★ stages 는 위의 isNewCustomer 분기 외에는 절대 건드리지 않음 ★★★
+    } catch(e) {}
+    localStorage.removeItem('rxData'); // 일회성 전달 소비
+  }
+
+  // ── 3단계: 폼 채우기 ─────────────────────────────────────────────────
+  document.getElementById('bName').value   = rxData.name   || '';
+  document.getElementById('bRegion').value = rxData.region || '';
+  document.getElementById('bArea').value   = rxData.area   || '';
+  if (rxData.crop) {
+    const sel = document.getElementById('bCrop');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === rxData.crop) { sel.selectedIndex = i; break; }
     }
   }
-  // areaType 로드
   {
     const stdTypes = ['농사','하우스','노지'];
-    const at = rxData.areaType || '농사';
+    const at  = rxData.areaType || '농사';
     const sel = document.getElementById('bAreaType');
     if (stdTypes.includes(at)) {
       sel.value = at;
@@ -907,43 +1028,6 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('bAreaTypeDirect').value = at;
     }
   }
-  // PDF 불러오기로 저장된 처방 단계 복원
-  const rawStages = localStorage.getItem('rxStages');
-  if (rawStages) {
-    try {
-      const saved = JSON.parse(rawStages);
-      if (saved.stages && saved.stages.length > 0) {
-        stageIdCnt = 0;
-        stages = saved.stages.map(s => {
-          const base = { ...s, id: ++stageIdCnt, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType || '',
-            // v18: 세 필드 기본값 보장 (구버전 저장본에 없을 경우 대비)
-            stageDisplayText: s.stageDisplayText || '', stageRawCell: s.stageRawCell || '', stageDisplayOverride: s.stageDisplayOverride || ''
-          };
-          // v17 migration: 구버전에서 stageLabelOverride = stageRawCell 로 저장된 경우 정정
-          if (!base.stageDisplayText && base.stageRawCell) {
-            // stageDisplayText가 없으면 stageRawCell을 그대로 사용 (best effort)
-            base.stageDisplayText = base.stageRawCell;
-          }
-          if (base.stageLabelOverride && base.stageLabelOverride === base.stageRawCell && base.stageDisplayText) {
-            // stageLabelOverride가 stageRawCell과 같으면 구버전 오염 패턴 → stageDisplayText로 교체
-            base.stageLabelOverride = base.stageDisplayText;
-          }
-          return base;
-        });
-        pageOrder = saved.pageOrder || [];
-        costVisible = saved.costVisible || false;
-        priceOverrides = saved.priceOverrides || {};
-        groupLabels = saved.groupLabels || {};
-        stageGroupOrder = saved.stageGroupOrder || [];
-        if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
-        if (saved.coverCustomText) {
-          const ct = {...saved.coverCustomText};
-          delete ct.rx; // 이전 고객명은 복원하지 않음
-          rxData.coverCustomText = ct;
-        }
-      }
-    } catch(e) {}
-  }
   // 구버전 처방전 PDF: rxPdfRawText에서 단계 파싱 (rxStages가 비어있을 때만)
   if (stages.length === 0) {
     const rawPdfText = localStorage.getItem('rxPdfRawText');
@@ -952,17 +1036,8 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const parsedRx = parseRxPdfText(rawPdfText.split('\n').filter(Boolean));
         if (parsedRx.stages && parsedRx.stages.length > 0) {
-          // 제품 키 정규화: rxData.cart와 대조해서 name||size ↔ name(size)|| 자동 매핑
-          const cartKeys = new Set((rxData.cart||[]).map(c => c.name+'||'+(c.size||'')));
-          parsedRx.stages.forEach(st => {
-            st.products.forEach(p => {
-              if (!cartKeys.has(p.key)) {
-                const [nm, sz] = p.key.split('||');
-                // name||size → name(size)|| 시도
-                if (sz) { const alt=nm+'('+sz+')||'; if (cartKeys.has(alt)) p.key=alt; }
-              }
-            });
-          });
+          // 제품 키 정규화: 공백·특수문자·괄호 형태 차이 보정
+          _normalizeStageProductKeys(parsedRx.stages);
           stageIdCnt = 0;
           stages = parsedRx.stages.map(s => ({
             ...s,
@@ -979,12 +1054,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
   document.getElementById('bManagerPhone').value = managerPhone;
+  recalcTypeNums();
   renderInventory();
   renderStages();
-  // 입력 변경시 실시간 처방전 업데이트
+  // 로드 완료 → 즉시 저장 (stages 가 있을 때만 — 빈 상태로 덮어쓰기 방지)
+  if (stages.length > 0 || (rxData.cart && rxData.cart.length > 0)) {
+    _saveRxStages();
+  }
+  // 이전 작업 복원 알림
+  if (hadSavedWork) {
+    setTimeout(() => showRxToast('이전 작업을 자동으로 불러왔습니다.'), 600);
+  }
+  // 입력 변경시 실시간 처방전 업데이트 + 자동 저장
   ['bName','bRegion','bArea','bCrop','bAreaType','bAreaTypeDirect'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.addEventListener('input', schedulePreview); el.addEventListener('change', schedulePreview); }
+    if (!el) return;
+    el.addEventListener('input',  () => { schedulePreview(); _scheduleAutoSave(); });
+    el.addEventListener('change', () => { schedulePreview(); _scheduleAutoSave(); });
   });
   schedulePreview();
   // Ctrl+Z 되돌리기 / Ctrl+Y·Ctrl+Shift+Z 다시하기
@@ -999,12 +1085,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     if (e.key === 'Escape' && _rxSelSi.size > 0) { _rxClearSel(); }
   });
-  // 바깥 클릭 시 rx 셀 선택 해제
+  // 바깥 클릭 시 rx 셀 선택 해제 (툴바/편집 셀 제외)
   document.addEventListener('click', e => {
-    if (_rxSelSi.size === 0) return;
-    const menu = document.getElementById('rx-cell-menu');
-    if (menu && menu.contains(e.target)) return;
-    if (e.target.closest('.rx-editable')) return;
+    if (!_rxSelSi.size && !selectedCells.length) return;
+    if (e.target.closest('#rxFloatToolbar') || e.target.closest('.rx-editable')) return;
     _rxClearSel();
   });
   // 드래그 다중 선택 + 우클릭 컨텍스트 메뉴 이벤트 바인딩
@@ -1106,6 +1190,68 @@ function makeAreaOptions(selected) {
 }
 
 // ── 재고 계산 ────────────────────────────
+// ── 제품 키 정규화 헬퍼 ───────────────────────────────────────────────────────
+// PDF에서 읽어온 키와 cart 키의 공백·괄호·특수문자 차이를 제거한 뒤 비교
+function _normProdKey(key) {
+  return (key || '')
+    .replace(/\s+/g, '')                        // 공백 전체 제거
+    .replace(/[（）]/g, m => m === '（' ? '(' : ')') // 전각 괄호 → 반각
+    .replace(/[ㆍ·•]/g, '·');                   // 가운뎃점 통일
+}
+
+// cart 항목들의 정규화 키 → 원본 키 매핑 (빠른 조회용)
+function _buildCartNormMap() {
+  const map = new Map();
+  (rxData.cart || []).forEach(c => {
+    const orig = c.name + '||' + (c.size || '');
+    map.set(_normProdKey(orig), orig);
+    // name(size)|| 형태도 등록
+    if (c.size) map.set(_normProdKey(c.name + '(' + c.size + ')||'), orig);
+  });
+  return map;
+}
+
+// stage 배열의 제품 key를 cart에 있는 정확한 key로 교정
+function _normalizeStageProductKeys(stageList) {
+  const normMap = _buildCartNormMap();
+  stageList.forEach(st => {
+    (st.products || []).forEach(p => {
+      if (!p.key) return;
+      // 이미 cart에 exact match 존재하면 통과
+      const cartKeys = new Set((rxData.cart || []).map(c => c.name + '||' + (c.size || '')));
+      if (cartKeys.has(p.key)) return;
+      // 정규화 후 매핑 시도
+      const norm = _normProdKey(p.key);
+      if (normMap.has(norm)) { p.key = normMap.get(norm); return; }
+      // name||size → name(size)|| 형태 변환 후 재시도
+      const [nm, sz] = p.key.split('||');
+      if (sz) {
+        const alt = nm + '(' + sz + ')||';
+        const altNorm = _normProdKey(alt);
+        if (normMap.has(altNorm)) { p.key = normMap.get(altNorm); }
+      }
+    });
+  });
+}
+
+// cart가 비어 있을 때 stage 제품 목록에서 cart 자동 생성
+// (외부 PDF 파싱처럼 cart 정보가 없는 경우 재고 현황에 즉시 표시)
+// ※ localStorage.rxData 에는 저장하지 않음 — 영속은 _saveRxStages() 가 담당
+function _autoCartFromStages(stageList) {
+  if ((rxData.cart || []).length > 0) return; // cart가 이미 있으면 건드리지 않음
+  const seen = new Set();
+  const auto = [];
+  stageList.forEach(st => {
+    (st.products || []).forEach(p => {
+      if (!p.key || seen.has(p.key)) return;
+      seen.add(p.key);
+      const [nm, sz] = p.key.split('||');
+      auto.push({ name: nm || p.key, size: sz || '', qty: 1, retail: 0, sp: 0 });
+    });
+  });
+  if (auto.length) rxData.cart = auto; // 메모리만 업데이트, 저장은 호출부에서 _saveRxStages()
+}
+
 function getInventory() {
   const inv = {};
   (rxData.cart || []).forEach(item => {
@@ -1234,6 +1380,7 @@ function confirmResetPrescription() {
   stages = []; groupLabels = {}; stageGroupOrder = [];
   // 거래명세표 cart·고객정보도 초기화
   rxData.cart = []; rxData.name = ''; rxData.region = ''; rxData.area = ''; rxData.crop = ''; rxData.areaType = '';
+  rxData.extractedTotalCost = null; rxData.extractedUnitPrice = null;
   ['bName','bRegion','bArea'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const bc=document.getElementById('bCrop'); if(bc) bc.selectedIndex=0;
   recalcTypeNums(); renderStages(); renderInventory(); schedulePreview(); _saveRxStages();
@@ -1250,6 +1397,7 @@ function onTypeNumWord(si, word) {
  * stageLabel 원문에서 화면 표시용 텍스트를 정제한다.
  *  - "\n(" → "("  : 괄호 줄바꿈 재결합  ("옥토팜\n(발효계분)" → "옥토팜(발효계분)")
  *  - 연속 개행 → 단일 개행
+ * ※ 날짜 패턴(N월-N일, N:N-N 등)은 절대 삭제하지 않음 — 처방 핵심 정보
  */
 function _cleanStageLabel(raw) {
   if (!raw) return raw;
@@ -1258,6 +1406,29 @@ function _cleanStageLabel(raw) {
     .replace(/[ \t]*\n[ \t]*/g, '\n') // 개행 주변 공백 정리
     .replace(/\n{2,}/g, '\n')         // 연속 개행 → 1개
     .trim();
+}
+
+/**
+ * 날짜 포함 원문 그대로 반환 — stage-td 표시·편집에 사용
+ *
+ * getStageLabel()은 관주/엽면에서 stageDisplayText를 완전히 무시하고
+ * 자동번호만 반환하므로, PDF에서 파싱된 날짜("3월:15일-20일" 등)가 손실됨.
+ * 이 함수는 stageDisplayText/stageRawCell 원문을 최우선으로 사용해 날짜를 보존한다.
+ *
+ * 우선순위:
+ *   1. stageDisplayOverride (사용자 직접 입력)
+ *   2. stageDisplayText     (PDF 파싱 원문 — 날짜 포함)
+ *   3. stageRawCell         (PDF 좌측 셀 원문)
+ *   4. getStageLabel()      (폴백 — 자동번호 라벨)
+ */
+function getStageLabelRaw(st) {
+  if (!st) return '';
+  if (st.stageDisplayOverride) return st.stageDisplayOverride;
+  // 원문 우선: 날짜가 포함된 전체 텍스트를 _cleanStageLabel로 경량 정제만 수행
+  if (st.stageDisplayText) return _cleanStageLabel(st.stageDisplayText);
+  if (st.stageRawCell)     return _cleanStageLabel(st.stageRawCell);
+  // 폴백: 원문이 없을 때만 getStageLabel 사용 (관주/엽면 자동번호 등)
+  return getStageLabel(st);
 }
 
 function getStageLabel(st) {
@@ -1284,8 +1455,8 @@ function getStageLabel(st) {
 }
 
 function getStageLabelHtml(st) {
-  // \n → <br> 로 변환해 HTML 표에서 여러 줄로 표시
-  const label = getStageLabel(st).replace(/\n/g, '<br>');
+  // ★ getStageLabelRaw: 날짜 포함 원문 그대로 → \n → <br> 변환
+  const label = getStageLabelRaw(st).replace(/\n/g, '<br>');
   return `<strong>${label}</strong>`;
 }
 
@@ -1457,7 +1628,7 @@ function renderStages() {
               style="width:100%;font-size:13px;padding:6px 8px;border:1.5px solid var(--teal);border-radius:5px;resize:vertical;font-family:inherit;color:var(--teal-dark);font-weight:700;"
               placeholder="${getStageLabel(st)}"
               oninput="onStageLabelOverride(${si},this.value)"
-            >${st.stageDisplayOverride || (st.type!=='관주'&&st.type!=='엽면' ? (st.stageDisplayText||st.stageRawCell||'') : '')}</textarea>
+            >${st.stageDisplayOverride || st.stageDisplayText || st.stageRawCell || ''}</textarea>
           </div>
           <div style="flex:1;min-width:80px;">
             <label style="font-size:12px;color:#888;font-weight:700;">📅 날짜 간격</label>
@@ -1932,13 +2103,14 @@ function onQtyInput(si, pi, val) {
   schedulePreview();
 }
 
-// 포커스 떠날 때: 재고 초과 검사
+// 포커스 떠날 때: 재고 초과 검사 + 저장
 function onQtyBlur(si, pi, val) {
   const qty = parseFloat(val) || 0;
   stages[si].products[pi].qty = qty;
   const key = stages[si].products[pi].key;
   checkOverStock(si, key);
   renderInventory();
+  _saveRxStages();  // 수량 변경 즉시 저장
 }
 
 function formatQty(qty, unit) {
@@ -1957,6 +2129,7 @@ function delStage(si) {
   stages.splice(si, 1);
   renderStages();
   renderInventory();
+  _saveRxStages();
 }
 
 // ── 단계 합치기 (si와 si+1 병합) ─────────────────────────────────
@@ -1986,6 +2159,7 @@ function mergeStages(si) {
   stages.splice(si + 1, 1);
   renderStages();
   renderInventory();
+  _saveRxStages();
 }
 
 // ── 단계 나누기 (si 단계를 product index splitAt 기준으로 2개로 분리) ──
@@ -2006,6 +2180,7 @@ function splitStage(si, splitAt) {
   stages.splice(si + 1, 0, newStage);
   renderStages();
   renderInventory();
+  _saveRxStages();
 }
 
 // ── rx 셀 선택 UI ────────────────────────────────────────────────
@@ -2107,29 +2282,10 @@ function _rxBindTableEvents() {
     _rxDragMoved = false;
   });
 
-  // contextmenu (우클릭)
-  pa.addEventListener('contextmenu', e => {
-    const td = e.target.closest('.rx-table tbody td.rx-editable');
-    if (!td) return;
-    e.preventDefault();
-    if (!td.classList.contains('selected')) {
-      const si = _rxGetSi(td);
-      if (si !== null) {
-        _rxSelSi.clear(); _rxSelSi.add(si);
-        selectedCells = [td];
-        _rxRefreshSelUI();
-      }
-    }
-    _rxShowCtxMenu(e.clientX, e.clientY);
-  });
-
-  // 바깥 클릭 → ctx 메뉴 닫기 + 선택 해제
+  // 바깥 클릭 → 선택 해제 (툴바/편집 셀 클릭 제외)
   document.addEventListener('click', e => {
-    const ctx = document.getElementById('rx-ctx-menu');
-    if (ctx && !ctx.contains(e.target)) _rxHideCtxMenu();
-    if (!_rxSelSi.size) return;
-    const fm = document.getElementById('rx-cell-menu');
-    if ((fm && fm.contains(e.target)) || e.target.closest('.rx-editable')) return;
+    if (!_rxSelSi.size && !selectedCells.length) return;
+    if (e.target.closest('#rxFloatToolbar') || e.target.closest('.rx-editable')) return;
     _rxClearSel();
   }, true);
 
@@ -2177,6 +2333,11 @@ function _rxRestoreResize() {
     trs.forEach((tr, idx) => {
       const h = _rxResizeStore.rows[k + '_r' + idx];
       if (h) tr.style.height = h;
+      if (tr.classList.contains('rx-footer-tr')) {
+        const ftd = tr.querySelector('td.page-footer-bar');
+        const fh  = _rxResizeStore.rows[k + '_ftd'];
+        if (ftd && fh) ftd.style.height = fh;
+      }
     });
   });
 }
@@ -2202,12 +2363,16 @@ function _rxInitTableSizes() {
       Object.entries(_rxResizeStore.cols[k]).forEach(([i, w]) => { if (cols[+i]) cols[+i].style.width = w; });
     }
 
-    // ② 행 높이: 사용자가 직접 조절한 값만 복원 (나머지는 height:auto 유지)
+    // ② 행 높이: 사용자가 직접 조절한 값만 복원
     const trs = [...table.querySelectorAll('tr')];
     trs.forEach((tr, i) => {
       const stored = _rxResizeStore.rows[k + '_r' + i];
       if (stored) tr.style.height = stored;
-      // 저장값 없으면 height:auto — 브라우저가 콘텐츠 기반으로 결정
+      if (tr.classList.contains('rx-footer-tr')) {
+        const ftd = tr.querySelector('td.page-footer-bar');
+        const fh  = _rxResizeStore.rows[k + '_ftd'];
+        if (ftd && fh) ftd.style.height = fh;
+      }
     });
 
   });
@@ -2305,8 +2470,9 @@ function _rxGridHitTest(e) {
   const cell = e.target.closest('.rx-table th, .rx-table td');
   if (!cell) return null;
   const r     = cell.getBoundingClientRect();
-  const nearR = e.clientX >= r.right  - _BORDER_HIT;
-  const nearB = e.clientY >= r.bottom - _BORDER_HIT;
+  // Math.round → 서브픽셀 오차 제거, 리사이즈 핸들 좌표 정수 스냅
+  const nearR = e.clientX >= Math.round(r.right)  - _BORDER_HIT;
+  const nearB = e.clientY >= Math.round(r.bottom) - _BORDER_HIT;
   if (!nearR && !nearB) return null;
 
   const table      = cell.closest('table');
@@ -2318,11 +2484,33 @@ function _rxGridHitTest(e) {
   if (canCol) return { mode:'col', cell, table, cols, colIdx };
 
   if (nearB) {
-    const tr     = cell.closest('tr');
     const allTrs = [...table.querySelectorAll('tr')];
-    const trIdx  = allTrs.indexOf(tr);
+    const cellTr    = cell.closest('tr');
+    const rowspan   = parseInt(cell.getAttribute('rowspan')) || 1;
+    const cellTrIdx = allTrs.indexOf(cellTr);
+
+    // 푸터 행 하단: 완전 차단 (테이블 외곽선 — 드래그 불가)
+    if (cellTr.classList.contains('rx-footer-tr')) return null;
+
+    // rowspan 병합셀: 핸들은 오직 마지막 병합 행의 바닥에만 (유령 핸들 방지)
+    const lastTrIdx = Math.min(cellTrIdx + rowspan - 1, allTrs.length - 1);
+    // rowspan > 1 인 셀을 중간 행에서 hover 하면 핸들 차단 (마지막 행 바닥에서만 허용)
+    if (rowspan > 1) {
+      const cellRect = cell.getBoundingClientRect();
+      // 실제 셀 바닥(rowspan 끝)에서 _BORDER_HIT px 이내가 아니면 무시
+      if (e.clientY < Math.round(cellRect.bottom) - _BORDER_HIT) return null;
+    }
+    const tr    = allTrs[lastTrIdx];
+    const trIdx = lastTrIdx;
     if (trIdx === allTrs.length - 1) return null;  // 마지막 행 하단 리사이즈 불가
     const trBelow = allTrs[trIdx + 1];
+
+    // ② trBelow 가 스페이서·푸터이면 단독 리사이즈 (spacer 가 여백 흡수, 합계 유지 불요)
+    if (trBelow.classList.contains('rx-spacer-tr') ||
+        trBelow.classList.contains('rx-footer-tr')) {
+      return { mode:'row', cell, table, tr, trIdx, trBelow: null };
+    }
+
     return { mode:'row', cell, table, tr, trIdx, trBelow };
   }
   return null;
@@ -2390,12 +2578,18 @@ function _rxInitColResize(container) {
             startWR: parseFloat(hit.cols[hit.colIdx + 1]?.style.width || '0'),
           };
         } else {
-          const startH = hit.tr.offsetHeight || hit.tr.getBoundingClientRect().height;
+          // Math.round → 1px 미만 오차 제거 (선 끊김 방지)
+          const startH = Math.round(hit.tr.getBoundingClientRect().height);
           hit.tr.style.height = startH + 'px';
           let startHBelow = 0;
           if (hit.trBelow) {
-            startHBelow = hit.trBelow.offsetHeight || hit.trBelow.getBoundingClientRect().height;
+            startHBelow = Math.round(hit.trBelow.getBoundingClientRect().height);
             hit.trBelow.style.height = startHBelow + 'px';
+            // 푸터 행이면 td.style.height 도 함께 고정
+            if (hit.trBelow.classList.contains('rx-footer-tr')) {
+              const ftd = hit.trBelow.querySelector('td.page-footer-bar');
+              if (ftd) ftd.style.height = startHBelow + 'px';
+            }
           }
           document.body.classList.add('row-resizing');
           _gridRow = {
@@ -2417,20 +2611,31 @@ function _rxInitColResize(container) {
       if (_gridCol.colR) _gridCol.colR.style.width = wR + 'px';
     }
 
-    // row resize 실시간 갱신 — 인접 행 단순 교환 (스페이서가 여백 흡수)
+    // row resize 실시간 갱신 — Push-Pull (스페이서가 여백 흡수)
     if (_gridRow) {
       e.preventDefault();
       const Δ = e.clientY - _gridRow.startY;
       let newH = _gridRow.startH + Δ;
 
       if (_gridRow.trBelow) {
+        // ── 두 행 합 고정 교환 (Zero-sum)
+        // trBelow 가 푸터인 경우 → 최솟값을 _FOOTER_MIN 으로 보호
+        const minBelow = _gridRow.trBelow.classList.contains('rx-footer-tr')
+          ? _FOOTER_MIN : _MIN_ROW_H;
         let newHP = _gridRow.startHBelow - (newH - _gridRow.startH);
-        if (newHP < _MIN_ROW_H) { newHP = _MIN_ROW_H; newH = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
-        if (newH  < _MIN_ROW_H) { newH  = _MIN_ROW_H; newHP = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
-        _gridRow.tr.style.height      = newH  + 'px';
-        _gridRow.trBelow.style.height = newHP + 'px';
+        if (newHP < minBelow)  { newHP = minBelow;   newH = _gridRow.startH + _gridRow.startHBelow - minBelow; }
+        if (newH  < _MIN_ROW_H){ newH  = _MIN_ROW_H; newHP = _gridRow.startH + _gridRow.startHBelow - _MIN_ROW_H; }
+        _gridRow.tr.style.height      = Math.round(newH)  + 'px';
+        _gridRow.trBelow.style.height = Math.round(newHP) + 'px';
+        // 푸터 td 높이도 직접 동기화 (display:table-cell + vertical-align:middle 이 중앙 처리)
+        if (_gridRow.trBelow.classList.contains('rx-footer-tr')) {
+          const _ftd = _gridRow.trBelow.querySelector('td.page-footer-bar');
+          if (_ftd) _ftd.style.height = Math.round(newHP) + 'px';
+        }
       } else {
-        _gridRow.tr.style.height = Math.max(_MIN_ROW_H, newH) + 'px';
+        // trBelow 없는 경우: 해당 행만 단독 조절 (최솟값 보호)
+        newH = Math.max(_MIN_ROW_H, newH);
+        _gridRow.tr.style.height = Math.round(newH) + 'px';
       }
     }
   });
@@ -2450,6 +2655,10 @@ function _rxInitColResize(container) {
       const k = _rxTableKey(_gridRow.table);
       [..._gridRow.table.querySelectorAll('tr')].forEach((tr, i) => {
         _rxResizeStore.rows[k + '_r' + i] = tr.style.height || '';
+        if (tr.classList.contains('rx-footer-tr')) {
+          const ftd = tr.querySelector('td.page-footer-bar');
+          if (ftd && ftd.style.height) _rxResizeStore.rows[k + '_ftd'] = ftd.style.height;
+        }
       });
       document.body.classList.remove('row-resizing');
       _gridRow = null;
@@ -2511,23 +2720,32 @@ function _rxCreateToolbar() {
     </select>
     <input type="number" class="tb-num" id="tbSize" min="8" max="72" placeholder="크기" title="글자 크기(px)">
     <span class="tb-sep"></span>
-    <button class="tb-btn" id="tbBold" onclick="rxTbExec('bold')" title="굵게 (Ctrl+B)"><b>B</b></button>
-    <button class="tb-btn" id="tbItalic" onclick="rxTbExec('italic')" title="기울임 (Ctrl+I)"><i>I</i></button>
-    <button class="tb-btn" id="tbUnder" onclick="rxTbExec('underline')" title="밑줄 (Ctrl+U)"><u>U</u></button>
+    <button class="tb-btn" id="tbBold" onmousedown="event.preventDefault();event.stopPropagation();" onclick="rxTbExec('bold')" title="굵게 (Ctrl+B)"><b>B</b></button>
+    <button class="tb-btn" id="tbItalic" onmousedown="event.preventDefault();event.stopPropagation();" onclick="rxTbExec('italic')" title="기울임 (Ctrl+I)"><i>I</i></button>
+    <button class="tb-btn" id="tbUnder" onmousedown="event.preventDefault();event.stopPropagation();" onclick="rxTbExec('underline')" title="밑줄 (Ctrl+U)"><u>U</u></button>
     <span class="tb-sep"></span>
-    <label class="tb-clr-wrap" title="글자색">
+    <label class="tb-clr-wrap" title="글자색" onmousedown="event.preventDefault();event.stopPropagation();">
       <span style="text-decoration:underline;text-decoration-color:var(--tc,#111);">A</span>
-      <input type="color" id="tbTextColor" value="#111111" oninput="rxTbColor('foreColor',this.value)">
+      <input type="color" id="tbTextColor" value="#111111" onmousedown="event.preventDefault();event.stopPropagation();" oninput="rxTbColor('foreColor',this.value)">
     </label>
-    <label class="tb-clr-wrap" title="배경색">
+    <label class="tb-clr-wrap" title="배경색" onmousedown="event.preventDefault();event.stopPropagation();">
       <span style="background:var(--bc,#fff);padding:0 2px;">배</span>
-      <input type="color" id="tbBgColor" value="#ffffff" oninput="rxTbColor('hiliteColor',this.value)">
+      <input type="color" id="tbBgColor" value="#ffffff" onmousedown="event.preventDefault();event.stopPropagation();" oninput="rxTbColor('hiliteColor',this.value)">
     </label>
     <span class="tb-sep"></span>
-    <button class="tb-btn" onclick="_rxHideToolbar()" title="닫기" style="font-size:11px;padding:2px 6px;">✕</button>
+    <button class="tb-btn tb-merge-btn" id="tbMerge" disabled
+      onmousedown="event.preventDefault();event.stopPropagation();"
+      onclick="_rxMergeSel()" title="드래그로 선택한 셀 합치기">🔗 합치기</button>
+    <button class="tb-btn tb-split-btn" id="tbSplit" disabled
+      onmousedown="event.preventDefault();event.stopPropagation();"
+      onclick="_rxSplitSel()" title="선택한 셀 분할">✂ 분할</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" onmousedown="event.preventDefault();event.stopPropagation();" onclick="_rxHideToolbar()" title="닫기" style="font-size:11px;padding:2px 6px;">✕</button>
   `;
   document.body.appendChild(tb);
-  tb.addEventListener('mousedown', e => e.preventDefault()); // 셀 포커스 유지
+  // stopPropagation: 툴바 클릭이 document의 포커스-블러 이벤트로 전파되지 않도록
+  // preventDefault: 브라우저가 편집 셀의 포커스를 뺏지 않도록
+  tb.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); });
   document.getElementById('tbFont').addEventListener('change', rxTbFontFamily);
   document.getElementById('tbSize').addEventListener('change', rxTbFontSize);
   document.getElementById('tbSize').addEventListener('keydown', e => { if (e.key === 'Enter') rxTbFontSize(); });
@@ -2559,7 +2777,7 @@ function _tbSyncState() {
 function rxTbExec(cmd) {
   if (!_tbActiveCell) return;
   _rxHistoryCapture();
-  // mousedown에서 preventDefault로 포커스 유지됨 — 직접 execCommand 실행
+  _tbActiveCell.focus(); // 포커스 복원 후 execCommand
   document.execCommand(cmd, false, null);
   _tbSyncState();
 }
@@ -2664,69 +2882,37 @@ function _rxCellSelect(el, e) {
   _rxRefreshSelUI();
 }
 
-// ── UI 갱신: 하이라이트 + floating menu ─────────────────────────────
+// ── UI 갱신: 하이라이트 + 툴바 합치기/분할 버튼 활성화 ────────────────
 function _rxRefreshSelUI() {
-  // selectedCells 에는 stage-td 외 product-td 등도 포함될 수 있음
   const selSet = new Set(selectedCells);
   document.querySelectorAll('.rx-editable, .rx-table tbody td[data-row]').forEach(el => {
     const inSel = selSet.has(el);
     el.classList.toggle('rx-cell-selected', inSel);
     el.classList.toggle('selected', inSel);
   });
-  const menu = document.getElementById('rx-cell-menu');
-  if (!menu) return;
-  const mergeBtn = menu.querySelector('.rxm-merge');
-  const splitBtn = menu.querySelector('.rxm-split');
-  mergeBtn.style.display = ''; splitBtn.style.display = '';
   const n = selectedCells.length;
-  if (n === 0) { menu.classList.remove('on'); return; }
-  menu.classList.add('on');
-  // 메뉴 위치: 마지막 선택 셀 아래
-  const lastCell = selectedCells[selectedCells.length - 1];
-  if (lastCell) {
-    const r = lastCell.getBoundingClientRect();
-    menu.style.top  = (r.bottom + 8 + window.scrollY) + 'px';
-    menu.style.left = (r.left   + window.scrollX) + 'px';
-  }
-  // 합치기: 2개 이상 선택 / 분할: 1개이고 rowspan>1 또는 _vis.mergedSis.length>0
+
+  // 툴바 합치기/분할 버튼 활성화 — 선택 없으면 disabled
+  _rxCreateToolbar();
+  const tbMerge = document.getElementById('tbMerge');
+  const tbSplit  = document.getElementById('tbSplit');
   const hasMerged = selectedCells.some(td =>
     (parseInt(td.getAttribute('rowspan')) || 1) > 1 ||
     (parseInt(td.getAttribute('colspan')) || 1) > 1 ||
     (() => { const si = _rxGetSi(td); return si !== null && stages[si]?._vis?.mergedSis?.length > 0; })()
   );
-  if (n >= 2) splitBtn.style.display = 'none';
-  if (n === 1 && !hasMerged) mergeBtn.style.display = 'none';
-  if (n === 1 && hasMerged)  mergeBtn.style.display = 'none'; // 1개 선택 = 분할만
+  if (tbMerge) tbMerge.disabled = n < 2;
+  if (tbSplit)  tbSplit.disabled = n === 0 || !hasMerged;
+
+  // 셀이 선택된 경우 툴바 자동 표시
+  if (n > 0) document.getElementById('rxFloatToolbar')?.classList.add('show');
 }
 
-// ── 우클릭 컨텍스트 메뉴 ────────────────────────────────────────────
-function _rxShowCtxMenu(x, y) {
-  const menu = document.getElementById('rx-ctx-menu');
-  if (!menu) return;
-  menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.style.display = 'block';
-  requestAnimationFrame(() => {
-    const r = menu.getBoundingClientRect();
-    if (r.right  > window.innerWidth)  menu.style.left = (x - r.width)  + 'px';
-    if (r.bottom > window.innerHeight) menu.style.top  = (y - r.height) + 'px';
-  });
-  const canMerge = _rxSelSi.size >= 2;
-  const mergedTd = selectedCells.length === 1 ? selectedCells[0] : null;
-  const canSplit = _rxSelSi.size === 1 && mergedTd &&
-                   (parseInt(mergedTd.getAttribute('rowspan')) || 1) > 1;
-  menu.querySelectorAll('.rxctx-merge').forEach(el =>
-    el.toggleAttribute('data-disabled', !canMerge));
-  menu.querySelectorAll('.rxctx-split').forEach(el =>
-    el.toggleAttribute('data-disabled', !canSplit));
-}
-function _rxHideCtxMenu() {
-  const m = document.getElementById('rx-ctx-menu');
-  if (m) m.style.display = 'none';
-}
+// (컨텍스트 메뉴 제거 — 툴바 합치기/분할 버튼으로 대체됨)
 
 // ── 합치기 — 바운딩 박스 Top-Left 셀 유지, 나머지 display:none ──────
 // 분할 후 완벽 복구를 위해 stage._vis 에도 상태 저장 (renderStages 재실행 대비)
 function _rxMergeSel() {
-  _rxHideCtxMenu();
   const cells = selectedCells.length ? selectedCells
     : [..._rxSelSi].map(s => document.querySelector(`.stage-td[data-si="${s}"]`)).filter(Boolean);
   if (cells.length < 2) return;
@@ -2787,7 +2973,6 @@ function _rxMergeSel() {
 
 // ── 분할 — 숨겨진 셀 전부 복구, rowspan/colspan 1로 초기화 ──────────
 function _rxSplitSel() {
-  _rxHideCtxMenu();
   // 선택된 셀이 있으면 그것, 없으면 _rxSelSi 기준
   const cells = selectedCells.length ? selectedCells
     : [..._rxSelSi].map(s => document.querySelector(`.stage-td[data-si="${s}"]`)).filter(Boolean);
@@ -2841,7 +3026,7 @@ function _rxSplitSel() {
 // ── 선택 해제 ────────────────────────────────────────────────────────
 function _rxClearSel() {
   _rxSelSi.clear(); selectedCells = []; _rxLastSelSi = null;
-  _rxRefreshSelUI(); _rxHideCtxMenu();
+  _rxRefreshSelUI();
 }
 
 // ── 단계 모달 ─────────────────────────────
@@ -3153,7 +3338,32 @@ function openCostModal() {
     </tr>`;
   });
   const grandTotal = rows.reduce((s, r) => s + r.sp * r.used, 0);
-  const perPyeong = area ? Math.round(grandTotal / area) : 0;
+  // PDF에서 추출한 평당가를 자동 세팅 (계산값이 없을 때 폴백)
+  const calcModalPPY = area ? Math.round(grandTotal / area) : 0;
+  const perPyeong    = calcModalPPY || rxData.extractedUnitPrice || 0;
+
+  // PDF 비용 페이지에서 추출한 참고값 행
+  let pdfCostRows = '';
+  if (rxData.extractedTotalCost || rxData.extractedUnitPrice) {
+    const pdfTotal = rxData.extractedTotalCost
+      ? rxData.extractedTotalCost.toLocaleString() + '원' : '-';
+    const pdfUnit  = rxData.extractedUnitPrice
+      ? rxData.extractedUnitPrice.toLocaleString() + '원/평' : '-';
+    pdfCostRows = `
+    <tr style="background:#E3F2FD;border-top:2px dashed #1565C0;">
+      <td colspan="5" style="text-align:right;font-size:12px;color:#1565C0;font-weight:700;">
+        📄 PDF 비용페이지 합계 <span style="font-size:10px;font-weight:400;">(참고)</span>
+      </td>
+      <td style="font-size:13px;font-weight:900;color:#1565C0;">${pdfTotal}</td>
+    </tr>
+    <tr style="background:#E3F2FD;">
+      <td colspan="5" style="text-align:right;font-size:12px;color:#1565C0;font-weight:700;">
+        📄 PDF 평당 단가 <span style="font-size:10px;font-weight:400;">(참고)</span>
+      </td>
+      <td style="font-size:13px;font-weight:900;color:#1565C0;">${pdfUnit}</td>
+    </tr>`;
+  }
+
   tableHtml += `</tbody><tfoot>
     <tr class="cost-total-row">
       <td colspan="5" style="text-align:right;font-size:13px;">${modalTotalLabel}</td>
@@ -3162,7 +3372,7 @@ function openCostModal() {
     <tr class="cost-total-row" style="background:#C8E6C9;">
       <td colspan="5" style="text-align:right;font-size:13px;">평당 단가 &nbsp;<span style="font-size:11px;color:#555;">${areaLabel}</span></td>
       <td id="costPerPyeong" style="font-size:15px;font-weight:900;color:var(--teal-dark);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
-    </tr>
+    </tr>${pdfCostRows}
   </tfoot></table>`;
 
   document.getElementById('costModalBody').innerHTML = tableHtml;
@@ -3232,7 +3442,9 @@ function generateCostPageHtml(area) {
   if (!rows.length) return '';
 
   const grand = rows.reduce((s, r) => s + r.total, 0);
-  const perPyeong = area ? Math.round(grand / area) : 0;
+  // 계산값이 없으면 PDF에서 추출된 평당가를 자동으로 사용
+  const calcPerPyeong = area ? Math.round(grand / area) : 0;
+  const perPyeong = calcPerPyeong || rxData.extractedUnitPrice || 0;
   const title = `${crop||''}${areaType} ${region||''} ${area?'('+area+'평) ':''} ${name||''} 처방전 사용금액`.trim();
 
   // 운임비 등 별도 비용 항목 (inventory 기반 외 cart 항목)
@@ -3280,9 +3492,20 @@ function generateCostPageHtml(area) {
               <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">평당 단가 ${area?'('+area+'평)':''}</td>
               <td style="padding:10px;font-weight:900;font-size:16px;color:var(--teal-dark);border:3.5px solid var(--teal);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
             </tr>
+            ${(rxData.extractedTotalCost || rxData.extractedUnitPrice) ? `
+            <tr style="background:#E3F2FD;">
+              <td colspan="5" style="text-align:right;padding:8px 10px;font-size:13px;color:#1565C0;font-weight:700;border:2px dashed #90CAF9;">📄 PDF 비용페이지 합계 (참고)</td>
+              <td style="padding:8px 10px;font-weight:900;font-size:14px;color:#1565C0;border:2px dashed #90CAF9;">${rxData.extractedTotalCost ? rxData.extractedTotalCost.toLocaleString()+'원' : '-'}</td>
+            </tr>
+            <tr style="background:#E3F2FD;">
+              <td colspan="5" style="text-align:right;padding:8px 10px;font-size:13px;color:#1565C0;font-weight:700;border:2px dashed #90CAF9;">📄 PDF 평당 단가 (참고)</td>
+              <td style="padding:8px 10px;font-weight:900;font-size:14px;color:#1565C0;border:2px dashed #90CAF9;">${rxData.extractedUnitPrice ? rxData.extractedUnitPrice.toLocaleString()+'원/평' : '-'}</td>
+            </tr>` : ''}
+            <tr class="rx-footer-tr">
+              <td colspan="6" class="page-footer-bar"><div class="footer-inner"><img src="logo.png" style="height:34px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div></td>
+            </tr>
           </tfoot>
         </table>
-        <div class="page-footer-bar"><img src="logo.png" style="height:34px;margin-right:6px;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div>
       </div>
     </div>
   </div>`;
@@ -3325,77 +3548,121 @@ function generatePreview() {
     let rows = '';
     let rowOffset = 0; // 논리 행 인덱스 (data-row 부여 기준)
 
-    // ── v17: stage-td는 각 stage별 단계명 표시 (pageTitle 표시 역할 제거) ──
-    // pageTitle은 page-purpose div에서만 표시. stage-td는 stageDisplayText를 보여줌
-    stagesInGroup.forEach(st => {
-      const si = stages.indexOf(st);
-      const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
+    // ── v19: flat-row 방식 — 병합 로직 완전 재작성 ──
+    // Step 1: 모든 행을 flat list로 펼쳐 rowNum 사전 계산
+    const _flatRows = [];
+    {
+      let _absRow = 0;
+      stagesInGroup.forEach(st => {
+        const si   = stages.indexOf(st);
+        const prods = (st.products||[]).map((p,idx)=>({p,idx})).filter(({p})=>p.key);
+        // ★ getStageLabelRaw: stageDisplayText/stageRawCell 원문 우선 사용
+        //   → getStageLabel은 관주/엽면에서 날짜를 무시하므로 사용 금지
+        const label = getStageLabelRaw(st);
+        const labelHtml = label.replace(/\n/g,'<br>'); // innerHTML 삽입용 줄바꿈 변환
+        const vis  = st._vis || {};
+        const isMD = st.type === '관주' || st.type === '엽면'; // isMergedDesc
+        if (!prods.length) {
+          _flatRows.push({ empty:true, si, label, labelHtml, hidden:!!vis.hidden, rowNum:_absRow });
+          _absRow++;
+        } else {
+          prods.forEach(({p, idx:pi}, rowIdx) => {
+            _flatRows.push({ empty:false, si, label, labelHtml, p, pi, rowIdx, prods, isMD, rowNum:_absRow });
+            _absRow++;
+          });
+        }
+      });
+    }
 
-      // ── _vis 병합 상태 ──────────────────────────────────────────────
-      const vis         = st._vis || {};
-      const isHidden    = !!vis.hidden;
+    // Step 2: 각 행에 "label-group start 여부 + stage rowspan" 정보 주입
+    for (let _i = 0; _i < _flatRows.length; _i++) {
+      const _prev = _i > 0 ? _flatRows[_i-1].label : null;
+      _flatRows[_i].isLabelStart = (_flatRows[_i].label !== _prev);
+      if (_flatRows[_i].isLabelStart) {
+        // 이 라벨 그룹이 몇 tr을 차지하는지 (= stage-td rowspan)
+        let _span = 0;
+        for (let _j = _i; _j < _flatRows.length && _flatRows[_j].label === _flatRows[_i].label; _j++) _span++;
+        _flatRows[_i].labelSpan = _span;
+        // 그룹 내 non-empty 행의 desc가 모두 같은지 확인 (desc 자동 병합용)
+        const _gd = _flatRows.slice(_i, _i + _span)
+          .filter(r => !r.empty && !r.isMD)
+          .map(r => r.p.detailCellDisplayOverride || r.p.detailCellRaw || r.p.usageDisplayText || r.p.desc || '');
+        _flatRows[_i].descAllSame = _gd.length > 1 && _gd.every(d => d === _gd[0]);
+      }
+    }
 
-      // 단계명 표시값: getStageLabel() 하나로 통일
-      // getStageLabel 우선순위: stageDisplayOverride → stageDisplayText → stageRawCell
-      //   → stageLabelOverride → stageLabel → 자동 라벨(관주(N번) / 엽면(N번)) → type
-      const stageLabelText = getStageLabel(st);
-      const stageLabelHtml = stageLabelText.replace(/\n/g, '<br>');
-      const stageRowspan   = prods.length || 1;
+    // Step 3: 행 렌더 — stage-td는 isLabelStart&&rowIdx===0 일 때만, 그 외 완전 생략
+    const _wd  = html => `<div class="desc-inner">${html}</div>`;
+    const _emp = '<span style="color:#ccc;font-size:11px;">+</span>';
+    let _descSkipUntil = -1; // desc 병합 중인 경우, 이 인덱스까지 descTd 생략
 
-      if (!prods.length) {
-        const hiddenStyle = isHidden ? ' style="display:none"' : '';
-        const stageTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
-          `rowspan="1" data-row="${rowOffset}" data-col="0" ` +
-          `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
-          `<strong>${stageLabelHtml}</strong></td>`;
-        rows += `<tr>${stageTd}<td colspan="4" data-row="${rowOffset}" data-col="1"${hiddenStyle} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
-        rowOffset += 1;
+    _flatRows.forEach((row, _i) => {
+      const isFirst = row.isLabelStart && (row.empty || row.rowIdx === 0);
+
+      if (row.empty) {
+        const hd = row.hidden ? ' style="display:none"' : '';
+        if (isFirst) {
+          const sTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${row.si}" data-monthkey="${monthKey}" ` +
+            `rowspan="${row.labelSpan}" data-row="${row.rowNum}" data-col="0" ` +
+            `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
+            `<strong>${row.labelHtml}</strong></td>`;
+          rows += `<tr>${sTd}<td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        } else {
+          rows += `<tr><td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+        }
+        rowOffset++;
         return;
       }
 
-      const isMergedDesc = st.type === '관주' || st.type === '엽면';
-      prods.forEach(({p, idx: pi}, rowIdx) => {
-        const rowNum = rowOffset + rowIdx;
-        const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
-        const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
-        // 용량(capacity) 우선순위: PDF 파싱값 → 카트 size → key 괄호 size
-        const prodSize = p.capacity || (cartItem ? cartItem.size : p.key.split('||')[1] || '');
-        const qtyCell = p.qty ? formatQty(p.qty, p.unit) : '';
-        const prodAreaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
-        const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${prodAreaLine}</td>`;
-        const sizeTd = `<td class="size-td rx-editable" data-edit="prod-size" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="2" onclick="openRxEdit(this,event)">${prodSize}</td>`;
-        const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
-        // Detail column priority: manual override → detailCellRaw → usageDisplayText → desc
-        let descTd = '';
+      const { si, p, pi, rowIdx, prods, isMD, labelHtml, rowNum } = row;
+      const lSpan = row.isLabelStart ? row.labelSpan : null;
+
+      const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
+      const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
+      const prodSize = p.capacity || (cartItem ? cartItem.size : p.key.split('||')[1] || '');
+      const qtyCell  = p.qty ? formatQty(p.qty, p.unit) : '';
+      const areaLine = p.prodArea ? `<br><span style="font-size:0.9em;font-weight:700;color:#333;">(${p.prodArea}평)</span>` : '';
+
+      const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${areaLine}</td>`;
+      const sizeTd = `<td class="size-td rx-editable" data-edit="prod-size" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="2" onclick="openRxEdit(this,event)">${prodSize}</td>`;
+      const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
+
+      // ── desc 열 병합 ─────────────────────────────────────────────
+      let descTd = '';
+      const skipDesc = _i <= _descSkipUntil;
+      if (!skipDesc) {
         const descText = p.detailCellDisplayOverride || p.detailCellRaw || p.usageDisplayText || p.desc || '';
-        // desc 내용을 <div class="desc-inner">로 감싸 flex 중앙 정렬 적용
-        const _wrapDesc = (html) => `<div class="desc-inner">${html}</div>`;
-        const _emptyDesc = '<span style="color:#ccc;font-size:11px;">+</span>';
-        if (isMergedDesc) {
-          if (rowIdx === 0) {
-            // 관주/엽면: 모든 제품 desc를 모아 하나의 병합 셀에 표시 (중복 제거)
-            const allDescs = [...new Set(prods.map(({p:pp}) => pp.detailCellDisplayOverride || pp.detailCellRaw || pp.usageDisplayText || pp.desc || '').filter(Boolean))];
-            const inner = allDescs.length
-              ? allDescs.map(d => d.replace(/\n/g, '<br>')).join('<br>')
-              : _emptyDesc;
-            descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}">${_wrapDesc(inner)}</td>`;
-          }
-        } else {
-          const inner = descText ? descText.replace(/\n/g, '<br>') : _emptyDesc;
-          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${_wrapDesc(inner)}</td>`;
+        const inner    = descText ? descText.replace(/\n/g,'<br>') : _emp;
+        if (isMD && rowIdx === 0) {
+          // 관주/엽면: 이 stage의 모든 제품 desc를 하나로 병합
+          const allD = [...new Set(prods.map(({p:pp}) =>
+            pp.detailCellDisplayOverride || pp.detailCellRaw || pp.usageDisplayText || pp.desc || '').filter(Boolean))];
+          const mInner = allD.length ? allD.map(d => d.replace(/\n/g,'<br>')).join('<br>') : _emp;
+          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}">${_wd(mInner)}</td>`;
+          _descSkipUntil = _i + prods.length - 1;
+        } else if (!isMD && isFirst && row.descAllSame && row.labelSpan > 1) {
+          // 같은 라벨 그룹이고 desc가 모두 동일: 그룹 전체 병합
+          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${row.labelSpan}">${_wd(inner)}</td>`;
+          _descSkipUntil = _i + row.labelSpan - 1;
+        } else if (!isMD) {
+          // 개별 desc
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${_wd(inner)}</td>`;
         }
-        if (rowIdx === 0) {
-          // 각 stage 첫 행에만 stage-td 렌더 (rowspan = 이 stage의 제품 수)
-          const stageTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
-            `rowspan="${stageRowspan}" data-row="${rowNum}" data-col="0" ` +
-            `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
-            `<strong>${stageLabelHtml}</strong></td>`;
-          rows += `<tr>${stageTd}${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
-        } else {
-          rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
-        }
-      });
-      rowOffset += prods.length;
+        // isMD && rowIdx > 0: 이미 _descSkipUntil 처리됨 → descTd = ''
+      }
+
+      // ── stage-td: 라벨 그룹의 첫 행에만 렌더, 나머지는 완전 생략 ──
+      if (isFirst) {
+        const sTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
+          `rowspan="${lSpan}" data-row="${rowNum}" data-col="0" ` +
+          `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
+          `<strong>${labelHtml}</strong></td>`;
+        rows += `<tr>${sTd}${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+      } else {
+        rows += `<tr>${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
+      }
+
+      if (rowIdx === prods.length - 1) rowOffset += prods.length;
     });
     const allFuncRows = stagesInGroup.filter(s=>s.funcTags&&s.funcTags.length)
       .map(s=>({tags:s.funcTags,color:s.funcColor||'#ffffff',si:stages.indexOf(s)}));
@@ -3409,11 +3676,11 @@ function generatePreview() {
       <div class="content-page"><div class="content-inner">
         <table class="rx-table">
           <colgroup>
-            <col style="width:110px;">
-            <col style="width:160px;">
-            <col style="width:70px;">
-            <col style="width:90px;">
-            <col>
+            <col style="width:15%;">
+            <col style="width:35%;">
+            <col style="width:10%;">
+            <col style="width:10%;">
+            <col style="width:30%;">
           </colgroup>
           <tbody>
             <tr class="rx-title-tr">
@@ -3434,7 +3701,7 @@ function generatePreview() {
               관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성</td>
             </tr>` : ''}
             <tr class="rx-footer-tr">
-              <td colspan="5" class="page-footer-bar"><img src="logo.png" style="height:34px;margin-right:6px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</td>
+              <td colspan="5" class="page-footer-bar"><div class="footer-inner"><img src="logo.png" style="height:34px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div></td>
             </tr>
           </tbody>
         </table>
@@ -3503,7 +3770,29 @@ function generatePreview() {
   try {
     const rxEmbed = {
       n: name, rg: region, ar: area, cr: crop, at: areaType,
-      cart: (rxData.cart||[]).map(c => [c.name, c.size, c.qty, c.retail, c.sp]),
+      cart: (() => {
+        // 단계별 실사용량 집계 (rxData.cart의 주문수량 대신 처방 단계 총 사용량 사용)
+        const agg = {};
+        stages.forEach(s => (s.products||[]).forEach(p => {
+          if (!p.key) return;
+          const [nm, sz] = p.key.split('||');
+          if (!agg[p.key]) agg[p.key] = { name: nm||'', size: sz||'', qty: 0 };
+          agg[p.key].qty += (p.qty || 0);
+        }));
+        const aggList = Object.values(agg).filter(v => v.qty > 0);
+        if (aggList.length > 0) {
+          return aggList.map(v => {
+            const key = v.name + '||' + v.size;
+            const override = priceOverrides[key] || {};
+            const cartItem = (rxData.cart||[]).find(c => (c.name+'||'+(c.size||'')) === key);
+            const retail = override.retail ?? (cartItem?.retail || 0);
+            const sp = override.sp ?? (cartItem?.sp || 0);
+            return [v.name, v.size, v.qty, retail, sp];
+          });
+        }
+        // 단계 미설정 시 rxData.cart 그대로 사용
+        return (rxData.cart||[]).map(c => [c.name, c.size, c.qty, c.retail, c.sp]);
+      })(),
       st: stages.map(s => ({
         m: s.month, pg: s.pageGroup ?? undefined, sp: s.sourcePage ?? undefined, pt: s.pageType || undefined, t: s.type, d: s.days, dr: s.dateRange, p: s.purpose,
         ft: s.funcTags, fc: s.funcColor,
@@ -3558,25 +3847,26 @@ function applyPrintAutoFit() {
     cp.style.removeProperty('zoom');
     cp.classList.remove('print-compact');
 
-    let h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) return;  // 축소 불필요
+    const _needsFit = () =>
+      ci.scrollHeight > ci.clientHeight * 1.05 ||
+      ci.scrollWidth  > ci.clientWidth  * 1.02;
 
-    // Step 1: 폰트 2px 축소 (CSS custom property override)
+    if (!_needsFit()) return;  // 축소 불필요
+
+    // Step 1: 폰트 2px 축소
     const curFs = parseInt(getComputedStyle(cp).getPropertyValue('--rx-fs')) || 17;
     const newFs = Math.max(9, curFs - 2);
     cp.style.setProperty('--rx-fs', newFs + 'px');
-
-    h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) { card.dataset.printScaled = '1'; return; }
+    if (!_needsFit()) { card.dataset.printScaled = '1'; return; }
 
     // Step 2: 셀 padding / line-height 축소
     cp.classList.add('print-compact');
+    if (!_needsFit()) { card.dataset.printScaled = '1'; return; }
 
-    h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) { card.dataset.printScaled = '1'; return; }
-
-    // Step 3: 전체 zoom 축소
-    const scale = Math.max(PRINT_MIN_ZOOM, ci.clientHeight / h);
+    // Step 3: 전체 zoom 축소 — 세로·가로 중 더 큰 초과 비율 기준
+    const scaleH = ci.clientHeight / ci.scrollHeight;
+    const scaleW = ci.clientWidth  / ci.scrollWidth;
+    const scale  = Math.max(PRINT_MIN_ZOOM, Math.min(scaleH, scaleW));
     cp.style.zoom = scale;
     card.dataset.printScaled = '1';
   });
@@ -3619,24 +3909,27 @@ function applyPreviewAutoFit() {
     cp.classList.remove('print-compact');
     delete card.dataset.previewScaled;
 
-    // scrollHeight는 overflow:hidden 여부와 무관하게 실제 컨텐츠 높이 반환
-    let h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) return;  // 축소 불필요
+    // 세로·가로 모두 체크 (table-layout:fixed 여도 scrollWidth 가 넘칠 수 있음)
+    const _needsFit = () =>
+      ci.scrollHeight > ci.clientHeight * 1.05 ||
+      ci.scrollWidth  > ci.clientWidth  * 1.02;
+
+    if (!_needsFit()) return;  // 축소 불필요
 
     // Step 1: 폰트 점진적 축소 (최대 3px)
     const baseFs = parseInt(getComputedStyle(cp).getPropertyValue('--rx-fs')) || 17;
     const newFs  = Math.max(9, baseFs - 3);
     cp.style.setProperty('--rx-fs', newFs + 'px');
-    h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) { card.dataset.previewScaled = '1'; return; }
+    if (!_needsFit()) { card.dataset.previewScaled = '1'; return; }
 
     // Step 2: 셀 padding / line-height 축소 (.print-compact 재사용)
     cp.classList.add('print-compact');
-    h = ci.scrollHeight;
-    if (h <= ci.clientHeight * 1.05) { card.dataset.previewScaled = '1'; return; }
+    if (!_needsFit()) { card.dataset.previewScaled = '1'; return; }
 
-    // Step 3: 전체 zoom 축소 (최소 0.80)
-    const scale = Math.max(PREVIEW_MIN_ZOOM, ci.clientHeight / h);
+    // Step 3: 전체 zoom 축소 — 세로·가로 중 더 큰 초과 비율 기준
+    const scaleH = ci.clientHeight / ci.scrollHeight;
+    const scaleW = ci.clientWidth  / ci.scrollWidth;
+    const scale  = Math.max(PREVIEW_MIN_ZOOM, Math.min(scaleH, scaleW));
     cp.style.zoom = scale;
     card.dataset.previewScaled = '1';
   });
@@ -3689,7 +3982,7 @@ window.addEventListener('resize', () => {
 
 // ══ 처방전 PDF 불러오기 ══════════════════════════
 
-function showRxToast(msg) {
+function showRxToast(msg, duration) {
   let t = document.getElementById('rxToast');
   if (!t) {
     t = document.createElement('div');
@@ -3700,7 +3993,7 @@ function showRxToast(msg) {
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration || 2500);
 }
 
 // ── 페이지별 텍스트 배열 반환 (##RX## 감지용) ──
@@ -4157,6 +4450,112 @@ function parseRxPdfCoords(items) {
   return stages.filter(s => s.products.length > 0);
 }
 
+// ── PDF 비용 페이지 인라인 추출 ────────────────────────────────────────────
+// pdfParser.js와 별개로, 처방전.html 내에서 직접 pdfDoc에서 비용 정보를 추출한다.
+const _COST_KW       = ['소매가','공급가','단가','합계','총액','금액','계'];
+const _COST_KW_MIN   = 3;
+
+/**
+ * 행 아이템 배열을 텍스트로 합친다 (extractRxPdfCoords와 독립적으로 동작).
+ * @param {{ text:string, x:number }[]} items
+ * @returns {string}
+ */
+function _joinRowTextInline(items) {
+  if (!items.length) return '';
+  const sorted = [...items].sort((a, b) => a.x - b.x);
+  let out = sorted[0].text;
+  for (let i = 1; i < sorted.length; i++) {
+    out += ' ' + sorted[i].text;
+  }
+  return out.trim();
+}
+
+/**
+ * 페이지 텍스트 배열이 비용 요약 페이지인지 판별한다.
+ * @param {string[]} texts
+ * @returns {boolean}
+ */
+function _isCostPage(texts) {
+  const all = texts.join(' ');
+  return _COST_KW.filter(kw => all.includes(kw)).length >= _COST_KW_MIN;
+}
+
+/**
+ * 비용 페이지에서 totalCost, unitPricePerPyeong을 추출한다.
+ * @param {string[]} texts — 행별 텍스트 배열
+ * @returns {{ totalCost:number|null, unitPricePerPyeong:number|null }}
+ */
+function _extractCostFromTexts(texts) {
+  const PYEONG_RE = /평\s*당/;
+  const TOTAL_RE  = /합\s*계|총\s*액|총\s*계|총\s*금\s*액/;
+  let totalCost = null, unitPrice = null;
+
+  for (const text of texts) {
+    const nums = () => (text.match(/[\d,]+/g) || [])
+      .map(n => parseInt(n.replace(/,/g, ''), 10))
+      .filter(n => !isNaN(n));
+
+    if (PYEONG_RE.test(text)) {
+      const ns = nums().filter(n => n > 100 && n < 10_000_000);
+      if (ns.length) unitPrice = ns[ns.length - 1];
+    }
+    if (TOTAL_RE.test(text)) {
+      const ns = nums().filter(n => n > 10_000);
+      if (ns.length) { const mx = Math.max(...ns); if (!totalCost || mx > totalCost) totalCost = mx; }
+    }
+  }
+
+  // 합계 행 없으면 큰 숫자 중 최대값을 totalCost 후보로
+  if (!totalCost) {
+    const candidates = texts.flatMap(t =>
+      (t.match(/[\d,]+/g) || []).map(n => parseInt(n.replace(/,/g,''),10)).filter(n => n >= 50_000 && n < 100_000_000)
+    );
+    if (candidates.length) totalCost = Math.max(...candidates);
+  }
+
+  return { totalCost, unitPricePerPyeong: unitPrice };
+}
+
+/**
+ * pdfDoc을 스캔해 비용 페이지를 감지하고 데이터를 반환한다.
+ * @param {object} pdfDoc — pdf.js 문서 객체
+ * @returns {Promise<{ totalCost:number|null, unitPricePerPyeong:number|null, isCalculated:boolean }|null>}
+ */
+async function extractCostFromPdfDoc(pdfDoc) {
+  const totalPages = Math.min(pdfDoc.numPages, 10);
+  for (let p = 1; p <= totalPages; p++) {
+    const page  = await pdfDoc.getPage(p);
+    const tc    = await page.getTextContent();
+    const texts = [];
+    // 행으로 묶기 (Y 좌표 기준 ±8px)
+    const rowMap = {};
+    tc.items.forEach(it => {
+      if (!it.str.trim()) return;
+      const y = Math.round(it.transform[5]);
+      const key = Object.keys(rowMap).find(k => Math.abs(parseInt(k) - y) <= 8);
+      if (key) rowMap[key] += ' ' + it.str;
+      else      rowMap[y]   = it.str;
+    });
+    Object.values(rowMap).forEach(t => t.trim() && texts.push(t.trim()));
+
+    if (!_isCostPage(texts)) continue;
+
+    console.log(`[CostExtract] page ${p} → 비용 페이지 감지`);
+    const raw = _extractCostFromTexts(texts);
+    const area = parseFloat(document.getElementById('bArea')?.value) || 0;
+
+    let isCalculated = false;
+    if (!raw.unitPricePerPyeong && raw.totalCost && area > 0) {
+      raw.unitPricePerPyeong = Math.round(raw.totalCost / area);
+      isCalculated = true;
+    }
+
+    console.log('[CostExtract] 결과:', raw);
+    return { ...raw, isCalculated };
+  }
+  return null;
+}
+
 async function onRxPdfSelected(input) {
   const file = input.files[0];
   if (!file) return;
@@ -4189,15 +4588,39 @@ async function onRxPdfSelected(input) {
     const items   = await extractRxPdfCoords(pdfDoc);
     const parsed  = parseRxPdfCoords(items);
 
+    // 비용 페이지 추출 (처방 단계 파싱과 독립적으로 실행)
+    const costExtracted = await extractCostFromPdfDoc(pdfDoc);
+    if (costExtracted) {
+      rxData.extractedTotalCost  = costExtracted.totalCost;
+      rxData.extractedUnitPrice  = costExtracted.unitPricePerPyeong;
+      _saveRxStages();
+      const priceStr = costExtracted.unitPricePerPyeong
+        ? costExtracted.unitPricePerPyeong.toLocaleString() + '원/평'
+        : '(계산 불가)';
+      const calcNote = costExtracted.isCalculated ? ' (자동계산)' : '';
+      showRxToast(`💰 비용 페이지 인식 — 평당 ${priceStr}${calcNote}`, 4000);
+      // 추출된 평당가를 미리보기(비용 페이지)에 즉시 자동 반영
+      schedulePreview();
+      // 비용 모달이 열려 있으면 즉시 갱신
+      if (document.getElementById('costOverlay')?.classList.contains('on')) {
+        showCostModal();
+      }
+    }
+
     if (parsed.length > 0) {
       stageIdCnt = 0;
       stages = parsed.map(s => ({ ...s, id: ++stageIdCnt }));
+      // 제품 키 정규화: cart와 공백·특수문자 차이 보정
+      _normalizeStageProductKeys(stages);
+      // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
+      _autoCartFromStages(stages);
       syncGroupOrder();
       renderStages();
+      renderInventory();   // ← 재고 현황 즉시 갱신
       schedulePreview();
       _saveRxStages();
       showRxToast(`처방전 파싱 완료 — ${parsed.length}단계 인식`);
-    } else {
+    } else if (!costExtracted) {
       alert('처방 단계를 인식하지 못했습니다.\n텍스트 레이어가 없는 스캔 PDF는 지원되지 않습니다.');
     }
   } catch (e) {
@@ -4263,8 +4686,7 @@ function applyRxData(d) {
   if (d.gl) groupLabels = d.gl;
   if (d.go) stageGroupOrder = d.go;
 
-  // localStorage 업데이트 (거래명세표 연동 + 단계 영속)
-  localStorage.setItem('rxData', JSON.stringify(rxData));
+  // rxStages 단일 저장소에 모든 상태 저장 (rxData 키는 index.html 전달 전용이므로 쓰지 않음)
   _saveRxStages();
 
   renderStages();
@@ -4556,10 +4978,12 @@ function parseRxPdfText(pageTexts) {
 
 // ── 파싱된 외부 PDF 데이터 적용 ──
 function applyParsedRx(parsed) {
+  // cart가 있으면 그대로 사용, 없으면 stages에서 자동 생성
+  const initCart = (parsed.cart && parsed.cart.length > 0) ? parsed.cart : [];
   rxData = {
     name: parsed.name, region: parsed.region, area: parsed.area,
     crop: parsed.crop, areaType: parsed.areaType,
-    cart: parsed.cart
+    cart: initCart
   };
 
   document.getElementById('bName').value = parsed.name;
@@ -4633,11 +5057,16 @@ function applyParsedRx(parsed) {
   costVisible = false;
   priceOverrides = {};
 
-  localStorage.setItem('rxData', JSON.stringify(rxData));
+  // 제품 키 정규화: cart와 공백·괄호 차이 보정
+  _normalizeStageProductKeys(stages);
+  // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
+  _autoCartFromStages(stages);
+
+  // PDF 로드 직후 즉시 저장 — 거래명세표 이동해도 유실 없음
   _saveRxStages();
 
   renderStages();
-  renderInventory();
+  renderInventory();   // 재고 현황 즉시 갱신
   schedulePreview();
 }
 
@@ -4742,7 +5171,10 @@ function _rxAutoGrowCell(cell) {
   cell.style.overflowY = '';  // 확장 성공 — 스크롤 해제
 
   const k = _rxTableKey(table);
-  trs.forEach((t, i) => { _rxResizeStore.rows[k + '_r' + i] = t.style.height || ''; });
+  trs.forEach((t, i) => {
+    if (t.classList.contains('rx-spacer-tr')) return; // spacer만 제외, 푸터는 포함
+    _rxResizeStore.rows[k + '_r' + i] = t.style.height || '';
+  });
 }
 
 // ── 인라인 편집 상태 ──
@@ -4771,7 +5203,9 @@ function openRxEdit(el, e) {
   const getters = {
     'page-title': () => groupLabels[mk] || '',
     'func-tags':  () => (stages[si].funcTags||[]).join('+'),
-    'stage-date': () => stages[si].stageDisplayOverride || stages[si].stageDisplayText || stages[si].stageRawCell || getStageLabel(stages[si]),
+    // ★ getStageLabelRaw 사용: 편집창에 날짜 포함 원문 그대로 표시
+    //   buildGroupPage의 label 소스와 완전히 동일 → 클릭 전·후 텍스트 일치
+    'stage-date': () => getStageLabelRaw(stages[si]),
     'prod-desc':  () => { const p=stages[si].products[pi]; return p.detailCellDisplayOverride || p.detailCellRaw || p.desc || ''; },
     'prod-qty':   () => String(stages[si].products[pi].qty||''),
     'prod-name':  () => stages[si].products[pi].key.split('||')[0],
@@ -4790,6 +5224,8 @@ function openRxEdit(el, e) {
   _inlineEditing = true;
   el.setAttribute('contenteditable', 'true');
   el.classList.add('rx-editing');
+  // stage-date: <strong> 래퍼 없이 순수 텍스트만 표시 (편집 편의 + 표시 일치)
+  // 다른 셀: 기존 방식 그대로
   el.innerHTML = rawVal.replace(/\n/g, '<br>');
   // 편집 모드: 스크롤 허용으로 텍스트 잘림 방지
   el._origHeight = el.style.height;    // 원본 높이 저장
@@ -4899,7 +5335,8 @@ function _saveInlineEdit(type, si, pi, mk, val) {
 // ── 셀 HTML 즉시 복원 (전체 re-render 전 임시 표시) ──
 function _restoreCellHtml(el, type, si, pi, mk) {
   if (type === 'stage-date') {
-    el.innerHTML = '<strong>' + getStageLabel(stages[si]).replace(/\n/g,'<br>') + '</strong>';
+    // ★ getStageLabelRaw: buildGroupPage/openRxEdit과 동일 소스로 날짜 보존
+    el.innerHTML = '<strong>' + getStageLabelRaw(stages[si]).replace(/\n/g,'<br>') + '</strong>';
   } else if (type === 'prod-name') {
     const p = stages[si].products[pi];
     const name = p.key.split('||')[0];
@@ -5020,6 +5457,9 @@ function goBackToCart() {
   });
 
   rxData.cart = updatedCart;
+  // 이동 직전 현재 상태 전체 저장 (복귀 시 stages 등 모두 복원됨)
+  _saveRxStages();
+  // index.html 로 cart 전달 (일회성 크로스-페이지 전달 키)
   localStorage.setItem('rxData', JSON.stringify(rxData));
   location.href = 'index.html';
 }
@@ -5040,26 +5480,46 @@ function _saveRxStages() {
       pageOrder, costVisible, priceOverrides,
       groupLabels, stageGroupOrder,
       coverCustomFs: rxData.coverCustomFs || {},
-      coverCustomText: rxData.coverCustomText || {}
+      coverCustomText: rxData.coverCustomText || {},
+      // ★ rxData 핵심 필드 함께 저장 → 새로고침 후에도 복원 가능
+      rxCart:     rxData.cart     || [],
+      rxName:     rxData.name     || '',
+      rxRegion:   rxData.region   || '',
+      rxArea:     rxData.area     || '',
+      rxCrop:     rxData.crop     || '',
+      rxAreaType: rxData.areaType || '농사',
+      // PDF 비용 페이지 추출 데이터
+      extractedTotalCost: rxData.extractedTotalCost ?? null,
+      extractedUnitPrice: rxData.extractedUnitPrice ?? null
     }));
   } catch(e) {}
 }
+
+// ── 통합 저장 (rxData + stages) ─────────────────────────────────────────────
+// saveRxData() — 외부에서 호출 가능한 공통 저장 입구
+// ※ localStorage.rxData 는 index.html 전달 전용이므로 여기서는 쓰지 않음
+//    모든 영속은 rxStages 단일 저장소로 통일
+function saveRxData() {
+  _saveRxStages();
+}
+
+// 입력 필드 변경 시 debounce 자동 저장 (타이핑 중 불필요한 쓰기 방지)
+let _autoSaveTimer = null;
+function _scheduleAutoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    // 폼 값 → rxData 동기화 후 저장
+    rxData.name     = document.getElementById('bName')?.value    || rxData.name    || '';
+    rxData.region   = document.getElementById('bRegion')?.value  || rxData.region  || '';
+    rxData.area     = document.getElementById('bArea')?.value    || rxData.area    || '';
+    rxData.crop     = document.getElementById('bCrop')?.value    || rxData.crop    || '';
+    const at = document.getElementById('bAreaType')?.value || '';
+    rxData.areaType = at === '직접입력'
+      ? (document.getElementById('bAreaTypeDirect')?.value || '') : (at || rxData.areaType || '농사');
+    _saveRxStages();
+  }, 800);
+}
 </script>
-
-<!-- rx 셀 선택 floating bottom menu -->
-<div id="rx-cell-menu">
-  <button class="rxm-merge" onclick="_rxMergeSel()">🔗 합치기</button>
-  <button class="rxm-split" onclick="_rxSplitSel()">✂ 분할</button>
-  <button class="rxm-clear" onclick="_rxClearSel()">☐ 해제</button>
-</div>
-
-<!-- 우클릭 컨텍스트 메뉴 -->
-<div id="rx-ctx-menu">
-  <div class="rxctx-item rxctx-merge" onclick="_rxMergeSel()">🔗 셀 합치기</div>
-  <div class="rxctx-item rxctx-split" onclick="_rxSplitSel()">✂ 셀 분할</div>
-  <div class="rxctx-sep"></div>
-  <div class="rxctx-item" onclick="_rxClearSel()">☐ 선택 해제</div>
-</div>
 
 <!-- 표지 줄 편집 패널 -->
 <div id="coverEditor">

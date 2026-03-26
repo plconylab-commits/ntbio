@@ -212,6 +212,13 @@
       cropEl.value = copy.customer.crop;
     }
 
+    // rxStages 복원 — 처방전.html에서 달별 단계 복원에 사용
+    if (copy.rxStages) {
+      localStorage.setItem('rxStages', JSON.stringify(copy.rxStages));
+    } else {
+      localStorage.removeItem('rxStages');
+    }
+
     // 전역 함수 호출
     if (typeof applyGlobalDisc === 'function') applyGlobalDisc();
     if (typeof render          === 'function') render();
