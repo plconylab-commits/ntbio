@@ -382,7 +382,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
   border:3.5px solid var(--teal);border-bottom:none;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  white-space:nowrap;overflow:hidden;}
 /* page-purpose as td inside merged rx-table */
 .rx-table td.page-purpose{
   display:table-cell;vertical-align:middle;
@@ -391,8 +391,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   text-align:center;letter-spacing:1px;
   color:#111;background:#fff;
   border:3.5px solid var(--teal);
-  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  max-width:0; /* table-cell ellipsis 필수 */
+  overflow:hidden;white-space:nowrap;
 }
 /* ── border-collapse:collapse 전략 — 셀 벌어짐 완전 차단 ── */
 .rx-table{
@@ -3998,11 +3997,27 @@ function generatePreview() {
   setTimeout(applyPreviewAutoFit, 150);
   // autofit 완료 후 모든 col/tr에 px 고정값 삽입 (리사이즈 기준점 확립)
   setTimeout(_rxInitTableSizes, 230);
+  // 헤더 텍스트 1줄 맞춤 (autofit 후 실제 width 확정된 시점)
+  setTimeout(fitPagePurposeText, 280);
+}
+
+// ── 헤더(page-purpose) 텍스트 자동 축소 — 1줄 고정 ──────────────────────
+function fitPagePurposeText() {
+  document.querySelectorAll('.page-purpose').forEach(el => {
+    el.style.fontSize = ''; // CSS 기본값(22px)으로 리셋
+    const w = el.offsetWidth || el.parentElement?.offsetWidth || 0;
+    if (!w) return;
+    let fs = parseFloat(getComputedStyle(el).fontSize) || 22;
+    while (el.scrollWidth > w && fs > 9) {
+      fs -= 0.5;
+      el.style.fontSize = fs + 'px';
+    }
+  });
 }
 
 function doPrint() {
   generatePreview();
-  setTimeout(() => window.print(), 200);
+  setTimeout(() => { fitPagePurposeText(); window.print(); }, 200);
 }
 
 // ── 인쇄 자동 축소 (A4 landscape 한 페이지 잘림 방지) ─────────────────────────
