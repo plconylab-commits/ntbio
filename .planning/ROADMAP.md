@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천 (completed 2026-03-25)
 - [x] **Phase 4: 거래이력 + 미수금 + 매출** - 납부 기록, 미수금 목록, 기간별 매출 집계 (completed 2026-03-25)
 - [x] **Phase 5: 거래명세표 인쇄/PDF 버그 수정** - 구버전 PDF 불러오기, 푸터 오버플로 방지, ##TN## 숨김, 다중 페이지 양식 반복 (completed 2026-03-26)
-- [ ] **Phase 6: 처방전↔거래명세표 대조 검토** - 처방전 PDF와 거래명세표를 동시에 올려 품목·수량·금액 차이를 자동 검출
+- [x] **Phase 6: 처방전↔거래명세표 대조 검토** - 처방전 PDF와 거래명세표를 동시에 올려 품목·수량·금액 차이를 자동 검출 (completed 2026-03-27)
 
 ## Phase Details
 
@@ -110,7 +110,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 06-01-PLAN.md — 비교 로직 모듈 TDD (rxCompare.js: 퍼지 매칭, diff 분류, 평당가 계산)
-- [ ] 06-02-PLAN.md — 비교 모달 UI (rxCompareUI.js) + index.html 통합 + 사용자 검증
+- [x] 06-02-PLAN.md — 비교 모달 UI (rxCompareUI.js) + index.html 통합 + 사용자 검증
 
 ## Backlog
 
@@ -148,4 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
 | 4. 거래이력 + 미수금 + 매출 | 1/2 | Complete    | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | 1/1 | Complete    | 2026-03-26 |
-| 6. 처방전↔거래명세표 대조 검토 | 1/2 | In Progress | - |
+| 6. 처방전↔거래명세표 대조 검토 | 2/2 | Complete    | 2026-03-27 |
