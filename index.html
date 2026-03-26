@@ -705,6 +705,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <button class="btn-clear" onclick="clearAll()">🗑&nbsp; 전체 초기화</button>
       </div>
       <div class="act-row">
+        <button class="btn-compare" onclick="RxCompareUI.openCompareModal()" style="background:var(--g-btn,#35a09e);color:#fff;border:none;border-radius:7px;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:1;">🔍&nbsp; 처방전 비교</button>
+      </div>
+      <div class="act-row">
         <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
         <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
       </div>
@@ -837,6 +840,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="customerUI.js?v=1"></script>
 <script src="prescriptionHistoryUI.js?v=1"></script>
 <script src="salesHistoryUI.js?v=1"></script>
+<script src="rxCompare.js?v=1"></script>
+<script src="rxCompareUI.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
