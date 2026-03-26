@@ -3538,11 +3538,6 @@ function generateSummaryCardHtml(areaNum) {
     const c = (rxData.cart||[]).find(c => c.name+'||'+c.size === key);
     return c ? (c.sp || 0) : 0;
   }
-  function getRetailAmt(key) {
-    if (priceOverrides[key]?.retail !== undefined) return priceOverrides[key].retail;
-    const c = (rxData.cart||[]).find(c => c.name+'||'+c.size === key);
-    return c ? (c.retail || 0) : 0;
-  }
 
   const groups = {};
   stages.forEach(st => {
@@ -3557,6 +3552,28 @@ function generateSummaryCardHtml(areaNum) {
 
   if (!orderedMks.length) return '';
 
+  // 그룹 레이블 스마트 추출: 단계의 month → "N월", 아니면 groupLabel에서 숫자월 추출
+  function getMonthLabel(mk) {
+    const stagesInGroup = groups[mk] || [];
+    // 1. st.month 기준으로 다수결 추출
+    const months = stagesInGroup.map(st => parseInt(st.month)).filter(m => m >= 1 && m <= 12);
+    if (months.length) {
+      const freq = {};
+      months.forEach(m => { freq[m] = (freq[m]||0) + 1; });
+      const top = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+      return top + '월';
+    }
+    // 2. groupLabel에서 숫자월 패턴 추출 ("5월", "5 월", "5월:01")
+    const lbl = groupLabels[mk] || '';
+    const mMatch = lbl.match(/(\d{1,2})\s*월/);
+    if (mMatch) return mMatch[1] + '월';
+    // 3. mk 자체가 월 번호
+    if (mk >= 1 && mk <= 12) return mk + '월';
+    // 4. 짧은 레이블 그대로 ('기비용', '기비', '기타' 등)
+    if (lbl) return lbl.length <= 5 ? lbl : lbl.substring(0, 4);
+    return String(mk);
+  }
+
   function groupTotal(mk) {
     return (groups[mk]||[]).reduce((s, st) =>
       s + (st.products||[]).reduce((ss, p) => {
@@ -3565,22 +3582,28 @@ function generateSummaryCardHtml(areaNum) {
       }, 0), 0);
   }
 
-  const grand = orderedMks.reduce((s, mk) => s + groupTotal(mk), 0);
-  const perPyeong = areaNum ? Math.round(grand / areaNum) : 0;
+  const calcGrand = orderedMks.reduce((s, mk) => s + groupTotal(mk), 0);
+  // 계산값이 없으면 PDF 추출값 폴백
+  const grand      = calcGrand || rxData.extractedTotalCost || 0;
+  const calcPP     = areaNum ? Math.round(calcGrand / areaNum) : 0;
+  const perPyeong  = calcPP  || rxData.extractedUnitPrice    || 0;
+  const hasPrices  = calcGrand > 0;   // 제품 단가가 실제로 있는지
 
-  // 월별 합계 행
+  // 월별 합계 행 — 단가가 없으면 금액은 '-' 표시, 레이블만 표시
   const monthRows = orderedMks.map(mk => {
     const tot = groupTotal(mk);
     const pp  = areaNum ? Math.round(tot / areaNum) : 0;
-    const lbl = groupLabels[mk] || (mk < 13 ? mk + '월' : String(mk));
+    const lbl = getMonthLabel(mk);
     return `<tr>
       <td class="sc-month">${lbl}</td>
-      <td class="sc-amt">${tot ? tot.toLocaleString() + '원' : '-'}</td>
-      <td class="sc-pp">${pp ? '평당(' + pp.toLocaleString() + '원)' : '-'}</td>
+      <td class="sc-amt">${(hasPrices && tot) ? tot.toLocaleString() + '원' : '-'}</td>
+      <td class="sc-pp">${(hasPrices && pp) ? '평당(' + pp.toLocaleString() + '원)' : '-'}</td>
     </tr>`;
   }).join('');
 
   const title = `${region||''}지역 ${crop||''}${area ? '(' + area + '평)' : ''}농사 ${name||''}님 처방전`;
+  const grandDisp = grand ? grand.toLocaleString() + '원' : '-';
+  const ppDisp    = perPyeong ? perPyeong.toLocaleString() + '원' : '-';
 
   return `<div class="page-card" data-pagekey="cost">
     <div class="content-page">
@@ -3597,8 +3620,8 @@ function generateSummaryCardHtml(areaNum) {
           </tbody>
           <tfoot>
             <tr class="sc-footer-row">
-              <td colspan="2"><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grand.toLocaleString()}원</td>
-              <td>평당(${perPyeong ? perPyeong.toLocaleString() + '원' : '-'})</td>
+              <td colspan="2"><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grandDisp}</td>
+              <td>평당(${ppDisp})</td>
             </tr>
           </tfoot>
         </table>
