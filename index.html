@@ -136,41 +136,41 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 @keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
 .ord-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px;}
 .ord-name-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
-.ord-name{font-size:15px;font-weight:700;}
-.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:auto;flex:0 1 auto;min-width:20px;field-sizing:content;outline:none;}
+.ord-name{font-size:17px;font-weight:700;}
+.ord-name-edit{font-size:17px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:auto;flex:0 1 auto;min-width:20px;field-sizing:content;outline:none;}
 .ord-name-edit:focus{border-bottom-color:var(--teal);}
-.ord-size{font-size:12px;font-weight:600;color:var(--g-btn);background:var(--g-pale);
-  padding:2px 7px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
-.del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;
+.ord-size{font-size:14px;font-weight:600;color:var(--g-btn);background:var(--g-pale);
+  padding:2px 8px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
+.del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:16px;
   padding:0 3px;transition:color .15s;}
 .del-btn:hover{color:var(--red);}
-.ord-ctrl{display:grid;grid-template-columns:26px 26px 1fr auto;gap:6px;align-items:center;margin-bottom:3px;}
-.qty-btn{width:26px;height:26px;border:1.5px solid var(--border);border-radius:5px;
-  background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--g-mid);
+.ord-ctrl{display:grid;grid-template-columns:30px 30px 1fr auto;gap:6px;align-items:center;margin-bottom:3px;}
+.qty-btn{width:30px;height:30px;border:1.5px solid var(--border);border-radius:5px;
+  background:#fff;cursor:pointer;font-size:16px;font-weight:700;color:var(--g-mid);
   display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .qty-btn:hover{background:var(--g-pale);border-color:var(--g-btn);}
-.qty-num{font-size:14px;font-weight:700;text-align:center;}
+.qty-num{font-size:16px;font-weight:700;text-align:center;}
 .disc-ctrl{display:flex;align-items:center;gap:4px;background:var(--yellow);
   border:1px solid var(--yellow-d);border-radius:5px;padding:4px 8px;}
-.disc-ctrl span{font-size:12px;font-weight:700;color:var(--orange);}
-.disc-ctrl input{width:42px;border:none;background:transparent;font-family:inherit;
-  font-size:15px;font-weight:700;color:var(--red);text-align:center;outline:none;}
+.disc-ctrl span{font-size:13px;font-weight:700;color:var(--orange);}
+.disc-ctrl input{width:46px;border:none;background:transparent;font-family:inherit;
+  font-size:17px;font-weight:700;color:var(--red);text-align:center;outline:none;}
 /* 지원가 직접입력 행 */
 .ord-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:3px 0;}
 .ord-retail-row{display:flex;align-items:center;gap:4px;}
-.ord-retail-lbl{font-size:10px;font-weight:700;color:#E65100;flex-shrink:0;white-space:nowrap;}
+.ord-retail-lbl{font-size:12px;font-weight:700;color:#E65100;flex-shrink:0;white-space:nowrap;}
 .ord-retail-input{flex:1;min-width:0;border:1.5px solid #FFCC80;border-radius:5px;
-  padding:3px 6px;font-family:inherit;font-size:12px;font-weight:700;color:#E65100;outline:none;text-align:right;}
+  padding:4px 6px;font-family:inherit;font-size:14px;font-weight:700;color:#E65100;outline:none;text-align:right;}
 .ord-retail-input:focus{border-color:#E65100;}
-.ord-retail-unit{font-size:10px;color:#E65100;font-weight:700;flex-shrink:0;}
+.ord-retail-unit{font-size:12px;color:#E65100;font-weight:700;flex-shrink:0;}
 .ord-supp-row{display:flex;align-items:center;gap:4px;}
-.ord-supp-lbl{font-size:10px;font-weight:700;color:#1565C0;flex-shrink:0;white-space:nowrap;}
+.ord-supp-lbl{font-size:12px;font-weight:700;color:#1565C0;flex-shrink:0;white-space:nowrap;}
 .ord-supp-input{flex:1;min-width:0;border:1.5px solid #90CAF9;border-radius:5px;
-  padding:3px 7px;font-family:inherit;font-size:12px;font-weight:700;color:#1565C0;
+  padding:4px 7px;font-family:inherit;font-size:14px;font-weight:700;color:#1565C0;
   background:#E3F2FD;outline:none;}
 .ord-supp-input:focus{border-color:#1565C0;}
 .ord-supp-input::placeholder{color:#90CAF9;font-weight:400;}
-.ord-supp-unit{font-size:10px;color:#1565C0;font-weight:700;flex-shrink:0;}
+.ord-supp-unit{font-size:12px;color:#1565C0;font-weight:700;flex-shrink:0;}
 /* 모달 직접입력 구분선 */
 .mf-or{text-align:center;color:var(--muted);font-size:11px;margin:2px 0 6px;}
 .mf input.sp-direct{color:#1565C0;background:#E3F2FD;border-color:#90CAF9;}
@@ -187,17 +187,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border-radius:4px;font-weight:700;display:none;}
 .vat-on-badge.show{display:inline;}
 .ord-prices{display:flex;justify-content:flex-end;align-items:center;
-  gap:6px;margin-top:2px;font-size:11px;}
+  gap:6px;margin-top:2px;font-size:13px;}
 .retail-p{color:var(--muted);text-decoration:line-through;}
 .supply-p{color:var(--blue);font-weight:700;}
-.disc-tag{background:var(--red-lt);color:var(--red);font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;}
-.line-tot{color:var(--red);font-weight:700;font-size:13px;}
-.gift-tag{font-size:11px;color:var(--orange);font-weight:700;background:var(--red-lt);
+.disc-tag{background:var(--red-lt);color:var(--red);font-size:12px;font-weight:700;padding:1px 5px;border-radius:4px;}
+.line-tot{color:var(--red);font-weight:700;font-size:15px;}
+.gift-tag{font-size:13px;color:var(--orange);font-weight:700;background:var(--red-lt);
   padding:2px 7px;border-radius:8px;display:inline-block;}
 
 .summary{border-top:2px solid var(--border);padding:6px 12px;background:var(--g-pale2);}
 .sum-row{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:2px;font-size:12px;}
+  margin-bottom:2px;font-size:13px;}
 .sum-row .lbl{color:var(--muted);}
 .sum-row .val{font-weight:700;}
 .sum-total{display:flex;justify-content:space-between;align-items:center;
@@ -2512,24 +2512,8 @@ function onPdfSelected(input){
       if(/거래명세표/.test(text)||/거래명세표/.test(compact)){
         const oldParsed=parseOldInvoice(text);
         if(oldParsed.items.length>0){
-          // 고객 정보 세팅
-          if(oldParsed.customerName) document.getElementById('cName').value=oldParsed.customerName;
-          if(oldParsed.phone){
-            const el=document.getElementById('cPhone');
-            el.value=oldParsed.phone;
-            if(typeof fmtPhone==='function') fmtPhone(el,'cPhone');
-          }
-          if(oldParsed.addr) document.getElementById('cAddr').value=oldParsed.addr;
-          if(oldParsed.addr && typeof shortenRegion==='function')
-            document.getElementById('cRegion').value=shortenRegion(oldParsed.addr);
-          // 카트 교체
-          cart=[];
-          oldParsed.items.forEach(it=>cart.push(it));
-          if(typeof sortCart==='function') sortCart();
-          if(typeof render==='function') render();
-          if(typeof syncPrint==='function') syncPrint();
-          if(typeof checkUnpaidOnCustomer==='function') checkUnpaidOnCustomer();
-          showToast('구버전 거래명세표 불러오기 완료 — '+oldParsed.items.length+'개 품목');
+          window._oldInvParsed=oldParsed;
+          _openOldInvConfirmModal(oldParsed);
         }else{
           showToast('거래명세표 파싱 실패 — 직접 입력해 주세요.', true);
         }
@@ -3200,6 +3184,86 @@ function _applyInvoiceConfirm(){
     zIndex:'99999',pointerEvents:'none',boxShadow:'0 4px 16px rgba(0,0,0,.3)'});
   document.body.appendChild(toast);
   setTimeout(()=>toast.remove(),3000);
+}
+
+/* ─── 구버전 거래명세표 불러오기 확인 모달 ───────────────────────────── */
+function _openOldInvConfirmModal(op){
+  const prev=document.getElementById('oldInvOverlay');
+  if(prev) prev.remove();
+  const hasCurrent=cart.length>0;
+  const overlay=document.createElement('div');
+  overlay.id='oldInvOverlay';
+  overlay.innerHTML=`
+    <style>
+      #oldInvOverlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;
+        display:flex;align-items:center;justify-content:center}
+      .oldinv-box{background:#fff;border-radius:14px;width:min(480px,95vw);
+        box-shadow:0 8px 40px rgba(0,0,0,.3);padding:24px 24px 20px}
+      .oldinv-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+      .oldinv-hdr h3{margin:0;font-size:17px}
+      .oldinv-x{border:none;background:none;font-size:20px;cursor:pointer;color:#888}
+      .oldinv-info{background:#f0f7f7;border-radius:9px;padding:12px 14px;margin-bottom:12px;
+        font-size:14px;line-height:1.8;border:1px solid #c8e0df}
+      .oldinv-info b{color:#2a8a88}
+      .oldinv-cnt{background:#eef7f5;border-radius:8px;padding:10px 14px;margin-bottom:16px;
+        font-size:15px;font-weight:700;border:1px solid #c0e0dc}
+      .oldinv-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .oldinv-btn-replace{padding:13px;background:#2a8a88;color:#fff;border:none;border-radius:9px;
+        font-size:14px;font-weight:700;cursor:pointer}
+      .oldinv-btn-replace:hover{background:#228a85}
+      .oldinv-btn-add{padding:13px;background:#1565C0;color:#fff;border:none;border-radius:9px;
+        font-size:14px;font-weight:700;cursor:pointer}
+      .oldinv-btn-add:hover{background:#0D47A1}
+      .oldinv-btn-add:disabled{background:#90CAF9;cursor:not-allowed}
+    </style>
+    <div class="oldinv-box">
+      <div class="oldinv-hdr">
+        <h3>📄 구버전 거래명세표 불러오기</h3>
+        <button class="oldinv-x" onclick="document.getElementById('oldInvOverlay').remove()">✕</button>
+      </div>
+      <div class="oldinv-info">
+        <b>고객명:</b> ${op.customerName||'(없음)'}<br>
+        ${op.phone?`<b>연락처:</b> ${op.phone}<br>`:''}
+        ${op.addr?`<b>주소:</b> ${op.addr}<br>`:''}
+      </div>
+      <div class="oldinv-cnt">📦 제품 <b>${op.items.length}개</b> 감지됨</div>
+      <div class="oldinv-btns">
+        <button class="oldinv-btn-replace" onclick="_applyOldInv(false)">
+          🔄 카트 교체
+        </button>
+        <button class="oldinv-btn-add" onclick="_applyOldInv(true)" ${!hasCurrent?'disabled title="현재 카트가 비어있음"':''}>
+          ➕ 현재 카트에 추가
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _applyOldInv(append){
+  const op=window._oldInvParsed;
+  if(!op) return;
+  // 고객 정보 세팅
+  if(op.customerName) document.getElementById('cName').value=op.customerName;
+  if(op.phone){
+    const el=document.getElementById('cPhone');
+    el.value=op.phone;
+    if(typeof fmtPhone==='function') fmtPhone(el,'cPhone');
+  }
+  if(op.addr){
+    document.getElementById('cAddr').value=op.addr;
+    if(typeof shortenRegion==='function')
+      document.getElementById('cRegion').value=shortenRegion(op.addr);
+  }
+  // 카트 적용
+  if(!append) cart=[];
+  op.items.forEach(it=>cart.push(it));
+  if(typeof sortCart==='function') sortCart();
+  if(typeof render==='function') render();
+  if(typeof syncPrint==='function') syncPrint();
+  if(typeof checkUnpaidOnCustomer==='function') checkUnpaidOnCustomer();
+  document.getElementById('oldInvOverlay').remove();
+  window._oldInvParsed=null;
+  showToast((append?'카트에 추가 완료':'불러오기 완료')+' — '+op.items.length+'개 품목');
 }
 
 // ─── 완전삭제 / 복구 ────────────────────
