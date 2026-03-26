@@ -4218,7 +4218,9 @@ const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단�
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
-  for (let p = 1; p <= Math.min(pdfDoc.numPages, 8); p++) {
+  // 비용표(마지막 1-2장) 제외한 전체 처방 페이지 처리
+  const lastPage = Math.max(1, pdfDoc.numPages - 2);
+  for (let p = 1; p <= lastPage; p++) {
     const page = await pdfDoc.getPage(p);
     const vp   = page.getViewport({ scale: 1.0 });
     const tc   = await page.getTextContent();
@@ -4364,8 +4366,30 @@ function parseRxPdfCoords(items) {
 
       const rightText = rightRow.map(i => i.text).join(' ');
       if (RX_COUNT_UNITS_RE.test(rightText)) {
-        // ④ 제품 행도 푸터 영역이면 제외
-        rightRow.forEach(it => rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text }));
+        // ── 수량 토큰 위치 기준으로 제품열(좌)/사용법열(우) 분리 ──
+        // pdfjs는 x 오름차순으로 항목을 주므로 이미 좌→우 순서
+        const sortedRight = rightRow.slice().sort((a, b) => a.x - b.x);
+        let qtyIdx = -1;
+        for (let ri = 0; ri < sortedRight.length; ri++) {
+          if (/^(반)?(포|병|봉|통|개)$/.test(sortedRight[ri].text.trim()) ||
+              /^\d+(?:\.\d+)?\s*(포|병|봉|통|개)$/.test(sortedRight[ri].text.trim())) {
+            qtyIdx = ri;
+            break;
+          }
+        }
+        sortedRight.forEach((it, ri) => {
+          if (qtyIdx < 0 || ri <= qtyIdx) {
+            // 제품명·규격·수량 → rightProductItems
+            rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text });
+          } else {
+            // 수량 뒤 = 사용법/설명 컬럼 → rightDetailItems (제품명 오염 방지)
+            const detailText = cleanDetailText(it.text);
+            if (!RX_FOOTER_RE.test(detailText) && detailText.length > 2 &&
+                !/^\d+(\.\d+)?(kg|g|L|ml)?$/.test(detailText)) {
+              rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText });
+            }
+          }
+        });
       } else {
         // 단위 없는 우측 행: detail 후보 (usage/composition/instruction)
         const detailText = cleanDetailText(rightText);
@@ -4476,6 +4500,44 @@ function parseRxPdfCoords(items) {
     const idx = assignToBlock(rr.yAvg, rr.page);
     if (idx >= 0) blockProducts[idx].push(rr);
   });
+
+  // ── 7b. 텍스트 전용 페이지 폴백 ─────────────────────────────────────
+  // rightProductItems 없는 페이지(텍스트 레이아웃 페이지)에서
+  // 좌열 아이템 중 수량단위 포함 행 → 가상의 rightProductItems로 처리
+  {
+    const pagesWithRightProds = new Set(rightProductItems.map(r => r.page));
+    const pagesWithLeftItems  = new Set(leftItems.map(l => l.page));
+    pagesWithLeftItems.forEach(pg => {
+      if (pagesWithRightProds.has(pg)) return; // 표 페이지는 이미 처리됨
+      // 이 페이지의 좌열 아이템 중 수량단위 포함 행 = 제품 행
+      const leftPgItems = leftItems.filter(l => l.page === pg);
+      leftPgItems.forEach(li => {
+        if (!RX_COUNT_UNITS_RE.test(li.text)) return;
+        // 수량단위 포함 아이템 → 가상 productRow로 등록
+        rightProductItems.push({ y: li.y, page: li.page, text: li.text });
+      });
+    });
+    // productRows를 다시 빌드 (추가된 항목 포함)
+    productRows.length = 0;
+    let lastPR2 = null;
+    const sortedRPI = rightProductItems.slice().sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+    for (const ri of sortedRPI) {
+      if (!lastPR2 || lastPR2.page !== ri.page || Math.abs(ri.y - lastPR2.yAvg) > RX_ROW_Y_MERGE) {
+        lastPR2 = { y: ri.y, yAvg: ri.y, page: ri.page, texts: [] };
+        productRows.push(lastPR2);
+      } else {
+        const cnt = lastPR2.texts.length;
+        lastPR2.yAvg = (lastPR2.yAvg * cnt + ri.y) / (cnt + 1);
+      }
+      lastPR2.texts.push(ri.text);
+    }
+    // blockProducts 재배정
+    blockProducts.forEach(b => b.length = 0);
+    productRows.forEach(rr => {
+      const idx = assignToBlock(rr.yAvg, rr.page);
+      if (idx >= 0) blockProducts[idx].push(rr);
+    });
+  }
 
   // ── 8. detail 행 → stageBlock 배정 (Y 포함 객체 보존) ──────────────
   const blockDetailItems = stageBlocks.map(() => []);
