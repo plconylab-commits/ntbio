@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: 처방이력 + 템플릿** - 발행 시 자동 저장, 이력 불러오기, 유사 처방 템플릿 추천 (completed 2026-03-25)
 - [x] **Phase 4: 거래이력 + 미수금 + 매출** - 납부 기록, 미수금 목록, 기간별 매출 집계 (completed 2026-03-25)
 - [x] **Phase 5: 거래명세표 인쇄/PDF 버그 수정** - 구버전 PDF 불러오기, 푸터 오버플로 방지, ##TN## 숨김, 다중 페이지 양식 반복 (completed 2026-03-26)
+- [ ] **Phase 6: 처방전↔거래명세표 대조 검토** - 처방전 PDF와 거래명세표를 동시에 올려 품목·수량·금액 차이를 자동 검출
 
 ## Phase Details
 
@@ -95,6 +96,22 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — 거래명세표 인쇄/PDF 4가지 버그 수정
 
+### Phase 6: 처방전↔거래명세표 대조 검토
+**Goal**: 처방전 PDF를 업로드하면 현재 거래명세표 카트와 비교하여 품목 유무·수량·금액 차이를 자동으로 찾아 모달 diff 테이블로 표시한다
+**Depends on**: Phase 5
+**Requirements**: XCHK-01, XCHK-02, XCHK-03, XCHK-04, XCHK-05, XCHK-06
+**Success Criteria** (what must be TRUE):
+  1. 거래명세표 툴바에 "처방전 비교" 버튼이 있고 클릭하면 비교 모달이 열린다
+  2. 모달에서 처방전 PDF를 업로드하면 카트와 자동 대조되어 diff 테이블이 표시된다
+  3. diff 테이블이 일치/수량차이/한쪽에만/미매칭 4가지 상태를 색상으로 구분한다
+  4. 퍼지 매칭으로 품목명을 자동 대응하고 매칭 실패는 "미매칭"으로 표시한다
+  5. 처방전 평당가 vs 카트 공급가 합계/면적 요약이 diff 테이블 상단에 표시된다
+  6. 비교 과정에서 카트 데이터가 절대 변경되지 않는다
+**Plans:** 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — 비교 로직 모듈 TDD (rxCompare.js: 퍼지 매칭, diff 분류, 평당가 계산)
+- [ ] 06-02-PLAN.md — 비교 모달 UI (rxCompareUI.js) + index.html 통합 + 사용자 검증
+
 ## Backlog
 
 ### Phase 999.1: 거래명세표 처방전 PDF 업로드 오류 (BACKLOG)
@@ -122,7 +139,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -131,3 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
 | 4. 거래이력 + 미수금 + 매출 | 1/2 | Complete    | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | 1/1 | Complete    | 2026-03-26 |
+| 6. 처방전↔거래명세표 대조 검토 | 0/2 | Planned | - |
