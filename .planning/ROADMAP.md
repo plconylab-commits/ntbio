@@ -109,7 +109,7 @@ Plans:
   6. 비교 과정에서 카트 데이터가 절대 변경되지 않는다
 **Plans:** 2 plans
 Plans:
-- [ ] 06-01-PLAN.md — 비교 로직 모듈 TDD (rxCompare.js: 퍼지 매칭, diff 분류, 평당가 계산)
+- [x] 06-01-PLAN.md — 비교 로직 모듈 TDD (rxCompare.js: 퍼지 매칭, diff 분류, 평당가 계산)
 - [ ] 06-02-PLAN.md — 비교 모달 UI (rxCompareUI.js) + index.html 통합 + 사용자 검증
 
 ## Backlog
@@ -148,4 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. 처방이력 + 템플릿 | 2/2 | Complete   | 2026-03-25 |
 | 4. 거래이력 + 미수금 + 매출 | 1/2 | Complete    | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | 1/1 | Complete    | 2026-03-26 |
-| 6. 처방전↔거래명세표 대조 검토 | 0/2 | Planned | - |
+| 6. 처방전↔거래명세표 대조 검토 | 1/2 | In Progress | - |
