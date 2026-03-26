@@ -27,7 +27,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .app-header h1{font-size:17px;font-weight:700;color:#fff;}
 .app-header .today{margin-left:auto;font-size:11px;color:#A5D6A7;}
 
-.layout{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 48px);}
+.layout{display:grid;grid-template-columns:1fr 460px;height:calc(100vh - 48px);}
 
 /* ── 모바일 반응형 ── */
 @media (max-width: 768px) {
@@ -131,19 +131,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   height:100%;color:#bbb;font-size:13px;gap:8px;}
 .ord-empty .ic{font-size:34px;}
 
-.ord-item{padding:10px 14px;border-bottom:1px solid #f0f0f0;
+.ord-item{padding:6px 12px;border-bottom:1px solid #f0f0f0;
   animation:slideIn .2s ease;}
 @keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
-.ord-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;}
-.ord-name{font-size:13px;font-weight:700;}
-.ord-name-edit{font-size:13px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:100%;outline:none;}
+.ord-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.ord-top>div:first-child{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
+.ord-name{font-size:15px;font-weight:700;}
+.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:100%;outline:none;}
 .ord-name-edit:focus{border-bottom-color:var(--teal);}
-.ord-size{font-size:10px;font-weight:500;color:var(--g-btn);background:var(--g-pale);
-  padding:1px 5px;border-radius:7px;margin-top:2px;display:inline-block;}
+.ord-size{font-size:12px;font-weight:600;color:var(--g-btn);background:var(--g-pale);
+  padding:2px 7px;border-radius:7px;margin-top:2px;display:inline-block;}
 .del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;
   padding:0 3px;transition:color .15s;}
 .del-btn:hover{color:var(--red);}
-.ord-ctrl{display:grid;grid-template-columns:26px 26px 1fr auto;gap:7px;align-items:center;margin-bottom:7px;}
+.ord-ctrl{display:grid;grid-template-columns:26px 26px 1fr auto;gap:6px;align-items:center;margin-bottom:3px;}
 .qty-btn{width:26px;height:26px;border:1.5px solid var(--border);border-radius:5px;
   background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--g-mid);
   display:flex;align-items:center;justify-content:center;transition:all .15s;}
@@ -155,13 +156,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .disc-ctrl input{width:34px;border:none;background:transparent;font-family:inherit;
   font-size:12px;font-weight:700;color:var(--red);text-align:center;outline:none;}
 /* 지원가 직접입력 행 */
-.ord-retail-row{display:flex;align-items:center;gap:5px;margin:4px 0 2px;}
+.ord-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:3px 0;}
+.ord-retail-row{display:flex;align-items:center;gap:4px;}
 .ord-retail-lbl{font-size:10px;font-weight:700;color:#E65100;flex-shrink:0;white-space:nowrap;}
 .ord-retail-input{flex:1;min-width:0;border:1.5px solid #FFCC80;border-radius:5px;
-  padding:4px 6px;font-family:inherit;font-size:12px;font-weight:700;color:#E65100;outline:none;text-align:right;}
+  padding:3px 6px;font-family:inherit;font-size:12px;font-weight:700;color:#E65100;outline:none;text-align:right;}
 .ord-retail-input:focus{border-color:#E65100;}
 .ord-retail-unit{font-size:10px;color:#E65100;font-weight:700;flex-shrink:0;}
-.ord-supp-row{display:flex;align-items:center;gap:5px;margin:4px 0 6px;}
+.ord-supp-row{display:flex;align-items:center;gap:4px;}
 .ord-supp-lbl{font-size:10px;font-weight:700;color:#1565C0;flex-shrink:0;white-space:nowrap;}
 .ord-supp-input{flex:1;min-width:0;border:1.5px solid #90CAF9;border-radius:5px;
   padding:3px 7px;font-family:inherit;font-size:12px;font-weight:700;color:#1565C0;
@@ -175,7 +177,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .mf input.sp-direct:focus{border-color:#1565C0;}
 /* 부가세 토글 */
 .vat-row{display:flex;align-items:center;justify-content:space-between;
-  padding:7px 10px;background:#F1F8E9;border-radius:7px;margin-bottom:8px;
+  padding:4px 8px;background:#F1F8E9;border-radius:7px;margin-bottom:4px;
   border:1px solid #DCEDC8;}
 .vat-label{display:flex;align-items:center;gap:7px;cursor:pointer;
   font-size:12px;font-weight:700;color:#33691E;}
@@ -185,7 +187,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   border-radius:4px;font-weight:700;display:none;}
 .vat-on-badge.show{display:inline;}
 .ord-prices{display:flex;justify-content:flex-end;align-items:center;
-  gap:6px;margin-top:4px;font-size:11px;}
+  gap:6px;margin-top:2px;font-size:11px;}
 .retail-p{color:var(--muted);text-decoration:line-through;}
 .supply-p{color:var(--blue);font-weight:700;}
 .disc-tag{background:var(--red-lt);color:var(--red);font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;}
@@ -193,38 +195,38 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .gift-tag{font-size:11px;color:var(--orange);font-weight:700;background:var(--red-lt);
   padding:2px 7px;border-radius:8px;display:inline-block;}
 
-.summary{border-top:2px solid var(--border);padding:12px 14px;background:var(--g-pale2);}
+.summary{border-top:2px solid var(--border);padding:6px 12px;background:var(--g-pale2);}
 .sum-row{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:5px;font-size:13px;}
+  margin-bottom:2px;font-size:12px;}
 .sum-row .lbl{color:var(--muted);}
 .sum-row .val{font-weight:700;}
 .sum-total{display:flex;justify-content:space-between;align-items:center;
   padding-top:7px;border-top:1.5px solid var(--border);margin-top:3px;}
 .sum-total .lbl{font-size:14px;font-weight:700;color:var(--g-dark);}
-.sum-total .val{font-size:20px;font-weight:900;color:var(--red);}
+.sum-total .val{font-size:18px;font-weight:900;color:var(--red);}
 
-.actions{padding:12px 14px;display:flex;flex-direction:column;gap:8px;
+.actions{padding:6px 10px;display:flex;flex-direction:column;gap:4px;
   border-top:2px solid var(--g-btn);background:var(--g-pale2);border-radius:0 0 0 0;}
-.act-group{display:flex;flex-direction:column;gap:7px;}
-.act-row{display:flex;gap:7px;}
+.act-group{display:flex;flex-direction:column;gap:4px;}
+.act-row{display:flex;gap:4px;}
 .act-row>button{flex:1;}
-.act-divider{height:1px;background:var(--border);margin:2px 0;}
-.btn-print{background:var(--g-dark);color:#fff;border:none;border-radius:7px;padding:12px;
-  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;width:100%;
+.act-divider{height:1px;background:var(--border);margin:1px 0;}
+.btn-print{background:var(--g-dark);color:#fff;border:none;border-radius:7px;padding:9px;
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;
   transition:background .15s;box-shadow:0 2px 6px rgba(42,138,136,.3);}
 .btn-print:hover{background:var(--g-mid);}
-.btn-pdf{background:#1565C0;color:#fff;border:none;border-radius:7px;padding:12px;
-  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;width:100%;transition:background .15s;}
+.btn-pdf{background:#1565C0;color:#fff;border:none;border-radius:7px;padding:9px;
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;transition:background .15s;}
 .btn-pdf:hover{background:#0D47A1;}
-.btn-email{background:#2E7D32;color:#fff;border:none;border-radius:7px;padding:12px;
-  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;width:100%;transition:background .15s;}
+.btn-email{background:#2E7D32;color:#fff;border:none;border-radius:7px;padding:9px;
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;transition:background .15s;}
 .btn-email:hover{background:#1B5E20;}
 .btn-clear{background:var(--g-pale);color:var(--g-dark);border:1.5px solid var(--border);
-  border-radius:7px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;
+  border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;width:100%;transition:all .15s;}
 .btn-clear:hover{border-color:var(--red);color:var(--red);background:var(--red-lt);}
-.btn-rx{background:var(--g-btn);color:#fff;border:none;border-radius:7px;padding:12px;
-  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;width:100%;
+.btn-rx{background:var(--g-btn);color:#fff;border:none;border-radius:7px;padding:9px;
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;
   transition:background .15s;}
 .btn-rx:hover{background:var(--g-dark);}
 .cust-row3{display:grid;grid-template-columns:1fr 80px 85px 0.8fr;gap:8px;margin-top:8px;}
@@ -311,7 +313,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .au-amount{font-size:14px;font-weight:900;color:#C62828;min-width:90px;text-align:right;}
 .au-date{font-size:11px;color:#aaa;min-width:44px;text-align:right;}
 .au-empty{text-align:center;padding:60px 20px;color:#888;font-size:15px;}
-.btn-all-unpaid{width:100%;padding:12px;background:#FFEBEE;color:#C62828;border:1.5px solid #EF9A9A;border-radius:7px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn-all-unpaid{width:100%;padding:8px;background:#FFEBEE;color:#C62828;border:1.5px solid #EF9A9A;border-radius:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
 .btn-all-unpaid:hover{background:#C62828;color:#fff;border-color:#C62828;}
 
 /* ════════════════════════════════
@@ -455,7 +457,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   color:#1565C0;text-decoration:underline;display:none;
 }
 .c-custom{--cb:#e8f5e9;--ct:#2E7D32;}
-.ord-date-row{display:flex;align-items:center;gap:8px;padding:4px 0 2px;border-top:1px solid var(--g-line);}
+.ord-date-row{display:none;}
 .ord-date-lbl{font-size:11px;color:var(--muted);white-space:nowrap;}
 .ord-date-input{flex:1;border:1.5px solid var(--g-line);border-radius:7px;padding:4px 6px;
   font-family:inherit;font-size:12px;font-weight:700;color:#1565C0;outline:none;
@@ -504,17 +506,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .unpaid-alert:hover{background:var(--red);color:#fff;}
 @keyframes unpaidPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 .btn-unpaid{display:none;background:var(--red-lt);color:var(--red);border:1.5px solid var(--red);
-  border-radius:7px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;
+  border-radius:7px;padding:8px;font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;width:100%;position:relative;transition:all .15s;}
 .btn-unpaid:hover{background:var(--red);color:#fff;}
 .btn-check-unpaid{background:#FFF8E1;color:#E65100;border:1.5px solid #FFB300;
-  border-radius:7px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;
+  border-radius:7px;padding:8px;font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;width:100%;transition:all .15s;}
 .btn-check-unpaid:hover{background:#FFB300;color:#fff;}
 .unpaid-badge{background:var(--red);color:#fff;font-size:11px;font-weight:900;padding:1px 7px;border-radius:9px;margin-left:6px;display:none;}
 .unpaid-badge.show{display:inline;}
 .btn-import{background:var(--g-pale);color:var(--g-dark);border:1.5px solid var(--g-btn);
-  border-radius:7px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;
+  border-radius:7px;padding:8px;font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;width:100%;transition:all .15s;}
 .btn-import:hover{background:var(--g-dark);color:#fff;}
 .inv-payments{margin-bottom:8px;}
@@ -681,34 +683,30 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
 
     <div class="actions">
-      <div class="act-group">
-        <button class="btn-print" onclick="doPrint()">🖨️&nbsp; 인쇄</button>
-        <div class="act-row">
-          <button class="btn-pdf" onclick="doPdf()">📄&nbsp; PDF 저장</button>
-          <button class="btn-email" onclick="doEmail()">📧&nbsp; 서버저장</button>
-        </div>
+      <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="onPdfSelected(this)">
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="doImportJSON(this)">
+      <button class="btn-print" onclick="doPrint()">🖨️&nbsp; 인쇄</button>
+      <div class="act-row">
+        <button class="btn-pdf" onclick="doPdf()">📄&nbsp; PDF 저장</button>
+        <button class="btn-email" onclick="doEmail()">📧&nbsp; 서버저장</button>
       </div>
       <div class="act-divider"></div>
-      <div class="act-group">
-        <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="onPdfSelected(this)">
-        <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; PDF 업로드 (거래명세표 / 처방전)</button>
-        <button class="btn-all-unpaid" onclick="openAllUnpaid()">📋&nbsp; 미수금 전체 목록</button>
+      <div class="act-row">
+        <button class="btn-import" onclick="document.getElementById('pdfFileInput').click()">📂&nbsp; PDF 업로드</button>
+        <button class="btn-all-unpaid" onclick="openAllUnpaid()">📋&nbsp; 미수금 전체</button>
+      </div>
+      <div class="act-row">
         <button class="btn-all-unpaid" onclick="SalesHistoryUI.openSalesPanel()" style="background:#E3F2FD;color:#1565C0;border-color:#1565C0;">📊&nbsp; 매출 집계</button>
         <button class="btn-check-unpaid" onclick="checkUnpaidOnCustomer()">🔍&nbsp; 미수금 확인</button>
-        <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
       </div>
-      <div class="act-divider"></div>
-      <div class="act-group">
+      <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
+      <div class="act-row">
         <button class="btn-rx" onclick="goToPrescription()">📋&nbsp; 처방전 처방</button>
         <button class="btn-clear" onclick="clearAll()">🗑&nbsp; 전체 초기화</button>
       </div>
-      <div class="act-divider"></div>
-      <div class="act-group">
-        <div class="act-row">
-          <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
-          <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
-        </div>
-        <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="doImportJSON(this)">
+      <div class="act-row">
+        <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
+        <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
       </div>
     </div>
   </div><!-- /right -->
@@ -1316,17 +1314,19 @@ function render(){
           <input type="number" value="${it.disc}" min="0" max="100"
             onchange="chgDisc(${i},this.value)"><span>%</span></div>
       </div>
-      <div class="ord-retail-row">
-        <span class="ord-retail-lbl">소비자가</span>
-        <input type="number" class="ord-retail-input" value="${it.retail}"
-          onchange="chgRetail(${i},this.value)" placeholder="소비자가">
-        <span class="ord-retail-unit">원${it.customRetail?' ✏️':''}</span>
-      </div>
-      <div class="ord-supp-row">
-        <span class="ord-supp-lbl">공급가</span>
-        <input type="number" class="ord-supp-input" value="${it.sp}"
-          onchange="chgSp(${i},this.value)" placeholder="직접입력">
-        <span class="ord-supp-unit">원${it.customSp?' ✏️':''}</span>
+      <div class="ord-price-grid">
+        <div class="ord-retail-row">
+          <span class="ord-retail-lbl">소비자가</span>
+          <input type="number" class="ord-retail-input" value="${it.retail}"
+            onchange="chgRetail(${i},this.value)" placeholder="소비자가">
+          <span class="ord-retail-unit">원${it.customRetail?' ✏️':''}</span>
+        </div>
+        <div class="ord-supp-row">
+          <span class="ord-supp-lbl">공급가</span>
+          <input type="number" class="ord-supp-input" value="${it.sp}"
+            onchange="chgSp(${i},this.value)" placeholder="직접입력">
+          <span class="ord-supp-unit">원${it.customSp?' ✏️':''}</span>
+        </div>
       </div>
       <div class="ord-date-row">
         <span class="ord-date-lbl">📅 출고일</span>
