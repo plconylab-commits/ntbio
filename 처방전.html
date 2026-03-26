@@ -969,6 +969,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (saved.rxArea)     rxData.area     = saved.rxArea;
       if (saved.rxCrop)     rxData.crop     = saved.rxCrop;
       if (saved.rxAreaType) rxData.areaType = saved.rxAreaType;
+      if (saved.rxPhone)    rxData.phone    = saved.rxPhone;
+      if (saved.rxAddr)     rxData.addr     = saved.rxAddr;
       // PDF 비용 페이지 추출 데이터 복원
       if (saved.extractedTotalCost != null) rxData.extractedTotalCost = saved.extractedTotalCost;
       if (saved.extractedUnitPrice != null) rxData.extractedUnitPrice = saved.extractedUnitPrice;
@@ -1018,6 +1020,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (incoming.area)     rxData.area     = incoming.area;
       if (incoming.crop)     rxData.crop     = incoming.crop;
       if (incoming.areaType) rxData.areaType = incoming.areaType;
+      // 전화번호·주소 연동
+      if (incoming.phone || incoming.phone2)
+        rxData.phone = [incoming.phone, incoming.phone2].filter(Boolean).join(' / ');
+      if (incoming.addr)     rxData.addr     = incoming.addr;
       // ★★★ stages 는 위의 isNewCustomer 분기 외에는 절대 건드리지 않음 ★★★
     } catch(e) {}
     localStorage.removeItem('rxData'); // 일회성 전달 소비
@@ -3662,7 +3668,7 @@ function generateSummaryCardHtml(areaNum) {
           <tbody style="height:100%;">
             ${monthRows}
             <tr class="sc-cust-row" style="height:1px;">
-              <td colspan="3">${name||''}님&nbsp;&nbsp;전화:${phone||'-'}&nbsp;&nbsp;${addr||''}</td>
+              <td colspan="3">${name||''}님${phone ? '&nbsp;&nbsp;전화:' + phone : ''}${addr ? '&nbsp;&nbsp;' + addr : ''}</td>
             </tr>
           </tbody>
           <tfoot>
@@ -5657,6 +5663,8 @@ function _saveRxStages() {
       rxArea:     rxData.area     || '',
       rxCrop:     rxData.crop     || '',
       rxAreaType: rxData.areaType || '농사',
+      rxPhone:    rxData.phone    || '',
+      rxAddr:     rxData.addr     || '',
       // PDF 비용 페이지 추출 데이터
       extractedTotalCost: rxData.extractedTotalCost ?? null,
       extractedUnitPrice: rxData.extractedUnitPrice ?? null
