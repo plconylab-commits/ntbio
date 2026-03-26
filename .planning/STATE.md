@@ -57,6 +57,10 @@ Plan: Not started
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 6 added: 처방전↔거래명세표 대조 검토
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
