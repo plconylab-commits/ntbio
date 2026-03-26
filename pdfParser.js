@@ -535,7 +535,7 @@ async function parsePdfToJSON(pdfFile) {
           // 전체 폭의 25~40% 구간에서 x밀도가 낮은 곳을 경계로 감지
           const maxX = Math.max(...allX);
           if (maxX > 0) {
-            const lo = Math.round(maxX * 0.2), hi = Math.round(maxX * 0.45);
+            const lo = Math.round(maxX * 0.15), hi = Math.round(maxX * 0.45); // 0.2→0.15: 구버전 PDF 좁은 단계셀(x<140) 경계 조기 감지
             // 해당 범위에서 x값이 가장 적은 구간을 12px 슬라이딩 윈도우로 탐색
             let bestX = LEFT_X_MAX, bestGap = Infinity;
             for (let cx = lo; cx <= hi; cx += 4) {
