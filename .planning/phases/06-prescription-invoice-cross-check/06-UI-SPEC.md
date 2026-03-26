@@ -1,7 +1,8 @@
 ---
 phase: 6
 slug: prescription-invoice-cross-check
-status: draft
+status: approved
+reviewed_at: 2026-03-27
 shadcn_initialized: false
 preset: none
 created: 2026-03-27
@@ -38,12 +39,11 @@ Declared values (must be multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, badge padding, table cell inner gaps |
 | sm | 8px | Table cell padding (vertical), button internal padding |
-| md | 16px | Modal body padding, section spacing |
-| xl | 20px | Modal body top/bottom padding for diff table |
-| 2xl | 24px | Gap between diff table summary row and column headers |
+| md | 16px | Section spacing, modal content padding |
+| 2xl | 24px | Modal body top/bottom padding for diff table, gap between summary row and column headers |
 
-Exceptions (not named tokens — referenced directly in component CSS):
-- Modal header padding: `padding: 18px /* legacy modal-hdr match */` — use this value in component CSS directly, not as a design token.
+Exceptions (not part of this phase's design tokens):
+- **Existing `.modal-body { padding: 18px }` and `.modal-hdr { padding: 16px 18px }`** — inherited from existing codebase CSS at lines 250–256. This phase does NOT redeclare these values and executors MUST NOT apply grid-alignment corrections to existing modal styles.
 - Table row height minimum: 36px (touch-friendly tap targets for potential mobile review)
 - Modal max-width: 600px on desktop, 94vw on mobile (match existing `.modal` override at line 49)
 
@@ -238,11 +238,11 @@ No component registries used. Project is vanilla JS with no package manager buil
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: FLAG (닫기 single-verb — non-blocking)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (12/14/16px tight scale — non-blocking)
+- [x] Dimension 5 Spacing: FLAG (inherited 18px existing CSS exception — non-blocking)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED 2026-03-27
