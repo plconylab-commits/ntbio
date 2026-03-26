@@ -343,6 +343,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   .p-footer-tbl{page-break-inside:avoid;break-inside:avoid;}
   .p-wrap{page-break-inside:avoid;break-inside:avoid;page-break-after:always;break-after:always;min-height:254mm;}
   .p-wrap:last-child{page-break-after:auto;break-after:auto;}
+
+  /* 다중 페이지: 각 p-wrap은 독립적인 A4 페이지 */
+  .p-body{flex:1;}
+  .p-table{page-break-inside:auto;break-inside:auto;}
+  .p-table tr{page-break-inside:avoid;break-inside:avoid;}
 }
 
 /* 인쇄 문서 (화면에서는 숨김) */
@@ -1571,7 +1576,7 @@ function doPrint(){
   setTimeout(()=>{ document.title = orig; }, 1000);
 }
 
-function doPdf(){
+async function doPdf(){
   saveInvoice();
   _savePrescrSnapshotSafe();
   const filename = getDocTitle() + '.pdf';
@@ -1587,26 +1592,30 @@ function doPdf(){
   clone.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;display:block;';
   document.body.appendChild(clone);
 
-  // 폰트 로드 대기 후 캡처
-  document.fonts.ready.then(()=>{
-    return html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      width: 794,
-      windowWidth: 794
-    });
-  }).then(canvas=>{
-    document.body.removeChild(clone);
+  try{
+    await document.fonts.ready;
+
+    // ── .p-wrap별 개별 캡처 — 각 페이지가 정확히 한 PDF 페이지에 대응
+    const wraps = clone.querySelectorAll('.p-wrap');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const imgW = pageW - 12;
-    const imgH = canvas.height * imgW / canvas.width;
-    const imgData = canvas.toDataURL('image/jpeg', 0.97);
 
-    // ── 인보이스 데이터 준비 (나중에 마지막 페이지에 삽입)
+    for(let wi=0; wi<wraps.length; wi++){
+      if(wi>0) pdf.addPage();
+      const wCanvas = await html2canvas(wraps[wi], {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: 794, windowWidth: 794
+      });
+      const wImgH = wCanvas.height * imgW / wCanvas.width;
+      pdf.addImage(wCanvas.toDataURL('image/jpeg',0.97), 'JPEG', 6, 6, imgW, Math.min(wImgH, pageH-12));
+    }
+
+    document.body.removeChild(clone);
+
+    // ── 인보이스 데이터 준비
     let _tnLines=[];
     try{
       const d={v:2,
@@ -1624,23 +1633,6 @@ function doPdf(){
       for(var ci=0;ci<full.length;ci+=160) _tnLines.push(full.substring(ci,ci+160));
     }catch(e){console.error('##TN## 인코딩 실패:',e);}
 
-    let y = 6;
-    let remaining = imgH;
-    let srcY = 0;
-
-    while(remaining > 0){
-      const sliceH = Math.min(remaining, pageH - 12);
-      const sliceCanvas = document.createElement('canvas');
-      sliceCanvas.width = canvas.width;
-      sliceCanvas.height = sliceH * canvas.width / imgW;
-      const ctx = sliceCanvas.getContext('2d');
-      ctx.drawImage(canvas, 0, srcY * canvas.width / imgW, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
-      pdf.addImage(sliceCanvas.toDataURL('image/jpeg',0.97), 'JPEG', 6, y, imgW, sliceH);
-      remaining -= sliceH;
-      srcY += sliceH;
-      if(remaining > 0){ pdf.addPage(); y = 6; }
-    }
-
     // ── ##TN## 데이터를 PDF 메타데이터에 저장 (페이지에 보이지 않음)
     if(_tnLines.length>0){
       try{
@@ -1656,13 +1648,13 @@ function doPdf(){
     pdf.save(filename);
     btn.textContent = '📄\u00a0 PDF 저장';
     btn.disabled = false;
-  }).catch(err=>{
+  }catch(err){
     if(document.body.contains(clone)) document.body.removeChild(clone);
     console.error(err);
     btn.textContent = '📄\u00a0 PDF 저장';
     btn.disabled = false;
     alert('PDF 생성 중 오류가 발생했습니다.\n인쇄 버튼 → PDF로 저장을 이용해 주세요.');
-  });
+  }
 }
 
 function doEmail(){
