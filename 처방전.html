@@ -70,14 +70,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 /* ── 처방전 요약 카드 (summary card) ── */
 .sc-table{width:100%;border-collapse:collapse;font-size:15px;}
 .sc-table td{border:2px solid var(--teal);padding:10px 16px;}
-.sc-title-row td{background:var(--teal-dark);color:#fff;text-align:center;font-size:19px;font-weight:900;padding:14px 16px;}
+.sc-title-row td{background:#fff;color:#111;text-align:center;font-size:19px;font-weight:900;padding:14px 16px;}
 .sc-month{font-size:16px;font-weight:700;text-align:center;background:#E0F5F5;white-space:nowrap;width:80px;}
 .sc-amt{font-size:16px;font-weight:900;text-align:center;}
 .sc-pp{font-size:15px;font-weight:700;text-align:center;color:var(--teal-dark);}
 .sc-stage{font-size:13px;font-weight:700;text-align:center;background:#f5fbfb;white-space:nowrap;vertical-align:middle;width:110px;}
 .sc-prod-detail{font-size:13px;padding:7px 14px;}
-.sc-cust-row td{background:#fff;text-align:center;font-weight:700;font-size:15px;padding:10px;}
-.sc-footer-row td{background:#fff;color:var(--text);font-weight:700;font-size:15px;text-align:center;padding:10px;}
+.sc-cust-row td{background:#fff;text-align:center;font-weight:700;font-size:18px;padding:8px;}
+.sc-footer-row td{background:#fff;color:var(--text);font-weight:700;font-size:18px;text-align:center;padding:12px;}
 
 /* ── 빌더 섹션 ── */
 .b-section{border-bottom:1px solid #f0f0f0;padding:14px 16px;}
@@ -381,7 +381,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   padding:0 16px;height:49px;box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
   text-align:center;letter-spacing:1px;
-  border:3.5px solid var(--teal);border-bottom:none;}
+  border:3.5px solid var(--teal);border-bottom:none;
+  white-space:nowrap;overflow:hidden;}
 /* page-purpose as td inside merged rx-table */
 .rx-table td.page-purpose{
   display:table-cell;vertical-align:middle;
@@ -390,7 +391,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   text-align:center;letter-spacing:1px;
   color:#111;background:#fff;
   border:3.5px solid var(--teal);
-  overflow:hidden;
+  overflow:hidden;white-space:nowrap;
 }
 /* ── border-collapse:collapse 전략 — 셀 벌어짐 완전 차단 ── */
 .rx-table{
@@ -584,6 +585,11 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   .page-card{width:100%;box-shadow:none;border-radius:0;page-break-after:always;}
   .cover-page,.content-page{min-height:210mm;}
   .mobile-tabs{display:none!important;}
+  /* 인쇄 시 배경색 보존 (teal 헤더 등) */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  /* 요약카드 인쇄 시 전체 페이지 높이 채움 */
+  [data-pagekey="cost"] .content-inner{height:calc(210mm - 28px) !important;}
+  [data-pagekey="cost"] .sc-table{height:100% !important;}
 }
 /* ── 인쇄 자동 축소 Step 2: padding/line-height 축소 ── */
 .print-compact .rx-table td,
@@ -964,6 +970,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (saved.rxArea)     rxData.area     = saved.rxArea;
       if (saved.rxCrop)     rxData.crop     = saved.rxCrop;
       if (saved.rxAreaType) rxData.areaType = saved.rxAreaType;
+      if (saved.rxPhone)    rxData.phone    = saved.rxPhone;
+      if (saved.rxAddr)     rxData.addr     = saved.rxAddr;
       // PDF 비용 페이지 추출 데이터 복원
       if (saved.extractedTotalCost != null) rxData.extractedTotalCost = saved.extractedTotalCost;
       if (saved.extractedUnitPrice != null) rxData.extractedUnitPrice = saved.extractedUnitPrice;
@@ -1013,6 +1021,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (incoming.area)     rxData.area     = incoming.area;
       if (incoming.crop)     rxData.crop     = incoming.crop;
       if (incoming.areaType) rxData.areaType = incoming.areaType;
+      // 전화번호·주소 연동
+      if (incoming.phone || incoming.phone2)
+        rxData.phone = [incoming.phone, incoming.phone2].filter(Boolean).join(' / ');
+      if (incoming.addr)     rxData.addr     = incoming.addr;
       // ★★★ stages 는 위의 isNewCustomer 분기 외에는 절대 건드리지 않음 ★★★
     } catch(e) {}
     localStorage.removeItem('rxData'); // 일회성 전달 소비
@@ -3552,26 +3564,53 @@ function generateSummaryCardHtml(areaNum) {
 
   if (!orderedMks.length) return '';
 
-  // 그룹 레이블 스마트 추출: 단계의 month → "N월", 아니면 groupLabel에서 숫자월 추출
+  // 그룹 레이블 스마트 추출
+  // 우선순위: realMonth → st.month → purpose/stageLabel 텍스트 → groupLabel 텍스트 → 기비용
   function getMonthLabel(mk) {
     const stagesInGroup = groups[mk] || [];
-    // 1. st.month 기준으로 다수결 추출
-    const months = stagesInGroup.map(st => parseInt(st.month)).filter(m => m >= 1 && m <= 12);
-    if (months.length) {
+
+    // 1. realMonth (PDF 파싱 시 가짜 월 부여 전 보존된 진짜 월) 우선
+    //    그 다음 st.month (1-12 범위 직접)
+    const realMonths = stagesInGroup.map(st => {
+      const rm = parseInt(st.realMonth);
+      if (rm >= 1 && rm <= 12) return rm;
+      const m = parseInt(st.month);
+      if (m  >= 1 && m  <= 12) return m;
+      return null;
+    }).filter(Boolean);
+    if (realMonths.length) {
       const freq = {};
-      months.forEach(m => { freq[m] = (freq[m]||0) + 1; });
-      const top = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+      realMonths.forEach(m => { freq[m] = (freq[m]||0)+1; });
+      const top = parseInt(Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]);
       return top + '월';
     }
-    // 2. groupLabel에서 숫자월 패턴 추출 ("5월", "5 월", "5월:01")
+
+    // 2. stage 필드(purpose·stageLabel·stageLabelOverride)에서 "N월" 패턴
+    for (const st of stagesInGroup) {
+      for (const text of [st.purpose||'', st.stageLabel||'', st.stageLabelOverride||'']) {
+        const pm = text.match(/(\d{1,2})\s*월/);
+        if (pm) return parseInt(pm[1]) + '월';
+      }
+    }
+
+    // 3. groupLabel에서 "N월" 패턴
     const lbl = groupLabels[mk] || '';
     const mMatch = lbl.match(/(\d{1,2})\s*월/);
-    if (mMatch) return mMatch[1] + '월';
-    // 3. mk 자체가 월 번호
+    if (mMatch) return parseInt(mMatch[1]) + '월';
+
+    // 4. mk 자체가 월 번호 (1-12)
     if (mk >= 1 && mk <= 12) return mk + '월';
-    // 4. 짧은 레이블 그대로 ('기비용', '기비', '기타' 등)
-    if (lbl) return lbl.length <= 5 ? lbl : lbl.substring(0, 4);
-    return String(mk);
+
+    // 5. 기비용: month=0 이거나 기비/경운/토양 키워드
+    const hasBase = stagesInGroup.some(st =>
+      parseInt(st.month) === 0 ||
+      /기비|밑거름|경운|토양/.test((st.stageLabel||'')+(st.purpose||''))
+    );
+    if (hasBase || mk === 0 || !stagesInGroup.length) return '기비용';
+
+    // 6. 짧은 레이블 그대로 (기타 케이스)
+    if (lbl && lbl.length <= 6) return lbl;
+    return '기비용';
   }
 
   function groupTotal(mk) {
@@ -3604,9 +3643,11 @@ function generateSummaryCardHtml(areaNum) {
     }
   });
 
+  // 행 높이 균등 분배: 월행수 + 고객행 + 푸터행 + 헤더행 = 총 행수
+  // height:1px 로 설정하면 브라우저가 테이블 전체 높이를 균등 분배
   const monthRows = mergedRows.map(({ lbl, tot }) => {
     const pp = areaNum ? Math.round(tot / areaNum) : 0;
-    return `<tr>
+    return `<tr style="height:1px;">
       <td class="sc-month">${lbl}</td>
       <td class="sc-amt">${(hasPrices && tot) ? tot.toLocaleString() + '원' : '-'}</td>
       <td class="sc-pp">${(hasPrices && pp) ? '평당(' + pp.toLocaleString() + '원)' : '-'}</td>
@@ -3617,21 +3658,22 @@ function generateSummaryCardHtml(areaNum) {
   const grandDisp = grand ? grand.toLocaleString() + '원' : '-';
   const ppDisp    = perPyeong ? perPyeong.toLocaleString() + '원' : '-';
 
+  // content-page 안쪽: 595px - padding(14px*2) = 567px, border(3px*2) 제외 → 561px
   return `<div class="page-card" data-pagekey="cost">
     <div class="content-page">
-      <div class="content-inner" style="display:flex;align-items:center;justify-content:center;">
-        <table class="sc-table">
+      <div class="content-inner" style="overflow:hidden;box-sizing:border-box;">
+        <table class="sc-table" style="height:561px;">
           <thead>
-            <tr class="sc-title-row"><td colspan="3">${title}</td></tr>
+            <tr class="sc-title-row" style="height:1px;"><td colspan="3">${title}</td></tr>
           </thead>
-          <tbody>
+          <tbody style="height:100%;">
             ${monthRows}
-            <tr class="sc-cust-row">
-              <td colspan="3">${name||''}님&nbsp;&nbsp;전화:${phone||'-'}&nbsp;&nbsp;${addr||''}</td>
+            <tr class="sc-cust-row" style="height:1px;">
+              <td colspan="3">${name||''}님${phone ? '&nbsp;&nbsp;전화:' + phone : ''}${addr ? '&nbsp;&nbsp;' + addr : ''}</td>
             </tr>
           </tbody>
           <tfoot>
-            <tr class="sc-footer-row">
+            <tr class="sc-footer-row" style="height:1px;">
               <td colspan="2"><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grandDisp}</td>
               <td>평당(${ppDisp})</td>
             </tr>
@@ -3955,11 +3997,27 @@ function generatePreview() {
   setTimeout(applyPreviewAutoFit, 150);
   // autofit 완료 후 모든 col/tr에 px 고정값 삽입 (리사이즈 기준점 확립)
   setTimeout(_rxInitTableSizes, 230);
+  // 헤더 텍스트 1줄 맞춤 (autofit 후 실제 width 확정된 시점)
+  setTimeout(fitPagePurposeText, 280);
+}
+
+// ── 헤더(page-purpose) 텍스트 자동 축소 — 1줄 고정 ──────────────────────
+function fitPagePurposeText() {
+  document.querySelectorAll('.page-purpose').forEach(el => {
+    el.style.fontSize = ''; // CSS 기본값(22px)으로 리셋
+    const w = el.offsetWidth || el.parentElement?.offsetWidth || 0;
+    if (!w) return;
+    let fs = parseFloat(getComputedStyle(el).fontSize) || 22;
+    while (el.scrollWidth > w && fs > 9) {
+      fs -= 0.5;
+      el.style.fontSize = fs + 'px';
+    }
+  });
 }
 
 function doPrint() {
   generatePreview();
-  setTimeout(() => window.print(), 200);
+  setTimeout(() => { fitPagePurposeText(); window.print(); }, 200);
 }
 
 // ── 인쇄 자동 축소 (A4 landscape 한 페이지 잘림 방지) ─────────────────────────
@@ -4160,7 +4218,9 @@ const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단�
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
-  for (let p = 1; p <= Math.min(pdfDoc.numPages, 8); p++) {
+  // 비용표(마지막 1-2장) 제외한 전체 처방 페이지 처리
+  const lastPage = Math.max(1, pdfDoc.numPages - 2);
+  for (let p = 1; p <= lastPage; p++) {
     const page = await pdfDoc.getPage(p);
     const vp   = page.getViewport({ scale: 1.0 });
     const tc   = await page.getTextContent();
@@ -4306,8 +4366,30 @@ function parseRxPdfCoords(items) {
 
       const rightText = rightRow.map(i => i.text).join(' ');
       if (RX_COUNT_UNITS_RE.test(rightText)) {
-        // ④ 제품 행도 푸터 영역이면 제외
-        rightRow.forEach(it => rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text }));
+        // ── 수량 토큰 위치 기준으로 제품열(좌)/사용법열(우) 분리 ──
+        // pdfjs는 x 오름차순으로 항목을 주므로 이미 좌→우 순서
+        const sortedRight = rightRow.slice().sort((a, b) => a.x - b.x);
+        let qtyIdx = -1;
+        for (let ri = 0; ri < sortedRight.length; ri++) {
+          if (/^(반)?(포|병|봉|통|개)$/.test(sortedRight[ri].text.trim()) ||
+              /^\d+(?:\.\d+)?\s*(포|병|봉|통|개)$/.test(sortedRight[ri].text.trim())) {
+            qtyIdx = ri;
+            break;
+          }
+        }
+        sortedRight.forEach((it, ri) => {
+          if (qtyIdx < 0 || ri <= qtyIdx) {
+            // 제품명·규격·수량 → rightProductItems
+            rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text });
+          } else {
+            // 수량 뒤 = 사용법/설명 컬럼 → rightDetailItems (제품명 오염 방지)
+            const detailText = cleanDetailText(it.text);
+            if (!RX_FOOTER_RE.test(detailText) && detailText.length > 2 &&
+                !/^\d+(\.\d+)?(kg|g|L|ml)?$/.test(detailText)) {
+              rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText });
+            }
+          }
+        });
       } else {
         // 단위 없는 우측 행: detail 후보 (usage/composition/instruction)
         const detailText = cleanDetailText(rightText);
@@ -4418,6 +4500,44 @@ function parseRxPdfCoords(items) {
     const idx = assignToBlock(rr.yAvg, rr.page);
     if (idx >= 0) blockProducts[idx].push(rr);
   });
+
+  // ── 7b. 텍스트 전용 페이지 폴백 ─────────────────────────────────────
+  // rightProductItems 없는 페이지(텍스트 레이아웃 페이지)에서
+  // 좌열 아이템 중 수량단위 포함 행 → 가상의 rightProductItems로 처리
+  {
+    const pagesWithRightProds = new Set(rightProductItems.map(r => r.page));
+    const pagesWithLeftItems  = new Set(leftItems.map(l => l.page));
+    pagesWithLeftItems.forEach(pg => {
+      if (pagesWithRightProds.has(pg)) return; // 표 페이지는 이미 처리됨
+      // 이 페이지의 좌열 아이템 중 수량단위 포함 행 = 제품 행
+      const leftPgItems = leftItems.filter(l => l.page === pg);
+      leftPgItems.forEach(li => {
+        if (!RX_COUNT_UNITS_RE.test(li.text)) return;
+        // 수량단위 포함 아이템 → 가상 productRow로 등록
+        rightProductItems.push({ y: li.y, page: li.page, text: li.text });
+      });
+    });
+    // productRows를 다시 빌드 (추가된 항목 포함)
+    productRows.length = 0;
+    let lastPR2 = null;
+    const sortedRPI = rightProductItems.slice().sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+    for (const ri of sortedRPI) {
+      if (!lastPR2 || lastPR2.page !== ri.page || Math.abs(ri.y - lastPR2.yAvg) > RX_ROW_Y_MERGE) {
+        lastPR2 = { y: ri.y, yAvg: ri.y, page: ri.page, texts: [] };
+        productRows.push(lastPR2);
+      } else {
+        const cnt = lastPR2.texts.length;
+        lastPR2.yAvg = (lastPR2.yAvg * cnt + ri.y) / (cnt + 1);
+      }
+      lastPR2.texts.push(ri.text);
+    }
+    // blockProducts 재배정
+    blockProducts.forEach(b => b.length = 0);
+    productRows.forEach(rr => {
+      const idx = assignToBlock(rr.yAvg, rr.page);
+      if (idx >= 0) blockProducts[idx].push(rr);
+    });
+  }
 
   // ── 8. detail 행 → stageBlock 배정 (Y 포함 객체 보존) ──────────────
   const blockDetailItems = stageBlocks.map(() => []);
@@ -5043,9 +5163,11 @@ function parseRxPdfText(pageTexts) {
     // 경운전/경운후(기비)는 month=0 고정
     const isBasePage = hits.every(h => h.type === '경운전' || h.type === '경운후');
     let pageMonth = 0;
+    let realPageMonth = 0; // 요약카드용 진짜 월 (가짜 월 할당 전 보존)
     if (!isBasePage) {
       const mm = pg.match(/(\d{1,2})월/);
       pageMonth = mm ? parseInt(mm[1]) : 0;
+      realPageMonth = pageMonth; // ← 진짜 월 기억
       // 같은 월이 이미 다른 페이지에서 사용됐으면 가상의 고유 월 부여 (100+페이지인덱스)
       if (usedMonths[pageMonth] !== undefined) {
         pageMonth = 100 + result.stages.length;
@@ -5060,7 +5182,8 @@ function parseRxPdfText(pageTexts) {
       const section = pg.slice(sh.end, nextPos);
 
       // sh.label이 있으면 purpose로 사용 (없으면 기비 페이지에서 나중에 채워짐)
-      const stage = { type: sh.type, month: pageMonth, products: [], purpose: sh.label || '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
+      // realMonth: 요약카드에서 "5월" 레이블 추출용 (가짜 pageGroup 번호와 무관)
+      const stage = { type: sh.type, month: pageMonth, realMonth: realPageMonth, products: [], purpose: sh.label || '', days: '', dateRange: '', funcTags: [], funcColor: '#ffffff', area: null };
       result.stages.push(stage);
       stagesThisPage.push(stage);
 
@@ -5599,7 +5722,7 @@ function _saveRxStages() {
   try {
     localStorage.setItem('rxStages', JSON.stringify({
       stages: stages.map(s => ({
-        type: s.type, month: s.month||0, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType||'', days: s.days||'', dateRange: s.dateRange||'',
+        type: s.type, month: s.month||0, realMonth: s.realMonth??null, pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null, pageType: s.pageType||'', days: s.days||'', dateRange: s.dateRange||'',
         purpose: s.purpose||'', funcTags: s.funcTags||[], funcColor: s.funcColor||'#ffffff',
         products: s.products||[], area: s.area||null,
         typeNumOverride: s.typeNumOverride||0, typeNumWord: s.typeNumWord||'',
@@ -5619,6 +5742,8 @@ function _saveRxStages() {
       rxArea:     rxData.area     || '',
       rxCrop:     rxData.crop     || '',
       rxAreaType: rxData.areaType || '농사',
+      rxPhone:    rxData.phone    || '',
+      rxAddr:     rxData.addr     || '',
       // PDF 비용 페이지 추출 데이터
       extractedTotalCost: rxData.extractedTotalCost ?? null,
       extractedUnitPrice: rxData.extractedUnitPrice ?? null
