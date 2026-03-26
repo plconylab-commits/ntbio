@@ -134,9 +134,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ord-item{padding:6px 12px;border-bottom:1px solid #f0f0f0;
   animation:slideIn .2s ease;}
 @keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
-.ord-top{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.ord-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px;}
+.ord-name-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
 .ord-name{font-size:15px;font-weight:700;}
-.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:auto;flex:1;min-width:0;outline:none;}
+.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:0;flex:1;min-width:0;outline:none;}
 .ord-name-edit:focus{border-bottom-color:var(--teal);}
 .ord-size{font-size:12px;font-weight:600;color:var(--g-btn);background:var(--g-pale);
   padding:2px 7px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
@@ -1301,8 +1302,10 @@ function render(){
              cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">별도</button>`:'';
     return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()" style="${byeoldoBorder}">
       <div class="ord-top">
-        ${it.size?`<span class="ord-size">${it.size}</span>`:''}
-        <input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
+        <div class="ord-name-row">
+          <input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
+          ${it.size?`<span class="ord-size">${it.size}</span>`:''}
+        </div>
         <button class="del-btn" onclick="removeItem(${i})">✕</button>
       </div>
       <div class="ord-ctrl">
