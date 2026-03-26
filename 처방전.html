@@ -584,6 +584,11 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   .page-card{width:100%;box-shadow:none;border-radius:0;page-break-after:always;}
   .cover-page,.content-page{min-height:210mm;}
   .mobile-tabs{display:none!important;}
+  /* 인쇄 시 배경색 보존 (teal 헤더 등) */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  /* 요약카드 인쇄 시 전체 페이지 높이 채움 */
+  [data-pagekey="cost"] .content-inner{height:calc(210mm - 28px) !important;}
+  [data-pagekey="cost"] .sc-table{height:100% !important;}
 }
 /* ── 인쇄 자동 축소 Step 2: padding/line-height 축소 ── */
 .print-compact .rx-table td,
@@ -3631,9 +3636,11 @@ function generateSummaryCardHtml(areaNum) {
     }
   });
 
+  // 행 높이 균등 분배: 월행수 + 고객행 + 푸터행 + 헤더행 = 총 행수
+  // height:1px 로 설정하면 브라우저가 테이블 전체 높이를 균등 분배
   const monthRows = mergedRows.map(({ lbl, tot }) => {
     const pp = areaNum ? Math.round(tot / areaNum) : 0;
-    return `<tr>
+    return `<tr style="height:1px;">
       <td class="sc-month">${lbl}</td>
       <td class="sc-amt">${(hasPrices && tot) ? tot.toLocaleString() + '원' : '-'}</td>
       <td class="sc-pp">${(hasPrices && pp) ? '평당(' + pp.toLocaleString() + '원)' : '-'}</td>
@@ -3644,21 +3651,22 @@ function generateSummaryCardHtml(areaNum) {
   const grandDisp = grand ? grand.toLocaleString() + '원' : '-';
   const ppDisp    = perPyeong ? perPyeong.toLocaleString() + '원' : '-';
 
+  // content-page 안쪽: 595px - padding(14px*2) = 567px, border(3px*2) 제외 → 561px
   return `<div class="page-card" data-pagekey="cost">
     <div class="content-page">
-      <div class="content-inner" style="display:flex;align-items:center;justify-content:center;">
-        <table class="sc-table">
+      <div class="content-inner" style="overflow:hidden;box-sizing:border-box;">
+        <table class="sc-table" style="height:561px;">
           <thead>
-            <tr class="sc-title-row"><td colspan="3">${title}</td></tr>
+            <tr class="sc-title-row" style="height:1px;"><td colspan="3">${title}</td></tr>
           </thead>
-          <tbody>
+          <tbody style="height:100%;">
             ${monthRows}
-            <tr class="sc-cust-row">
+            <tr class="sc-cust-row" style="height:1px;">
               <td colspan="3">${name||''}님&nbsp;&nbsp;전화:${phone||'-'}&nbsp;&nbsp;${addr||''}</td>
             </tr>
           </tbody>
           <tfoot>
-            <tr class="sc-footer-row">
+            <tr class="sc-footer-row" style="height:1px;">
               <td colspan="2"><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grandDisp}</td>
               <td>평당(${ppDisp})</td>
             </tr>
