@@ -76,8 +76,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .sc-pp{font-size:15px;font-weight:700;text-align:center;color:var(--teal-dark);}
 .sc-stage{font-size:13px;font-weight:700;text-align:center;background:#f5fbfb;white-space:nowrap;vertical-align:middle;width:110px;}
 .sc-prod-detail{font-size:13px;padding:7px 14px;}
-.sc-cust-row td{background:#E0F5F5;text-align:center;font-weight:700;font-size:14px;padding:10px;}
-.sc-footer-row td{background:var(--teal-dark);color:#fff;font-weight:700;font-size:15px;text-align:center;padding:10px;}
+.sc-cust-row td{background:#fff;text-align:center;font-weight:700;font-size:15px;padding:10px;}
+.sc-footer-row td{background:#fff;color:var(--text);font-weight:700;font-size:15px;text-align:center;padding:10px;}
 
 /* ── 빌더 섹션 ── */
 .b-section{border-bottom:1px solid #f0f0f0;padding:14px 16px;}
@@ -3584,16 +3584,28 @@ function generateSummaryCardHtml(areaNum) {
 
   const calcGrand = orderedMks.reduce((s, mk) => s + groupTotal(mk), 0);
   // 계산값이 없으면 PDF 추출값 폴백
-  const grand      = calcGrand || rxData.extractedTotalCost || 0;
-  const calcPP     = areaNum ? Math.round(calcGrand / areaNum) : 0;
-  const perPyeong  = calcPP  || rxData.extractedUnitPrice    || 0;
-  const hasPrices  = calcGrand > 0;   // 제품 단가가 실제로 있는지
+  const grand     = calcGrand || rxData.extractedTotalCost || 0;
+  const calcPP    = areaNum ? Math.round(calcGrand / areaNum) : 0;
+  const perPyeong = calcPP  || rxData.extractedUnitPrice   || 0;
+  const hasPrices = calcGrand > 0;
 
-  // 월별 합계 행 — 단가가 없으면 금액은 '-' 표시, 레이블만 표시
-  const monthRows = orderedMks.map(mk => {
-    const tot = groupTotal(mk);
-    const pp  = areaNum ? Math.round(tot / areaNum) : 0;
+  // 같은 월 레이블의 그룹을 병합 (5월 2페이지 → 5월 1행으로 합산)
+  // pageOrder 순서를 유지하면서 중복 레이블을 병합
+  const mergedRows = [];
+  const labelSeen  = {};
+  orderedMks.forEach(mk => {
     const lbl = getMonthLabel(mk);
+    const tot = groupTotal(mk);
+    if (labelSeen[lbl] !== undefined) {
+      mergedRows[labelSeen[lbl]].tot += tot;
+    } else {
+      labelSeen[lbl] = mergedRows.length;
+      mergedRows.push({ lbl, tot });
+    }
+  });
+
+  const monthRows = mergedRows.map(({ lbl, tot }) => {
+    const pp = areaNum ? Math.round(tot / areaNum) : 0;
     return `<tr>
       <td class="sc-month">${lbl}</td>
       <td class="sc-amt">${(hasPrices && tot) ? tot.toLocaleString() + '원' : '-'}</td>
