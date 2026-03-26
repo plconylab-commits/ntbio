@@ -134,13 +134,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ord-item{padding:6px 12px;border-bottom:1px solid #f0f0f0;
   animation:slideIn .2s ease;}
 @keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
-.ord-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
-.ord-top>div:first-child{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
+.ord-top{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
 .ord-name{font-size:15px;font-weight:700;}
-.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:100%;outline:none;}
+.ord-name-edit{font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1px dashed var(--border);background:transparent;padding:0 0 1px;width:auto;flex:1;min-width:0;outline:none;}
 .ord-name-edit:focus{border-bottom-color:var(--teal);}
 .ord-size{font-size:12px;font-weight:600;color:var(--g-btn);background:var(--g-pale);
-  padding:2px 7px;border-radius:7px;margin-top:2px;display:inline-block;}
+  padding:2px 7px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
 .del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;
   padding:0 3px;transition:color .15s;}
 .del-btn:hover{color:var(--red);}
@@ -150,11 +149,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .qty-btn:hover{background:var(--g-pale);border-color:var(--g-btn);}
 .qty-num{font-size:14px;font-weight:700;text-align:center;}
-.disc-ctrl{display:flex;align-items:center;gap:3px;background:var(--yellow);
-  border:1px solid var(--yellow-d);border-radius:5px;padding:3px 6px;}
-.disc-ctrl span{font-size:10px;font-weight:700;color:var(--orange);}
-.disc-ctrl input{width:34px;border:none;background:transparent;font-family:inherit;
-  font-size:12px;font-weight:700;color:var(--red);text-align:center;outline:none;}
+.disc-ctrl{display:flex;align-items:center;gap:4px;background:var(--yellow);
+  border:1px solid var(--yellow-d);border-radius:5px;padding:4px 8px;}
+.disc-ctrl span{font-size:12px;font-weight:700;color:var(--orange);}
+.disc-ctrl input{width:42px;border:none;background:transparent;font-family:inherit;
+  font-size:15px;font-weight:700;color:var(--red);text-align:center;outline:none;}
 /* 지원가 직접입력 행 */
 .ord-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:3px 0;}
 .ord-retail-row{display:flex;align-items:center;gap:4px;}
@@ -1302,8 +1301,8 @@ function render(){
              cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">별도</button>`:'';
     return`<div class="ord-item" draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event,${i})" ondrop="onDrop(event,${i})" ondragend="onDragEnd()" style="${byeoldoBorder}">
       <div class="ord-top">
-        <div><input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
-        <span class="ord-size">${it.size}</span></div>
+        <input class="ord-name-edit" value="${it.name}" onchange="chgName(${i},this.value)">
+        ${it.size?`<span class="ord-size">${it.size}</span>`:''}
         <button class="del-btn" onclick="removeItem(${i})">✕</button>
       </div>
       <div class="ord-ctrl">
