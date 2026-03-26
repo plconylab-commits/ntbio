@@ -26,7 +26,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Goal:** 처방전 불러오기 시 고객이름·평수·작물이 거래명세표와 처방전 양쪽에 자동 기입되고, 처방전 단계가 현재 단계 중심으로 접힌다
 **Requirements:** AUTO-01~02, UX-01
-**Plans:** 0 plans — start with `/gsd:plan-phase 7`
+**Plans:** 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — AUTO-01 cCrop select 안전대입 + AUTO-02 bArea 주입 + UX-01 stage-card 접힘
 
 ### Phase 8: 매출 집계
 
@@ -64,6 +67,6 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. 거래이력 + 미수금 + 매출 | v1.0 | 2/2 | ✅ Complete | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | v1.0 | 1/1 | ✅ Complete | 2026-03-26 |
 | 6. 처방전↔거래명세표 대조 검토 | v1.0 | 2/2 | ✅ Complete | 2026-03-27 |
-| 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 0/? | 🔲 Planned | — |
+| 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 0/1 | 🔲 Planned | — |
 | 8. 매출 집계 | v1.1 | 0/? | 🔲 Planned | — |
 | 9. 평당가 페이지 + 이미지 첨부 | v1.1 | 0/? | 🔲 Planned | — |
