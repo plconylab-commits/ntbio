@@ -39,12 +39,11 @@ Declared values (must be multiples of 4):
 | xs | 4px | Icon gaps, badge padding, table cell inner gaps |
 | sm | 8px | Table cell padding (vertical), button internal padding |
 | md | 16px | Modal body padding, section spacing |
-| lg | 18px | Modal header padding (matches existing `.modal-hdr`) |
-| xl | 20px | Modal body top/bottom padding (matches `.modal-body` 18px rounded to 20px for diff table) |
+| xl | 20px | Modal body top/bottom padding for diff table |
 | 2xl | 24px | Gap between diff table summary row and column headers |
 
-Exceptions:
-- Modal body padding: 18px (match existing `.modal-body` pattern exactly — do not change to 16px or 20px)
+Exceptions (not named tokens — referenced directly in component CSS):
+- Modal header padding: `padding: 18px /* legacy modal-hdr match */` — use this value in component CSS directly, not as a design token.
 - Table row height minimum: 36px (touch-friendly tap targets for potential mobile review)
 - Modal max-width: 600px on desktop, 94vw on mobile (match existing `.modal` override at line 49)
 
@@ -58,10 +57,10 @@ Source: existing modal CSS at lines 242–256, mobile override at line 49.
 |------|------|--------|-------------|
 | Body / table cell | 14px | 400 (regular) | 1.5 |
 | Label / column header | 12px | 700 (bold) | 1.4 |
-| Heading / modal title | 15px | 700 (bold) | 1.2 |
-| Summary row emphasis | 13px | 700 (bold) | 1.4 |
+| Heading / modal title | 16px | 700 (bold) | 1.2 |
+| Summary row emphasis | 14px | 700 (bold) | 1.4 |
 
-Source: existing `.modal-hdr h2` (15px/700), `.sec-title` (10px/700), input fields (14px/500), body (14px from `.fg input`). All body text in existing app uses 14px. Modal title uses 15px/700.
+Note: Modal title raised from 15px to 16px and summary row aligned to 14px to create a clear 12 → 14 → 16px visual jump (4px steps). Source: existing `.modal-hdr h2` and `.fg input` patterns; revised for clearer hierarchy.
 
 ---
 
@@ -85,6 +84,20 @@ Accent (`--g-dark` / `--g-btn`) reserved for:
 - Column header text accent
 
 Source: all values from existing `:root` at lines 13–20. Row status colors match diff row states declared in CONTEXT.md D-06.
+
+---
+
+## Visual Focal Point
+
+**Initial state (upload zone):** Focal point is the `📂 처방전 PDF 선택` button — centered in modal body, full-width, accent background.
+
+**Results state (after comparison):** Primary visual anchor is the diff table's colored status rows. Attention hierarchy:
+1. Red rows (`--red-lt` background, `--red` text) — 한쪽에만 ✗ (unilateral items, highest urgency)
+2. Yellow rows (`--yellow` background) — 수량 차이 △ (quantity mismatches)
+3. Orange rows (`#FFF3E0` background, `--orange` text) — 미매칭 ? (fuzzy match failures)
+4. Summary row (`--g-pale` background, bold 14px) — 평당가 comparison at top of table
+
+Matched rows (일치 ✓) are collapsed by default to keep focus on discrepancies.
 
 ---
 
@@ -148,7 +161,7 @@ Row collapse: matched (일치) rows are collapsed by default. A toggle button `�
 
 - Content: `처방전 평당가: {X}원  /  카트 공급가 합계 ÷ 면적: {Y}원  /  차이: {±Z}원`
 - Background: `var(--g-pale)` with `1px solid var(--border)` border
-- Font: 13px / 700 / `--text`
+- Font: 14px / 700 / `--text`
 - If prescription has no 평당가: display `처방전 평당가: 확인불가`
 - If cart area (면적) is 0 or missing: display `카트 면적 미입력`
 - Source: CONTEXT.md D-13
@@ -199,7 +212,7 @@ Destructive actions in this phase: none. The comparison is read-only — cart is
 |-------|---------------|
 | Initial (no file) | Upload zone centered in modal body |
 | Loading | `처방전 분석 중...` text, upload button disabled |
-| Results | Summary row + diff table with status rows |
+| Results | Summary row + diff table with status rows; focal point on red/yellow/orange rows |
 | All matched | `차이 없음 — 모든 품목이 일치합니다.` message |
 | Parse error | Error copy + retry button (re-shows upload zone) |
 | Cart empty | `showToast()` error, modal does not open |
