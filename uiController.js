@@ -529,36 +529,34 @@ function openValidationModal(rx) {
       `<option value="${p.id}" data-price="${p.price}" data-size="${p.size||''}">${p.name} (${p.size||''})</option>`
     ).join('');
 
-  // 파일명에서 고객명·작물·평수 파싱 → 폼 즉시 반영 (pdfParser는 표지 이미지라 항상 null 반환)
-  (function(filename) {
-    if (!filename) return;
-    const base = filename.replace(/\.pdf$/i, '');
-    const areaM = base.match(/\((\d+)평\)/);
-    const cropM = base.match(/([가-힣]+)\s*\(\d+평\)/);
-    const nameMs = [...base.matchAll(/([가-힣]{2,6})님/g)];
-    const parsedName = nameMs.length ? nameMs[nameMs.length - 1][1] : null;
-    const parsedCrop = cropM ? cropM[1] : null;
-    const parsedArea = areaM ? parseInt(areaM[1], 10) : null;
-    if (parsedName) { const el = document.getElementById('cName'); if (el) el.value = parsedName; }
-    if (parsedArea) { const el = document.getElementById('cArea'); if (el) el.value = parsedArea; }
-    if (parsedCrop) {
+  // 파일명에서 고객명·작물·평수 파싱 → DOM + fi 동시 반영
+  if (rx._sourceFilename) {
+    const _base = rx._sourceFilename.replace(/\.pdf$/i, '');
+    const _areaM  = _base.match(/\((\d+)평\)/);
+    const _cropM  = _base.match(/([가-힣]+)\s*\(\d+평\)/);
+    const _nameMs = [..._base.matchAll(/([가-힣]{2,6})님/g)];
+    const _pName  = _nameMs.length ? _nameMs[_nameMs.length - 1][1] : null;
+    const _pCrop  = _cropM  ? _cropM[1]               : null;
+    const _pArea  = _areaM  ? parseInt(_areaM[1], 10) : null;
+
+    // DOM 반영
+    if (_pName) { const el = document.getElementById('cName'); if (el) el.value = _pName; }
+    if (_pArea) { const el = document.getElementById('cArea'); if (el) el.value = _pArea; }
+    if (_pCrop) {
       const el = document.getElementById('cCrop');
       if (el) {
-        el.value = parsedCrop;
+        el.value = _pCrop;
         if (!el.value || el.value === '') {
           for (let i = 0; i < el.options.length; i++) {
-            if (el.options[i].text.includes(parsedCrop) || parsedCrop.includes(el.options[i].text)) { el.selectedIndex = i; break; }
+            if (el.options[i].text.includes(_pCrop) || _pCrop.includes(el.options[i].text)) { el.selectedIndex = i; break; }
           }
         }
       }
     }
-  })(rx._sourceFilename);
 
-  // 파일명 파싱 결과를 fi에도 반영 (모달 헤더 표시용)
-  if (!fi.farmName) fi.farmName = document.getElementById('cName')?.value || null;
-  if (!fi.cropName) {
-    const sel = document.getElementById('cCrop');
-    fi.cropName = sel ? (sel.options[sel.selectedIndex]?.text || sel.value || null) : null;
+    // fi 반영 (모달 헤더 표시용) — DOM 경유 없이 파싱값 직접 사용
+    if (!fi.farmName && _pName) fi.farmName = _pName;
+    if (!fi.cropName && _pCrop) fi.cropName = _pCrop;
   }
 
   // ── 모달 렌더 ──
