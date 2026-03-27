@@ -4706,11 +4706,48 @@ async function extractCostFromPdfDoc(pdfDoc) {
   return null;
 }
 
+// 처방전 파일명에서 고객명·작물·평수 파싱 (표지가 이미지여서 pdfParser 파싱 불가)
+function _parseRxFilenameInfo(filename) {
+  const base = filename.replace(/\.pdf$/i, '');
+  const result = { farmName: null, cropName: null, totalArea: null };
+  const areaMatch = base.match(/\((\d+)평\)/);
+  if (areaMatch) result.totalArea = parseInt(areaMatch[1], 10);
+  const cropMatch = base.match(/^([가-힣]+)/);
+  if (cropMatch) result.cropName = cropMatch[1];
+  const nameMatches = [...base.matchAll(/([가-힣]{2,6})님/g)];
+  if (nameMatches.length > 0) result.farmName = nameMatches[nameMatches.length - 1][1];
+  return result;
+}
+
 async function onRxPdfSelected(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
   showRxToast('PDF 분석 중...');
+
+  // 파일명에서 고객명·작물·평수 미리 기입 (##RX## 경로가 이후 덮어씌움)
+  const fnInfo = _parseRxFilenameInfo(file.name);
+  if (fnInfo.farmName) {
+    const el = document.getElementById('bName');
+    if (el && !el.value) el.value = fnInfo.farmName;
+  }
+  if (fnInfo.cropName) {
+    const el = document.getElementById('bCrop');
+    if (el && (!el.value || el.selectedIndex === 0)) {
+      el.value = fnInfo.cropName;
+      if (!el.value || el.value === '') {
+        for (let i = 0; i < el.options.length; i++) {
+          if (el.options[i].text.includes(fnInfo.cropName) || fnInfo.cropName.includes(el.options[i].text)) {
+            el.selectedIndex = i; break;
+          }
+        }
+      }
+    }
+  }
+  if (fnInfo.totalArea) {
+    const el = document.getElementById('bArea');
+    if (el && !el.value) el.value = fnInfo.totalArea;
+  }
 
   try {
     // Safari DataCloneError 방지: File 객체 대신 순수 ArrayBuffer를 전달
