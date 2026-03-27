@@ -1132,11 +1132,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         // 2순위: 좌표 기반 파싱 (Hwp 외부 처방전)
         const items = await extractRxPdfCoords(pdfDoc);
-        const parsed = parseRxPdfCoords(items);
-        if (parsed.stages && parsed.stages.length > 0) {
-          _normalizeStageProductKeys(parsed.stages);
+        const parsedArr = parseRxPdfCoords(items);  // returns array directly
+        if (parsedArr && parsedArr.length > 0) {
+          _normalizeStageProductKeys(parsedArr);
           stageIdCnt = 0;
-          stages = parsed.stages.map(s => ({
+          stages = parsedArr.map(s => ({
             ...s, id: ++stageIdCnt,
             pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null,
             pageType: s.pageType || '',
@@ -1151,7 +1151,7 @@ window.addEventListener('DOMContentLoaded', () => {
           _saveRxStages();
           showRxToast(`처방전 불러오기 완료 ✓ — ${stages.length}단계 (거래명세표 연동)`);
         } else {
-          showRxToast('처방전 단계를 인식하지 못했습니다.', 0);
+          showRxToast('처방전에서 단계를 인식하지 못했습니다. 처방전 탭에서 직접 PDF를 업로드해 주세요.', 5000);
         }
       } catch(e) { console.warn('[rxPendingPdf 파싱 실패]:', e); }
     })();
