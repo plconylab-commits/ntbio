@@ -1494,6 +1494,18 @@ function _applyToCart() {
   // 성공 시: render → 정렬 → 인쇄 동기화 → 모달 닫기
   if (typeof sortCart  === 'function') sortCart();
   if (typeof render    === 'function') render();
+  // PRICE-01: 평당가 전역 저장 — 검증 모달 완료 시 최신값으로 갱신
+  (function(){
+    const areaEl = document.getElementById('cArea');
+    const totalArea = areaEl ? parseFloat(areaEl.value) || 0 : 0;
+    if (totalArea > 0) {
+      const finalCost = cart.filter(c => !c.gift).reduce((s, c) => s + c.sp * c.qty, 0);
+      const calcedPrice = Math.round(finalCost / totalArea);
+      if (typeof window._invoiceUnitPrice !== 'undefined') {
+        window._invoiceUnitPrice = calcedPrice;
+      }
+    }
+  })();
   if (typeof syncPrint === 'function') syncPrint();
 
   if (cart.length === 0) {

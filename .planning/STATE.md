@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Complete
-stopped_at: Completed Phase 6 — 처방전↔거래명세표 대조 검토
-last_updated: "2026-03-27T00:00:00.000Z"
+milestone: v1.1
+milestone_name: v1.1
+status: In Progress
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-03-27T00:15:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: 6 (complete)
-Plan: All complete
+Phase: 8 (in progress)
+Plan: 1 complete
 
 ## Performance Metrics
 
@@ -85,6 +85,11 @@ Recent decisions affecting current work:
 - [Phase 04-sales-history]: customerKey 로직을 customerDB.js 내부에 인라인 구현 — index.html 전역 함수 의존 없이 독립 동작
 - [Phase 05-pdf]: ##TN## 저장 방식: addPage(연한회색) → pdf.setProperties(subject) 메타데이터로 이동 — 출력물 완전 불가시
 - [Phase 05-pdf]: doPdf async 전환: .then() 체인 제거, .p-wrap별 개별 html2canvas 캡처로 다중 페이지 정확 분리
+- [Phase 07-01]: select 안전 대입: .value= 직접 대입 대신 for-loop options 순회 — 옵션 미존재 시 기존 선택 유지
+- [Phase 07-01]: AUTO-02 Method B: parseRxPdfCoords가 stages 배열만 반환하므로 stages.area 빈도 분석으로 totalArea 추론
+- [Phase 07-01]: UX-01 toggleStageCard: 전체 재렌더 없이 DOM 직접 조작 → textarea 포커스 유지
+- [Phase 08-01]: 분기 범위: lastQ<0이면 lastQ=3, year-=1 — 1월 기준 전년도 4분기 경계 처리
+- [Phase 08-01]: 고객별 집계 payments.cancelled 제외: payments 배열 우선, paidAmount fallback으로 이중 데이터 구조 호환
 
 ### Pending Todos
 
@@ -98,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T02:22:28.013Z
-Stopped at: Completed 05-pdf-01-PLAN.md
+Last session: 2026-03-27T00:15:00.000Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None

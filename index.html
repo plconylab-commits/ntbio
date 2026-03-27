@@ -697,6 +697,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div class="act-row">
         <button class="btn-all-unpaid" onclick="SalesHistoryUI.openSalesPanel()" style="background:#E3F2FD;color:#1565C0;border-color:#1565C0;">📊&nbsp; 매출 집계</button>
+        <button class="btn-all-unpaid" onclick="SalesHistoryUI.openCustomerSummaryPanel()" style="background:#E8F5E9;color:#2E7D32;border-color:#2E7D32;">👥&nbsp; 고객별 집계</button>
         <button class="btn-check-unpaid" onclick="checkUnpaidOnCustomer()">🔍&nbsp; 미수금 확인</button>
       </div>
       <button class="btn-unpaid" onclick="openUnpaidForCurrent()">💰&nbsp; 미입금 조회 <span class="unpaid-badge" id="unpaidBadge">0</span></button>
@@ -711,8 +712,32 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
         <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
       </div>
+      <div class="act-row">
+        <input type="file" id="imgFileInput" accept="image/jpeg,image/png" style="display:none"
+          onchange="onImgSelected(this)" multiple>
+        <button class="btn-all-unpaid" onclick="document.getElementById('imgFileInput').click()"
+          style="background:#FFF3E0;color:#E65100;border-color:#E65100;">
+          🖼 이미지 첨부
+        </button>
+        <button class="btn-all-unpaid" onclick="openImgManager()"
+          style="background:#F3E5F5;color:#6A1B9A;border-color:#6A1B9A;">
+          📁 첨부 관리
+        </button>
+      </div>
     </div>
   </div><!-- /right -->
+</div>
+
+<!-- 이미지 첨부 관리 오버레이 (ATTACH-02) -->
+<div id="imgManagerOverlay" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:1001;
+  width:420px;max-width:95vw;max-height:80vh;overflow-y:auto;padding:20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="font-size:16px;font-weight:900;">📁 첨부 이미지 관리</div>
+    <button onclick="closeImgManager()"
+      style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">✕</button>
+  </div>
+  <div id="imgManagerList"></div>
 </div>
 
 <!-- 모달 -->
@@ -839,7 +864,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 <script src="customerDB.js?v=1"></script>
 <script src="customerUI.js?v=1"></script>
 <script src="prescriptionHistoryUI.js?v=1"></script>
-<script src="salesHistoryUI.js?v=1"></script>
+<script src="salesHistoryUI.js?v=2"></script>
 <script src="rxCompare.js?v=1"></script>
 <script src="rxCompareUI.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -854,7 +879,9 @@ const INVOICE_API = 'https://script.google.com/macros/s/AKfycbxFaxtyi2GyDE-9nYM6
 
 // ─── IndexedDB Storage ───
 const IDB_NAME='NTBioInvoices';
-const IDB_VER=1;
+const IDB_VER=2;
+window._invoiceUnitPrice = 0;  // PRICE-01: 평당가 페이지용 전역 값
+let _attachedImages = [];  // ATTACH-01/02: 이미지 캐시 (IndexedDB에서 로드)
 const IDB_STORE='invoices';
 let _invoiceCache=null;
 
@@ -866,8 +893,13 @@ function openIDB(){
     const req=indexedDB.open(IDB_NAME,IDB_VER);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
-      if(!db.objectStoreNames.contains(IDB_STORE))
-        db.createObjectStore(IDB_STORE,{keyPath:'_key'});
+      if(e.oldVersion < 1) {
+        if(!db.objectStoreNames.contains(IDB_STORE))
+          db.createObjectStore(IDB_STORE,{keyPath:'_key'});
+      }
+      if(e.oldVersion < 2) {
+        db.createObjectStore('attachImages', { keyPath: 'id' });
+      }
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
@@ -977,6 +1009,11 @@ document.addEventListener('DOMContentLoaded',()=>{
       else showToast('⚠️ 서버에 저장된 거래 없음 (처음 사용 시 정상)',false);
     });
   });
+  // ATTACH-02: 이미지 캐시 초기 로드
+  _idbLoadImages().then(imgs => {
+    _attachedImages = imgs;
+    if (imgs.length > 0 && typeof syncPrint === 'function') syncPrint();
+  }).catch(err => console.warn('[이미지 로드 실패]', err));
 });
 
 // ── 처방전에서 돌아온 경우 rxData→카트 연동 ──
@@ -1437,6 +1474,8 @@ function clearAll(){
   const gd=document.getElementById('gDisc'); if(gd) gd.value='0';
   const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
   localStorage.removeItem('rxStages');
+  window._invoiceUnitPrice = 0;
+  _attachedImages = [];
   render(); syncPrint();
 }
 
@@ -1458,6 +1497,163 @@ function updateSummary(){
   }
   const bn=document.getElementById('byeoldoNote');
   if(bn){bn.style.display=cart.some(c=>c.byeoldo)?'block':'none';}
+}
+
+// ─── 이미지 첨부 IndexedDB 함수 (ATTACH-02) ──────────────────
+function _idbSaveImage(rec) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readwrite');
+      tx.objectStore('attachImages').put(rec);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function _idbLoadImages() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readonly');
+      const all = tx.objectStore('attachImages').getAll();
+      all.onsuccess = () => resolve(all.result || []);
+      all.onerror = () => reject(all.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function _idbDeleteImage(id) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readwrite');
+      tx.objectStore('attachImages').delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ─── 이미지 업로드 핸들러 (ATTACH-01) ──────────────────
+function onImgSelected(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  let pending = 0;
+  files.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`${file.name}: 5MB 이하 이미지만 첨부 가능합니다.`);
+      return;
+    }
+    pending++;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rec = {
+        id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        name: file.name,
+        dataUrl: e.target.result,
+        savedAt: new Date().toISOString(),
+        memo: ''
+      };
+      _idbSaveImage(rec).then(() => {
+        _attachedImages.push(rec);
+        pending--;
+        if (pending === 0) syncPrint();
+      }).catch(err => {
+        console.error('[이미지 저장 실패]', err);
+        pending--;
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';  // 동일 파일 재선택 허용
+}
+
+function openImgManager() {
+  _idbLoadImages().then(imgs => {
+    _attachedImages = imgs;
+    const list = imgs.length === 0
+      ? '<p style="color:#888;text-align:center;padding:20px;">첨부된 이미지가 없습니다.</p>'
+      : imgs.map(img => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">
+          <img src="${img.dataUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #ddd;">
+          <div style="flex:1;font-size:13px;">
+            <div style="font-weight:700;">${img.name}</div>
+            <div style="color:#888;font-size:11px;">${img.savedAt ? img.savedAt.slice(0,10) : ''}</div>
+          </div>
+          <button onclick="deleteAttachedImage('${img.id}')"
+            style="background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px;">삭제</button>
+        </div>`).join('');
+    document.getElementById('imgManagerList').innerHTML = list;
+    document.getElementById('imgManagerOverlay').style.display = 'flex';
+    document.getElementById('overlay').style.display = 'block';
+  });
+}
+
+function deleteAttachedImage(id) {
+  _idbDeleteImage(id).then(() => {
+    _attachedImages = _attachedImages.filter(i => i.id !== id);
+    syncPrint();
+    openImgManager();  // 목록 갱신
+  }).catch(err => console.error('[이미지 삭제 실패]', err));
+}
+
+function closeImgManager() {
+  document.getElementById('imgManagerOverlay').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+}
+
+// ─── 평당가 페이지 주입 (PRICE-01) ─────────────────────
+function _appendPricePageIfNeeded() {
+  if (!window._invoiceUnitPrice) return;
+  const area = parseFloat(document.getElementById('cArea').value) || 0;
+  const supply = cart.filter(c => !c.gift).reduce((s, c) => s + c.sp * c.qty, 0);
+  const name = (document.getElementById('cName').value || '').trim() || '고객명';
+  const crop = document.getElementById('cCrop').value || '';
+  const html = `<div class="p-wrap p-page-break p-price-page">
+    <div class="p-title">평당가 안내</div>
+    <div style="padding:20px;font-size:14px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr>
+          <td style="padding:10px;font-weight:700;border:1px solid #ccc;">고객명</td>
+          <td style="padding:10px;border:1px solid #ccc;">${name}${crop ? ' / ' + crop : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px;font-weight:700;border:1px solid #ccc;">농사 면적</td>
+          <td style="padding:10px;border:1px solid #ccc;">${area}평</td>
+        </tr>
+        <tr>
+          <td style="padding:10px;font-weight:700;border:1px solid #ccc;">공급가 합계</td>
+          <td style="padding:10px;border:1px solid #ccc;">${supply.toLocaleString()}원</td>
+        </tr>
+        <tr style="background:#E0F5F5;">
+          <td style="padding:12px;font-weight:900;font-size:16px;border:3px solid #35a09e;">평당가</td>
+          <td style="padding:12px;font-weight:900;font-size:18px;color:#35a09e;border:3px solid #35a09e;">${window._invoiceUnitPrice.toLocaleString()}원/평</td>
+        </tr>
+      </table>
+    </div>
+  </div>`;
+  document.getElementById('printDoc').insertAdjacentHTML('beforeend', html);
+}
+
+function _appendImagePagesIfNeeded(imgs) {
+  if (!imgs || !imgs.length) return;
+  imgs.forEach((img, idx) => {
+    const html = `<div class="p-wrap p-page-break p-img-page">
+      <div class="p-title">첨부 이미지 ${idx + 1}${img.name ? ' — ' + img.name : ''}</div>
+      <div style="padding:10px;text-align:center;">
+        <img src="${img.dataUrl}" style="max-width:100%;max-height:220mm;object-fit:contain;">
+      </div>
+    </div>`;
+    document.getElementById('printDoc').insertAdjacentHTML('beforeend', html);
+  });
 }
 
 // ─── 인쇄 문서 동기화 ────────────────────
@@ -1562,6 +1758,9 @@ function syncPrint(){
       </div>
       ${ftr(idx+1,totalPages)}
     </div>`).join('');
+  // ── 추가 페이지 주입 ──
+  _appendPricePageIfNeeded();
+  _appendImagePagesIfNeeded(_attachedImages);
 }
 
 // ─── 인쇄 / PDF / 이메일 ─────────────────
@@ -2404,7 +2603,14 @@ function applyRxPdfEmbed(d){
   document.getElementById('cName').value=d.n||'';
   document.getElementById('cRegion').value=d.rg||'';
   document.getElementById('cArea').value=d.ar||'';
-  document.getElementById('cCrop').value=d.cr||'';
+  if (d.cr) {
+    const sel = document.getElementById('cCrop');
+    if (sel) {
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === d.cr) { sel.selectedIndex = i; break; }
+      }
+    }
+  }
   const atEl=document.getElementById('cAreaType');
   if(atEl&&d.at)atEl.value=d.at;
 
@@ -2476,6 +2682,26 @@ function onPdfSelected(input){
   if(!file)return;
   input.value=''; // 같은 파일 재선택 가능하게
   if(cart.length&&!confirm('기존 카트를 비우고 PDF를 불러올까요?'))return;
+
+  // 파일명에서 고객명·작물·평수 즉시 기입 (##RX##·Vision AI 경로 공통 fallback)
+  // 처방전 표지가 이미지라 pdfParser는 항상 null → 파일명이 가장 신뢰할 수 있는 소스
+  // 기존 값 무시하고 항상 덮어씀 — PDF 업로드는 새 고객 정보 로드 행위
+  (function(){
+    const fb = _parseFilenameInfo(file.name);
+    if(fb.farmName){ const el=document.getElementById('cName'); if(el) el.value=fb.farmName; }
+    if(fb.totalArea){ const el=document.getElementById('cArea'); if(el) el.value=fb.totalArea; }
+    if(fb.cropName){
+      const el=document.getElementById('cCrop');
+      if(el){
+        el.value=fb.cropName;
+        if(!el.value||el.value===''){
+          for(let i=0;i<el.options.length;i++){
+            if(el.options[i].text.includes(fb.cropName)||fb.cropName.includes(el.options[i].text)){el.selectedIndex=i;break;}
+          }
+        }
+      }
+    }
+  })();
 
   const reader=new FileReader();
   reader.onload=async function(e){

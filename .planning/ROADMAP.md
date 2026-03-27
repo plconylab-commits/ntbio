@@ -20,6 +20,38 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
+## Active Milestone: v1.1
+
+### Phase 7: 처방전 자동 기입 + 단계 UI 개선
+
+**Goal:** 처방전 불러오기 시 고객이름·평수·작물이 거래명세표와 처방전 양쪽에 자동 기입되고, 처방전 단계가 현재 단계 중심으로 접힌다
+**Requirements:** AUTO-01~02, UX-01
+**Plans:** 1 plan
+
+Plans:
+- [x] 07-01-PLAN.md — AUTO-01 cCrop select 안전대입 + AUTO-02 bArea 주입 + UX-01 stage-card 접힘 — completed 2026-03-27
+
+### Phase 8: 매출 집계
+
+**Goal:** 기간별 매출 합계와 고객별 총 거래금액·미수금을 조회할 수 있다
+**Requirements:** SALE-04~05
+**Plans:** 1 plan
+
+Plans:
+- [x] 08-01-PLAN.md — SALE-04 분기 버튼(이번/지난 분기) + SALE-05 고객별 집계 오버레이 — completed 2026-03-27
+
+### Phase 9: 평당가 페이지 + 이미지 첨부
+
+**Goal:** 처방전에 평당가가 있으면 거래명세표에 평당가 페이지가 자동 추가되고, 이미지를 업로드·저장해서 거래명세표에 포함할 수 있다
+**Requirements:** PRICE-01, ATTACH-01~02
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — PRICE-01 평당가 전역 변수 경로 + syncPrint 평당가 페이지 주입
+- [ ] 09-02-PLAN.md — ATTACH-01/02 IndexedDB v2 + 이미지 업로드/관리/인쇄 포함
+
+---
+
 ## Backlog
 
 ### Phase 999.1: 거래명세표 처방전 PDF 업로드 오류 (BACKLOG)
@@ -42,3 +74,6 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. 거래이력 + 미수금 + 매출 | v1.0 | 2/2 | ✅ Complete | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | v1.0 | 1/1 | ✅ Complete | 2026-03-26 |
 | 6. 처방전↔거래명세표 대조 검토 | v1.0 | 2/2 | ✅ Complete | 2026-03-27 |
+| 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 1/1 | ✅ Complete | 2026-03-27 |
+| 8. 매출 집계 | v1.1 | 1/1 | ✅ Complete | 2026-03-27 |
+| 9. 평당가 페이지 + 이미지 첨부 | v1.1 | 0/? | 🔲 Planned | — |
