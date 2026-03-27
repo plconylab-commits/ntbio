@@ -2679,25 +2679,23 @@ function onPdfSelected(input){
   input.value=''; // 같은 파일 재선택 가능하게
   if(cart.length&&!confirm('기존 카트를 비우고 PDF를 불러올까요?'))return;
 
-  // 파일명에서 고객명·작물·평수 즉시 기입 (##RX##·Vision AI 경로 공통 fallback)
-  // 처방전 표지가 이미지라 pdfParser는 항상 null → 파일명이 가장 신뢰할 수 있는 소스
-  // 기존 값 무시하고 항상 덮어씀 — PDF 업로드는 새 고객 정보 로드 행위
-  (function(){
-    const fb = _parseFilenameInfo(file.name);
-    if(fb.farmName){ const el=document.getElementById('cName'); if(el) el.value=fb.farmName; }
-    if(fb.totalArea){ const el=document.getElementById('cArea'); if(el) el.value=fb.totalArea; }
-    if(fb.cropName){
+  // 파일명에서 고객명·작물·평수 즉시 기입 — main.js 의존 없이 인라인 처리
+  (function(fn){
+    const base=fn.replace(/\.pdf$/i,'');
+    const areaM=base.match(/\((\d+)평\)/); const area=areaM?parseInt(areaM[1],10):null;
+    const cropM=base.match(/^([가-힣]+)/);  const crop=cropM?cropM[1]:null;
+    const nameMs=[...base.matchAll(/([가-힣]{2,6})님/g)];
+    const name=nameMs.length?nameMs[nameMs.length-1][1]:null;
+    if(name){const el=document.getElementById('cName');if(el)el.value=name;}
+    if(area){const el=document.getElementById('cArea');if(el)el.value=area;}
+    if(crop){
       const el=document.getElementById('cCrop');
       if(el){
-        el.value=fb.cropName;
-        if(!el.value||el.value===''){
-          for(let i=0;i<el.options.length;i++){
-            if(el.options[i].text.includes(fb.cropName)||fb.cropName.includes(el.options[i].text)){el.selectedIndex=i;break;}
-          }
-        }
+        el.value=crop;
+        if(!el.value||el.value===''){for(let i=0;i<el.options.length;i++){if(el.options[i].text.includes(crop)||crop.includes(el.options[i].text)){el.selectedIndex=i;break;}}}
       }
     }
-  })();
+  })(file.name);
 
   const reader=new FileReader();
   reader.onload=async function(e){
@@ -2714,11 +2712,15 @@ function onPdfSelected(input){
         if(d){
           console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
           applyRxPdfEmbed(d);
-          // embed에 없는 필드는 파일명 fallback으로 채움
-          const _fb=_parseFilenameInfo(file.name);
-          const _nm=document.getElementById('cName'); if(_nm&&!_nm.value&&_fb.farmName) _nm.value=_fb.farmName;
-          const _cr=document.getElementById('cCrop'); if(_cr&&_cr.selectedIndex===0&&_fb.cropName){ _cr.value=_fb.cropName; }
-          const _ar=document.getElementById('cArea'); if(_ar&&!_ar.value&&_fb.totalArea) _ar.value=_fb.totalArea;
+          // embed에 없는 필드는 파일명 fallback으로 채움 (인라인)
+          (function(fn){
+            const base=fn.replace(/\.pdf$/i,'');
+            const aM=base.match(/\((\d+)평\)/); const nMs=[...base.matchAll(/([가-힣]{2,6})님/g)];
+            const cM=base.match(/^([가-힣]+)/);
+            const _nm=document.getElementById('cName'); if(_nm&&!_nm.value&&nMs.length) _nm.value=nMs[nMs.length-1][1];
+            const _ar=document.getElementById('cArea'); if(_ar&&!_ar.value&&aM) _ar.value=parseInt(aM[1],10);
+            const _cr=document.getElementById('cCrop'); if(_cr&&_cr.selectedIndex===0&&cM){ _cr.value=cM[1]; }
+          })(file.name);
           return;
         }
       }
