@@ -855,8 +855,9 @@ const INVOICE_API = 'https://script.google.com/macros/s/AKfycbxFaxtyi2GyDE-9nYM6
 
 // ─── IndexedDB Storage ───
 const IDB_NAME='NTBioInvoices';
-const IDB_VER=1;
+const IDB_VER=2;
 let _invoiceUnitPrice = 0;  // PRICE-01: 평당가 페이지용 전역 값
+let _attachedImages = [];  // ATTACH-01/02: 이미지 캐시 (IndexedDB에서 로드)
 const IDB_STORE='invoices';
 let _invoiceCache=null;
 
@@ -868,8 +869,13 @@ function openIDB(){
     const req=indexedDB.open(IDB_NAME,IDB_VER);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
-      if(!db.objectStoreNames.contains(IDB_STORE))
-        db.createObjectStore(IDB_STORE,{keyPath:'_key'});
+      if(e.oldVersion < 1) {
+        if(!db.objectStoreNames.contains(IDB_STORE))
+          db.createObjectStore(IDB_STORE,{keyPath:'_key'});
+      }
+      if(e.oldVersion < 2) {
+        db.createObjectStore('attachImages', { keyPath: 'id' });
+      }
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
@@ -979,6 +985,11 @@ document.addEventListener('DOMContentLoaded',()=>{
       else showToast('⚠️ 서버에 저장된 거래 없음 (처음 사용 시 정상)',false);
     });
   });
+  // ATTACH-02: 이미지 캐시 초기 로드
+  _idbLoadImages().then(imgs => {
+    _attachedImages = imgs;
+    if (imgs.length > 0 && typeof syncPrint === 'function') syncPrint();
+  }).catch(err => console.warn('[이미지 로드 실패]', err));
 });
 
 // ── 처방전에서 돌아온 경우 rxData→카트 연동 ──
@@ -1440,6 +1451,7 @@ function clearAll(){
   const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
   localStorage.removeItem('rxStages');
   _invoiceUnitPrice = 0;
+  _attachedImages = [];
   render(); syncPrint();
 }
 
@@ -1461,6 +1473,49 @@ function updateSummary(){
   }
   const bn=document.getElementById('byeoldoNote');
   if(bn){bn.style.display=cart.some(c=>c.byeoldo)?'block':'none';}
+}
+
+// ─── 이미지 첨부 IndexedDB 함수 (ATTACH-02) ──────────────────
+function _idbSaveImage(rec) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readwrite');
+      tx.objectStore('attachImages').put(rec);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function _idbLoadImages() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readonly');
+      const all = tx.objectStore('attachImages').getAll();
+      all.onsuccess = () => resolve(all.result || []);
+      all.onerror = () => reject(all.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function _idbDeleteImage(id) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('attachImages', 'readwrite');
+      tx.objectStore('attachImages').delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
 }
 
 // ─── 평당가 페이지 주입 (PRICE-01) ─────────────────────
