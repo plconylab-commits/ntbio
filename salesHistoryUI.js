@@ -62,7 +62,27 @@
       '  background:#FFF3E0; border-radius:5px; color:#E65100; font-weight:600;',
       '  width:100%;',
       '}',
-      '.cust-sales-badge.has-unpaid { background:#FFEBEE; color:#C62828; }'
+      '.cust-sales-badge.has-unpaid { background:#FFEBEE; color:#C62828; }',
+      '.cust-summary-overlay {',
+      '  position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9001;',
+      '  display:none; align-items:center; justify-content:center;',
+      '}',
+      '.cust-summary-overlay.on { display:flex; }',
+      '.cust-summary-panel {',
+      '  background:#fff; max-width:560px; width:92%; max-height:82vh;',
+      '  overflow-y:auto; border-radius:14px; padding:24px; position:relative;',
+      '  box-shadow:0 8px 32px rgba(0,0,0,.2);',
+      '}',
+      '.cust-summary-panel h3 { font-size:18px; font-weight:700; margin-bottom:16px; }',
+      '.cust-summary-table { width:100%; border-collapse:collapse; font-size:13px; }',
+      '.cust-summary-table th {',
+      '  text-align:left; padding:6px 8px; border-bottom:2px solid var(--border);',
+      '  font-weight:700; color:var(--muted); font-size:12px;',
+      '}',
+      '.cust-summary-table td { padding:7px 8px; border-bottom:1px solid #f0f0f0; }',
+      '.cust-summary-table tr:last-child td { border-bottom:none; }',
+      '.cust-summary-unpaid { color:#C62828; font-weight:700; }',
+      '.cust-summary-empty { text-align:center; color:var(--muted); padding:32px 0; }'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -285,6 +305,93 @@
     if (_overlay) _overlay.classList.remove('on');
   }
 
+  function _buildCustomerAggregates() {
+    var history = (typeof getInvoiceHistory === 'function') ? getInvoiceHistory() : [];
+    var fmtKey = (typeof customerKey === 'function')
+      ? customerKey
+      : function(n, p) { return (n.trim() + '|' + p.replace(/\D/g, '')).toLowerCase(); };
+    var map = {};
+    history.forEach(function(h) {
+      if (h.status === '삭제됨') return;
+      var key = fmtKey(h.customer.name, h.customer.phone);
+      if (!map[key]) {
+        map[key] = {
+          name: h.customer.name,
+          phone: h.customer.phone,
+          region: h.customer.region || '',
+          count: 0, total: 0, paid: 0
+        };
+      }
+      var entry = map[key];
+      entry.count++;
+      entry.total += (h.totals && h.totals.grandTotal) || 0;
+      var paidAmt = h.payments
+        ? h.payments.filter(function(p) { return !p.cancelled; })
+                    .reduce(function(s, p) { return s + p.amount; }, 0)
+        : (h.paidAmount || 0);
+      entry.paid += paidAmt;
+    });
+    return Object.keys(map).map(function(k) {
+      var e = map[k];
+      e.unpaid = e.total - e.paid;
+      return e;
+    }).sort(function(a, b) { return b.unpaid - a.unpaid; });
+  }
+
+  var _custSummaryOverlay = null;
+
+  function openCustomerSummaryPanel() {
+    if (!_custSummaryOverlay) {
+      _custSummaryOverlay = document.createElement('div');
+      _custSummaryOverlay.id = 'custSummaryOverlay';
+      _custSummaryOverlay.className = 'cust-summary-overlay';
+      _custSummaryOverlay.innerHTML = [
+        '<div class="cust-summary-panel">',
+        '  <button class="sales-close-btn" id="custSummaryCloseBtn">✕</button>',
+        '  <h3>고객별 집계</h3>',
+        '  <div id="custSummaryBody"></div>',
+        '</div>'
+      ].join('\n');
+      document.body.appendChild(_custSummaryOverlay);
+      _custSummaryOverlay.addEventListener('click', function(e) {
+        if (e.target === _custSummaryOverlay) _custSummaryOverlay.classList.remove('on');
+      });
+      document.getElementById('custSummaryCloseBtn').addEventListener('click', function() {
+        _custSummaryOverlay.classList.remove('on');
+      });
+    }
+
+    var rows = _buildCustomerAggregates();
+    var body = document.getElementById('custSummaryBody');
+
+    if (!rows.length) {
+      body.innerHTML = '<div class="cust-summary-empty">거래 이력이 없습니다.</div>';
+    } else {
+      var html = [
+        '<table class="cust-summary-table">',
+        '<thead><tr>',
+        '<th>고객명</th><th>지역</th><th>거래</th><th>총 매출</th><th>미수금</th>',
+        '</tr></thead><tbody>'
+      ];
+      rows.forEach(function(r) {
+        var unpaidClass = r.unpaid > 0 ? ' class="cust-summary-unpaid"' : '';
+        html.push(
+          '<tr>',
+          '<td>' + r.name + '</td>',
+          '<td>' + (r.region || '-') + '</td>',
+          '<td>' + r.count + '건</td>',
+          '<td>' + _fmt(r.total) + '원</td>',
+          '<td' + unpaidClass + '>' + _fmt(r.unpaid) + '원</td>',
+          '</tr>'
+        );
+      });
+      html.push('</tbody></table>');
+      body.innerHTML = html.join('');
+    }
+
+    _custSummaryOverlay.classList.add('on');
+  }
+
   // ── 4. 고객별 요약 배지 ──────────────────────────────────────────────────
   function _ensureBadge() {
     if (document.getElementById('custSalesBadge')) return document.getElementById('custSalesBadge');
@@ -374,8 +481,9 @@
 
   // ── 6. 공개 API ──────────────────────────────────────────────────────────
   window.SalesHistoryUI = {
-    openSalesPanel:         openSalesPanel,
-    updateCustomerSummary:  _updateCustomerSummary
+    openSalesPanel:             openSalesPanel,
+    updateCustomerSummary:      _updateCustomerSummary,
+    openCustomerSummaryPanel:   openCustomerSummaryPanel
   };
 
 })();
