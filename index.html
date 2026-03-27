@@ -2645,12 +2645,13 @@ function applyRxPdfEmbed(d){
       type:s.t||'',month:s.m||0,pageGroup:s.pg??null,sourcePage:s.sp??null,pageType:s.pt||'',days:s.d||'',dateRange:s.dr||'',
       purpose:s.p||'',funcTags:s.ft||[],funcColor:s.fc||'#ffffff',
       products:(s.pr||[]).map(pr=>({
-        key:pr[0],qty:pr[1],unit:pr[2]||'개',desc:pr[3]||'',prodArea:pr[4]||null
+        key:pr[0],qty:pr[1],unit:pr[2]||'개',desc:pr[3]||'',prodArea:pr[4]||null,capacity:pr[5]||''
       })),
       area:s.a||null,
       typeNumOverride:s.to||0,typeNumWord:s.tw||'',
       stageLabelOverride:s.sl||'',
-      stageLabel:s.lb||''  // ★ lb 필드 복원 (누락 시 처방전에서 라벨 소실)
+      stageLabel:s.lb||'',  // ★ lb 필드 복원 (누락 시 처방전에서 라벨 소실)
+      stageDisplayText:s.sdt||'',stageRawCell:s.src||'',stageDisplayOverride:s.sdo||''
     })),
     pageOrder:d.po||null,
     costVisible:d.cv!==undefined?d.cv:true,
