@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: v1.1
 status: Planning
-stopped_at: Milestone v1.0 complete — v1.1 roadmap defined, Phase 7 ready to plan
+stopped_at: Completed 07-01-PLAN.md — AUTO-01/02 auto-fill + UX-01 stage collapse
 last_updated: "2026-03-27T00:00:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: 6 (complete)
-Plan: All complete
+Phase: 7 (in progress)
+Plan: 1 complete
 
 ## Performance Metrics
 
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 04-sales-history]: customerKey 로직을 customerDB.js 내부에 인라인 구현 — index.html 전역 함수 의존 없이 독립 동작
 - [Phase 05-pdf]: ##TN## 저장 방식: addPage(연한회색) → pdf.setProperties(subject) 메타데이터로 이동 — 출력물 완전 불가시
 - [Phase 05-pdf]: doPdf async 전환: .then() 체인 제거, .p-wrap별 개별 html2canvas 캡처로 다중 페이지 정확 분리
+- [Phase 07-01]: select 안전 대입: .value= 직접 대입 대신 for-loop options 순회 — 옵션 미존재 시 기존 선택 유지
+- [Phase 07-01]: AUTO-02 Method B: parseRxPdfCoords가 stages 배열만 반환하므로 stages.area 빈도 분석으로 totalArea 추론
+- [Phase 07-01]: UX-01 toggleStageCard: 전체 재렌더 없이 DOM 직접 조작 → textarea 포커스 유지
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T02:22:28.013Z
-Stopped at: Completed 05-pdf-01-PLAN.md
+Last session: 2026-03-27T00:00:00.000Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
