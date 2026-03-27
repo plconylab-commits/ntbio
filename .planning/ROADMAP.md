@@ -35,7 +35,10 @@ Plans:
 
 **Goal:** 기간별 매출 합계와 고객별 총 거래금액·미수금을 조회할 수 있다
 **Requirements:** SALE-04~05
-**Plans:** 0 plans — start with `/gsd:plan-phase 8`
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — SALE-04 분기 버튼(이번/지난 분기) + SALE-05 고객별 집계 오버레이
 
 ### Phase 9: 평당가 페이지 + 이미지 첨부
 
@@ -68,5 +71,5 @@ Plans:
 | 5. 거래명세표 인쇄/PDF 버그 수정 | v1.0 | 1/1 | ✅ Complete | 2026-03-26 |
 | 6. 처방전↔거래명세표 대조 검토 | v1.0 | 2/2 | ✅ Complete | 2026-03-27 |
 | 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 1/1 | ✅ Complete | 2026-03-27 |
-| 8. 매출 집계 | v1.1 | 0/? | 🔲 Planned | — |
+| 8. 매출 집계 | v1.1 | 0/1 | 🔲 Planned | — |
 | 9. 평당가 페이지 + 이미지 첨부 | v1.1 | 0/? | 🔲 Planned | — |
