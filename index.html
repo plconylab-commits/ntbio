@@ -880,7 +880,7 @@ const INVOICE_API = 'https://script.google.com/macros/s/AKfycbxFaxtyi2GyDE-9nYM6
 // ─── IndexedDB Storage ───
 const IDB_NAME='NTBioInvoices';
 const IDB_VER=2;
-let _invoiceUnitPrice = 0;  // PRICE-01: 평당가 페이지용 전역 값
+window._invoiceUnitPrice = 0;  // PRICE-01: 평당가 페이지용 전역 값
 let _attachedImages = [];  // ATTACH-01/02: 이미지 캐시 (IndexedDB에서 로드)
 const IDB_STORE='invoices';
 let _invoiceCache=null;
@@ -1474,7 +1474,7 @@ function clearAll(){
   const gd=document.getElementById('gDisc'); if(gd) gd.value='0';
   const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
   localStorage.removeItem('rxStages');
-  _invoiceUnitPrice = 0;
+  window._invoiceUnitPrice = 0;
   _attachedImages = [];
   render(); syncPrint();
 }
@@ -1612,7 +1612,7 @@ function closeImgManager() {
 
 // ─── 평당가 페이지 주입 (PRICE-01) ─────────────────────
 function _appendPricePageIfNeeded() {
-  if (!_invoiceUnitPrice) return;
+  if (!window._invoiceUnitPrice) return;
   const area = parseFloat(document.getElementById('cArea').value) || 0;
   const supply = cart.filter(c => !c.gift).reduce((s, c) => s + c.sp * c.qty, 0);
   const name = (document.getElementById('cName').value || '').trim() || '고객명';
@@ -1635,7 +1635,7 @@ function _appendPricePageIfNeeded() {
         </tr>
         <tr style="background:#E0F5F5;">
           <td style="padding:12px;font-weight:900;font-size:16px;border:3px solid #35a09e;">평당가</td>
-          <td style="padding:12px;font-weight:900;font-size:18px;color:#35a09e;border:3px solid #35a09e;">${_invoiceUnitPrice.toLocaleString()}원/평</td>
+          <td style="padding:12px;font-weight:900;font-size:18px;color:#35a09e;border:3px solid #35a09e;">${window._invoiceUnitPrice.toLocaleString()}원/평</td>
         </tr>
       </table>
     </div>
