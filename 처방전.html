@@ -4582,18 +4582,28 @@ function parseRxPdfCoords(items) {
     lastPR.texts.push(ri.text);
   }
 
-  // ── 6. stageBlock 배정 헬퍼 (Y 기반 nearest-preceding, 없으면 첫 유효 블록) ─
+  // ── 6. stageBlock 배정 헬퍼 (중간값 경계 기반) ──────────────────────
+  // 단계 사이 Y 중간값을 경계로 삼아 제품 행을 올바른 단계에 배정
+  // 예) 엽면(1번) yMax=207, 관주(2번) yMin=290 → 경계=248.5
+  //    y=277 제품 → 경계(248.5) 초과 → 관주(2번) ✓
   function assignToBlock(y, page) {
-    let bestIdx = -1;
+    // 페이지 내 유효 블록을 yMin 오름차순으로 정렬
+    const pageBlocks = [];
     stageBlocks.forEach((sb, idx) => {
       if (orphanPromoted.has(idx)) return;
       if (sb.page !== page) return;
-      if (sb.yMin <= y) bestIdx = idx;
+      pageBlocks.push({ idx, yMin: sb.yMin, yMax: sb.yMax });
     });
-    if (bestIdx < 0) {
-      bestIdx = stageBlocks.findIndex((sb, i) => sb.page === page && !orphanPromoted.has(i));
+    if (pageBlocks.length === 0) return -1;
+    pageBlocks.sort((a, b) => a.yMin - b.yMin);
+    // 각 블록의 상한 = 현재 블록 yMax와 다음 블록 yMin의 중간값
+    for (let i = 0; i < pageBlocks.length; i++) {
+      const cur  = pageBlocks[i];
+      const next = pageBlocks[i + 1];
+      const upperBound = next ? (cur.yMax + next.yMin) / 2 : Infinity;
+      if (y <= upperBound) return cur.idx;
     }
-    return bestIdx;
+    return pageBlocks[pageBlocks.length - 1].idx;
   }
 
   // ── 7. 제품 행 → stageBlock 배정 ─────────────────────────────────
