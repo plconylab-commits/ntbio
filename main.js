@@ -36,7 +36,11 @@ async function handlePrescriptionUpload(pdfFile) {
     }
     if (fi.cropName) {
       const el = document.getElementById('cCrop');
-      if (el) el.value = fi.cropName;
+      if (el) {
+        for (let i = 0; i < el.options.length; i++) {
+          if (el.options[i].value === fi.cropName) { el.selectedIndex = i; break; }
+        }
+      }
     }
     if (fi.totalArea) {
       const el = document.getElementById('cArea');

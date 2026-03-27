@@ -2404,7 +2404,14 @@ function applyRxPdfEmbed(d){
   document.getElementById('cName').value=d.n||'';
   document.getElementById('cRegion').value=d.rg||'';
   document.getElementById('cArea').value=d.ar||'';
-  document.getElementById('cCrop').value=d.cr||'';
+  if (d.cr) {
+    const sel = document.getElementById('cCrop');
+    if (sel) {
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === d.cr) { sel.selectedIndex = i; break; }
+      }
+    }
+  }
   const atEl=document.getElementById('cAreaType');
   if(atEl&&d.at)atEl.value=d.at;
 
