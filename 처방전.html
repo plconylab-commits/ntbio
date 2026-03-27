@@ -141,10 +141,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .group-toggle-btn:hover{background:rgba(255,255,255,.2);}
 .month-group-body{background:#f4fbfb;display:flex;flex-direction:column;gap:8px;padding:8px;}
 .month-group-body.collapsed{display:none;}
+.stage-body.collapsed{display:none;}
 /* ── 단계 카드 ── */
 .stage-card{border:1.5px solid #e0e0e0;border-radius:8px;overflow:hidden;}
 .stage-head{background:var(--teal);color:#fff;padding:8px 12px;
-  display:flex;align-items:center;justify-content:space-between;}
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none;}
 .stage-head .slabel{font-size:13px;font-weight:700;}
 .stage-head .sdate{font-size:11px;opacity:.85;}
 .stage-del{background:rgba(255,255,255,.25);border:none;color:#fff;
@@ -1496,6 +1498,13 @@ function renderStages() {
     renderToc();
     return;
   }
+
+  // UX-01: 첫 렌더 시 isOpen 초기화 — isOpen이 아직 없는 stages만 기본값 적용
+  if (stages.length > 0 && stages[0].isOpen === undefined) {
+    stages[0].isOpen = true;
+    // 나머지는 undefined → makeCard에서 collapsed 처리
+  }
+
   renderToc();
   schedulePreview();
 
@@ -1622,15 +1631,16 @@ function renderStages() {
     }).join('');
 
     const hasNext = si + 1 < stages.length;
+    const isCollapsed = !st.isOpen;
     return `<div class="stage-card" id="stageCard_${st.id}">
-      <div class="stage-head">
+      <div class="stage-head" onclick="toggleStageCard(${si})">
         <span class="slabel">${getStageBadge(st)}</span>
         <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
-          ${hasNext ? `<button class="stage-merge-btn" onclick="mergeStages(${si})" title="아래 단계와 합치기" style="font-size:11px;padding:2px 7px;border:1.5px solid var(--teal);border-radius:4px;background:var(--teal-light);color:var(--teal-dark);cursor:pointer;white-space:nowrap;">⊕ 합치기</button>` : ''}
-          <button class="stage-del" onclick="delStage(${si})" title="삭제">✕</button>
+          ${hasNext ? `<button class="stage-merge-btn" onclick="event.stopPropagation();mergeStages(${si})" title="아래 단계와 합치기" style="font-size:11px;padding:2px 7px;border:1.5px solid var(--teal);border-radius:4px;background:var(--teal-light);color:var(--teal-dark);cursor:pointer;white-space:nowrap;">⊕ 합치기</button>` : ''}
+          <button class="stage-del" onclick="event.stopPropagation();delStage(${si})" title="삭제">✕</button>
         </div>
       </div>
-      <div class="stage-body">
+      <div class="stage-body${isCollapsed ? ' collapsed' : ''}">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           <div style="flex:2;min-width:140px;">
             <label style="font-size:12px;color:#888;font-weight:700;">🕐 시기/단계명
@@ -1745,6 +1755,15 @@ function toggleMonthGroup(mk) {
   if (!window._monthGroupCollapsed) window._monthGroupCollapsed = {};
   window._monthGroupCollapsed[mk] = !window._monthGroupCollapsed[mk];
   renderStages();
+}
+
+// UX-01: 단계 카드 헤더 클릭 시 접힘/펼침 토글 (DOM 직접 조작 — 포커스 유지)
+function toggleStageCard(si) {
+  if (si < 0 || si >= stages.length) return;
+  stages[si].isOpen = !stages[si].isOpen;
+  // 전체 재렌더 대신 직접 DOM 조작 (포커스·스크롤 유지)
+  const body = document.querySelector(`#stageCard_${stages[si].id} .stage-body`);
+  if (body) body.classList.toggle('collapsed', !stages[si].isOpen);
 }
 
 // ── 그룹 순서 동기화 ─────────────────────
