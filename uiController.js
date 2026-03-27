@@ -554,6 +554,13 @@ function openValidationModal(rx) {
     }
   })(rx._sourceFilename);
 
+  // 파일명 파싱 결과를 fi에도 반영 (모달 헤더 표시용)
+  if (!fi.farmName) fi.farmName = document.getElementById('cName')?.value || null;
+  if (!fi.cropName) {
+    const sel = document.getElementById('cCrop');
+    fi.cropName = sel ? (sel.options[sel.selectedIndex]?.text || sel.value || null) : null;
+  }
+
   // ── 모달 렌더 ──
   _renderValidationModal(fi, totalArea, optionsHTML);
 }
