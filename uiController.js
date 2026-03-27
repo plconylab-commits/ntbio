@@ -534,7 +534,7 @@ function openValidationModal(rx) {
     if (!filename) return;
     const base = filename.replace(/\.pdf$/i, '');
     const areaM = base.match(/\((\d+)평\)/);
-    const cropM = base.match(/^([가-힣]+)/);
+    const cropM = base.match(/([가-힣]+)\s*\(\d+평\)/);
     const nameMs = [...base.matchAll(/([가-힣]{2,6})님/g)];
     const parsedName = nameMs.length ? nameMs[nameMs.length - 1][1] : null;
     const parsedCrop = cropM ? cropM[1] : null;

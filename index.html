@@ -2683,7 +2683,7 @@ function onPdfSelected(input){
   (function(fn){
     const base=fn.replace(/\.pdf$/i,'');
     const areaM=base.match(/\((\d+)평\)/); const area=areaM?parseInt(areaM[1],10):null;
-    const cropM=base.match(/^([가-힣]+)/);  const crop=cropM?cropM[1]:null;
+    const cropM=base.match(/([가-힣]+)\s*\(\d+평\)/);  const crop=cropM?cropM[1]:null;
     const nameMs=[...base.matchAll(/([가-힣]{2,6})님/g)];
     const name=nameMs.length?nameMs[nameMs.length-1][1]:null;
     if(name){const el=document.getElementById('cName');if(el)el.value=name;}

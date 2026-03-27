@@ -27,8 +27,8 @@ function _parseFilenameInfo(filename) {
   const areaMatch = base.match(/\((\d+)평\)/);
   if (areaMatch) result.totalArea = parseInt(areaMatch[1], 10);
 
-  // 작물: 맨 앞 한글 연속 (첫 '(' 앞)
-  const cropMatch = base.match(/^([가-힣]+)/);
+  // 작물: (N평) 바로 앞 한글 — 파일명 앞에 숫자/특수문자 있어도 인식
+  const cropMatch = base.match(/([가-힣]+)\s*\(\d+평\)/);
   if (cropMatch) result.cropName = cropMatch[1];
 
   // 고객명: 한글 2~6자 + '님' 패턴 중 마지막 (e.g. 김영국님, 송한천장로님)

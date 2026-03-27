@@ -4832,7 +4832,7 @@ function _parseRxFilenameInfo(filename) {
   const result = { farmName: null, cropName: null, totalArea: null };
   const areaMatch = base.match(/\((\d+)평\)/);
   if (areaMatch) result.totalArea = parseInt(areaMatch[1], 10);
-  const cropMatch = base.match(/^([가-힣]+)/);
+  const cropMatch = base.match(/([가-힣]+)\s*\(\d+평\)/);
   if (cropMatch) result.cropName = cropMatch[1];
   const nameMatches = [...base.matchAll(/([가-힣]{2,6})님/g)];
   if (nameMatches.length > 0) result.farmName = nameMatches[nameMatches.length - 1][1];
