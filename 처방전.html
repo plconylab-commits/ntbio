@@ -4043,7 +4043,24 @@ function fitPagePurposeText() {
 
 function doPrint() {
   generatePreview();
-  setTimeout(() => { fitPagePurposeText(); window.print(); }, 200);
+  setTimeout(() => {
+    fitPagePurposeText();
+    // ── document.title 트릭: ##RX## 데이터를 PDF Title 메타데이터에 삽입 ──
+    // Chrome print-to-PDF 는 document.title 을 PDF의 Title 필드에 저장하므로
+    // index.html 에서 getMetadata().info.Title 로 읽어낼 수 있다.
+    const embedEl = document.querySelector('.rx-embed-data');
+    const embedText = embedEl ? embedEl.textContent.trim() : '';
+    const rxm = embedText.match(/##RX##([A-Za-z0-9+/=]+)##RX##/);
+    const _origTitle = document.title;
+    if (rxm) {
+      document.title = '##RX##' + rxm[1] + '##RX##';
+    }
+    window.addEventListener('afterprint', function restoreTitle() {
+      document.title = _origTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    });
+    window.print();
+  }, 200);
 }
 
 // ── 인쇄 자동 축소 (A4 landscape 한 페이지 잘림 방지) ─────────────────────────

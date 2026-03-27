@@ -1473,7 +1473,7 @@ function clearAll(){
   });
   const gd=document.getElementById('gDisc'); if(gd) gd.value='0';
   const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
-  localStorage.removeItem('rxStages');
+  // ※ rxStages 는 삭제하지 않음 — 처방전.html 복원용 단계 데이터 보존
   window._invoiceUnitPrice = 0;
   _attachedImages = [];
   render(); syncPrint();
@@ -2702,9 +2702,17 @@ function onPdfSelected(input){
     const data=new Uint8Array(e.target.result);
     try{
       const text=await extractPdfText(data);
-      // 1순위: 처방전 PDF 감지 (##RX## 임베드)
+      // 1순위: 처방전 PDF 감지 (##RX## 임베드) — 텍스트 레이어 OR PDF Title 메타데이터
       const compact=text.replace(/\s+/g,'');
-      const rxm=compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
+      let rxFromTitle='';
+      try{
+        const pdfDocT=await pdfjsLib.getDocument({data}).promise;
+        const metaT=await pdfDocT.getMetadata();
+        const titleField=(metaT&&metaT.info&&metaT.info.Title)||'';
+        const rxmt=titleField.match(/##RX##([A-Za-z0-9+/=]+)##RX##/);
+        if(rxmt) rxFromTitle=rxmt[1];
+      }catch(e){}
+      const rxm=compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/)||(rxFromTitle?{1:rxFromTitle}:null);
       if(rxm){
         let d=null;
         try{d=JSON.parse(decodeURIComponent(atob(rxm[1])));}
