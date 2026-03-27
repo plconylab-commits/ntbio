@@ -2762,9 +2762,13 @@ function onPdfSelected(input){
         return;
       }
       // 3순위: 나머지 모든 PDF → Vision AI (스캔 처방전 포함)
-      // 처방전.html 단계 복원용: raw 텍스트를 저장하고 기존 단계 초기화
-      // 처방전.html 로드 시 rxPdfRawText → parseRxPdfText 로 단계 자동 복원
-      localStorage.setItem('rxPdfRawText', text);
+      // 처방전.html 단계 복원용: PDF 바이너리를 base64로 저장 → 좌표 기반 파싱
+      // (처방전.html will process this with the same coordinate-based parser as onRxPdfSelected)
+      try {
+        let binary = '';
+        for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
+        localStorage.setItem('rxPendingPdf', btoa(binary));
+      } catch(e) { console.warn('[rxPendingPdf] 저장 실패:', e); }
       localStorage.removeItem('rxStages');
       handlePrescriptionUpload(file);
     }catch(err){

@@ -1104,6 +1104,58 @@ window.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('change', () => { schedulePreview(); _scheduleAutoSave(); });
   });
   schedulePreview();
+  // rxPendingPdf: index.html에서 업로드한 처방전 PDF → 좌표 기반 파싱으로 단계 자동 복원
+  if (stages.length === 0) {
+    (async () => {
+      const b64 = localStorage.getItem('rxPendingPdf');
+      if (!b64) return;
+      localStorage.removeItem('rxPendingPdf');
+      try {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+        // 1순위: ##RX## 임베드 확인
+        const pageTxts = [];
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+          const page = await pdfDoc.getPage(i);
+          const tc = await page.getTextContent();
+          pageTxts.push(tc.items.map(it => it.str).join(' '));
+        }
+        const compact = pageTxts.join(' ').replace(/\s+/g, '');
+        const rxm = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
+        if (rxm) {
+          const d = JSON.parse(decodeURIComponent(atob(rxm[1])));
+          applyRxData(d);
+          showRxToast('처방전 불러오기 완료 ✓ (거래명세표 연동)');
+          return;
+        }
+        // 2순위: 좌표 기반 파싱 (Hwp 외부 처방전)
+        const items = await extractRxPdfCoords(pdfDoc);
+        const parsed = parseRxPdfCoords(items);
+        if (parsed.stages && parsed.stages.length > 0) {
+          _normalizeStageProductKeys(parsed.stages);
+          stageIdCnt = 0;
+          stages = parsed.stages.map(s => ({
+            ...s, id: ++stageIdCnt,
+            pageGroup: s.pageGroup ?? null, sourcePage: s.sourcePage ?? null,
+            pageType: s.pageType || '',
+            stageLabelOverride: s.stageLabelOverride || '',
+            stageLabel: s.stageLabel || '',
+            stageDisplayText: s.stageDisplayText || '',
+            stageRawCell: s.stageRawCell || '',
+            stageDisplayOverride: s.stageDisplayOverride || ''
+          }));
+          recalcTypeNums();
+          renderStages();
+          _saveRxStages();
+          showRxToast(`처방전 불러오기 완료 ✓ — ${stages.length}단계 (거래명세표 연동)`);
+        } else {
+          showRxToast('처방전 단계를 인식하지 못했습니다.', 0);
+        }
+      } catch(e) { console.warn('[rxPendingPdf 파싱 실패]:', e); }
+    })();
+  }
   // Ctrl+Z 되돌리기 / Ctrl+Y·Ctrl+Shift+Z 다시하기
   document.addEventListener('keydown', e => {
     const active = document.activeElement;
