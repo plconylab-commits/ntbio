@@ -4313,8 +4313,8 @@ const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단�
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
-  // 비용표(마지막 1-2장) 제외한 전체 처방 페이지 처리
-  const lastPage = Math.max(1, pdfDoc.numPages - 2);
+  // 비용표(마지막 1장) 제외한 전체 처방 페이지 처리
+  const lastPage = Math.max(1, pdfDoc.numPages - 1);
   for (let p = 1; p <= lastPage; p++) {
     const page = await pdfDoc.getPage(p);
     const vp   = page.getViewport({ scale: 1.0 });
@@ -4336,6 +4336,8 @@ function detectTypeFromParsedLabel(label, products) {
   const text = [label || '', ...(products || []).map(p => p.key || ''), ...(products || []).map(p => p.desc || '')].join(' ');
   if (/엽면/.test(text)) return '엽면';
   if (/관주/.test(text)) return '관주';
+  // 기비용 제품(옥스팜/뉴천연팜/옥토팜) 포함 단계 → 기비 (헤더 텍스트 무관)
+  if ((products || []).some(p => /옥스팜|뉴천연팜|옥토팜/.test(p.key || ''))) return '기비';
   if (/감사|수확/.test(text)) return '감사비료';
   if (/기비|밑거름|기본시비|토양|경운/.test(text)) return '기비';
   if (/추비/.test(text)) return '추비';
@@ -4401,10 +4403,15 @@ function parseRxPdfCoords(items) {
     const xMax = Math.max(...row.items.map(it => it.x + (it.w || it.text.length * 7)));
     if (xMin < RX_LEFT_X_MAX && xMax > RX_LEFT_X_MAX + 50) {
       const titleText = row.items.map(it => it.text).join(' ').trim();
-      if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText)) {
+      // 제품 성분 설명 행 제외: 옥스팜/뉴천연팜/옥토팜 등 포함 시 pageTitle 불가
+      const isProductDesc = /옥스팜|뉴천연팜|옥토팜|휴믹산|풀빅산|부식산|발효계분|견운모|고령토/.test(titleText);
+      if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText) && !isProductDesc) {
         pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + titleText : titleText;
         titleRowSet.add(ri);
         console.log(`[Parser v16] page ${pg} pageTitle (A): "${titleText}"`);
+      } else if (isProductDesc) {
+        // 성분 설명 행은 pageTitle에서 제외하지만 titleRowSet에는 추가해 좌측 아이템 오염 방지
+        titleRowSet.add(ri);
       }
     }
   });
