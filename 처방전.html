@@ -592,7 +592,12 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   /* 요약카드 인쇄 시 전체 페이지 높이 채움 */
   [data-pagekey="cost"] .content-inner{height:calc(210mm - 28px) !important;}
   [data-pagekey="cost"] .sc-table{height:100% !important;}
+  /* ##RX## 데이터 embed: 화면에서는 숨기고, PDF 인쇄 시에만 표시 — Chrome이 텍스트 레이어에 포함 */
+  .rx-embed-data{display:block !important;font-size:6pt;color:#ccc;word-break:break-all;
+    white-space:pre-wrap;line-height:1;pointer-events:none;user-select:none;}
 }
+/* 화면에서는 완전히 숨김 */
+.rx-embed-data{display:none;}
 /* ── 인쇄 자동 축소 Step 2: padding/line-height 축소 ── */
 .print-compact .rx-table td,
 .print-compact .rx-table th { padding:5px 7px !important; line-height:1.25 !important; }
@@ -4003,7 +4008,7 @@ function generatePreview() {
     // Chrome print-to-PDF 텍스트 레이어 보장:
     // 페이지 맨 끝에 6pt 검정 텍스트로 삽입 — Chrome Skia는 색깔·크기 무관하게 텍스트 레이어에 포함
     // word-break:break-all 로 base64 긴 문자열이 잘리지 않게 처리
-    html += `<div style="font-size:6pt;color:#f0f0f0;white-space:pre-wrap;word-break:break-all;line-height:1;pointer-events:none;user-select:none;">##RX##${rxB64}##RX##</div>`;
+    html += `<div class="rx-embed-data">##RX##${rxB64}##RX##</div>`;
   } catch(e) { console.warn('RX embed error:', e); }
 
   const preview = document.getElementById('previewArea');
