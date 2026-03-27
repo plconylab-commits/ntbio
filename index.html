@@ -2770,6 +2770,7 @@ function onPdfSelected(input){
         localStorage.setItem('rxPendingPdf', btoa(binary));
       } catch(e) { console.warn('[rxPendingPdf] 저장 실패:', e); }
       localStorage.removeItem('rxStages');
+      showToast('처방전 PDF 저장됨 — 상단 [처방전 처방] 버튼을 눌러 단계를 확인하세요');
       handlePrescriptionUpload(file);
     }catch(err){
       console.error('[PDF] 오류:', err);
