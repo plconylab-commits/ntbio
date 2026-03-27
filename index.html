@@ -712,8 +712,32 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <button class="btn-export-json" onclick="doExportJSON()" style="background:#1565C0;color:#fff;border:none;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 내보내기</button>
         <button class="btn-import-json" onclick="document.getElementById('jsonFileInput').click()" style="background:#E3F2FD;color:#1565C0;border:1.5px solid #1565C0;border-radius:7px;padding:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:1;">JSON 가져오기</button>
       </div>
+      <div class="act-row">
+        <input type="file" id="imgFileInput" accept="image/jpeg,image/png" style="display:none"
+          onchange="onImgSelected(this)" multiple>
+        <button class="btn-all-unpaid" onclick="document.getElementById('imgFileInput').click()"
+          style="background:#FFF3E0;color:#E65100;border-color:#E65100;">
+          🖼 이미지 첨부
+        </button>
+        <button class="btn-all-unpaid" onclick="openImgManager()"
+          style="background:#F3E5F5;color:#6A1B9A;border-color:#6A1B9A;">
+          📁 첨부 관리
+        </button>
+      </div>
     </div>
   </div><!-- /right -->
+</div>
+
+<!-- 이미지 첨부 관리 오버레이 (ATTACH-02) -->
+<div id="imgManagerOverlay" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:1001;
+  width:420px;max-width:95vw;max-height:80vh;overflow-y:auto;padding:20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="font-size:16px;font-weight:900;">📁 첨부 이미지 관리</div>
+    <button onclick="closeImgManager()"
+      style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">✕</button>
+  </div>
+  <div id="imgManagerList"></div>
 </div>
 
 <!-- 모달 -->
@@ -1518,6 +1542,74 @@ function _idbDeleteImage(id) {
   });
 }
 
+// ─── 이미지 업로드 핸들러 (ATTACH-01) ──────────────────
+function onImgSelected(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  let pending = 0;
+  files.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`${file.name}: 5MB 이하 이미지만 첨부 가능합니다.`);
+      return;
+    }
+    pending++;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rec = {
+        id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        name: file.name,
+        dataUrl: e.target.result,
+        savedAt: new Date().toISOString(),
+        memo: ''
+      };
+      _idbSaveImage(rec).then(() => {
+        _attachedImages.push(rec);
+        pending--;
+        if (pending === 0) syncPrint();
+      }).catch(err => {
+        console.error('[이미지 저장 실패]', err);
+        pending--;
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';  // 동일 파일 재선택 허용
+}
+
+function openImgManager() {
+  _idbLoadImages().then(imgs => {
+    _attachedImages = imgs;
+    const list = imgs.length === 0
+      ? '<p style="color:#888;text-align:center;padding:20px;">첨부된 이미지가 없습니다.</p>'
+      : imgs.map(img => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">
+          <img src="${img.dataUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #ddd;">
+          <div style="flex:1;font-size:13px;">
+            <div style="font-weight:700;">${img.name}</div>
+            <div style="color:#888;font-size:11px;">${img.savedAt ? img.savedAt.slice(0,10) : ''}</div>
+          </div>
+          <button onclick="deleteAttachedImage('${img.id}')"
+            style="background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px;">삭제</button>
+        </div>`).join('');
+    document.getElementById('imgManagerList').innerHTML = list;
+    document.getElementById('imgManagerOverlay').style.display = 'flex';
+    document.getElementById('overlay').style.display = 'block';
+  });
+}
+
+function deleteAttachedImage(id) {
+  _idbDeleteImage(id).then(() => {
+    _attachedImages = _attachedImages.filter(i => i.id !== id);
+    syncPrint();
+    openImgManager();  // 목록 갱신
+  }).catch(err => console.error('[이미지 삭제 실패]', err));
+}
+
+function closeImgManager() {
+  document.getElementById('imgManagerOverlay').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+}
+
 // ─── 평당가 페이지 주입 (PRICE-01) ─────────────────────
 function _appendPricePageIfNeeded() {
   if (!_invoiceUnitPrice) return;
@@ -1549,6 +1641,19 @@ function _appendPricePageIfNeeded() {
     </div>
   </div>`;
   document.getElementById('printDoc').insertAdjacentHTML('beforeend', html);
+}
+
+function _appendImagePagesIfNeeded(imgs) {
+  if (!imgs || !imgs.length) return;
+  imgs.forEach((img, idx) => {
+    const html = `<div class="p-wrap p-page-break p-img-page">
+      <div class="p-title">첨부 이미지 ${idx + 1}${img.name ? ' — ' + img.name : ''}</div>
+      <div style="padding:10px;text-align:center;">
+        <img src="${img.dataUrl}" style="max-width:100%;max-height:220mm;object-fit:contain;">
+      </div>
+    </div>`;
+    document.getElementById('printDoc').insertAdjacentHTML('beforeend', html);
+  });
 }
 
 // ─── 인쇄 문서 동기화 ────────────────────
@@ -1655,6 +1760,7 @@ function syncPrint(){
     </div>`).join('');
   // ── 추가 페이지 주입 ──
   _appendPricePageIfNeeded();
+  _appendImagePagesIfNeeded(_attachedImages);
 }
 
 // ─── 인쇄 / PDF / 이메일 ─────────────────
