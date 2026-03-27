@@ -529,18 +529,7 @@ function openValidationModal(rx) {
       `<option value="${p.id}" data-price="${p.price}" data-size="${p.size||''}">${p.name} (${p.size||''})</option>`
     ).join('');
 
-  // ── 모달 렌더 ──
-  _renderValidationModal(fi, totalArea, optionsHTML);
-}
-
-/* ───────────────────────────────────────────
-   모달 DOM 생성 (헤더/바디/푸터 분리)
-   ─────────────────────────────────────────── */
-function _renderValidationModal(fi, totalArea, optionsHTML) {
-  const rows = window._vldRows || [];
-  const warningCount = rows.filter(r => r.warnings && r.warnings.length).length;
-
-  // 파일명에서 고객명·작물·평수 파싱 → 폼에 즉시 반영 (pdfParser는 표지 이미지라 항상 null)
+  // 파일명에서 고객명·작물·평수 파싱 → 폼 즉시 반영 (pdfParser는 표지 이미지라 항상 null 반환)
   (function(filename) {
     if (!filename) return;
     const base = filename.replace(/\.pdf$/i, '');
@@ -565,7 +554,18 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
     }
   })(rx._sourceFilename);
 
-  // 고객 정보: 현재 입력 필드 값 (수정 가능하게 pre-fill — 위 파싱 결과 포함)
+  // ── 모달 렌더 ──
+  _renderValidationModal(fi, totalArea, optionsHTML);
+}
+
+/* ───────────────────────────────────────────
+   모달 DOM 생성 (헤더/바디/푸터 분리)
+   ─────────────────────────────────────────── */
+function _renderValidationModal(fi, totalArea, optionsHTML) {
+  const rows = window._vldRows || [];
+  const warningCount = rows.filter(r => r.warnings && r.warnings.length).length;
+
+  // 고객 정보: 현재 입력 필드 값 (수정 가능하게 pre-fill)
   const _cName  = document.getElementById('cName')?.value  || '';
   const _cPhone = document.getElementById('cPhone')?.value || '';
   const _cAddr  = document.getElementById('cAddr')?.value  || '';
