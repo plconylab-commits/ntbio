@@ -540,7 +540,32 @@ function _renderValidationModal(fi, totalArea, optionsHTML) {
   const rows = window._vldRows || [];
   const warningCount = rows.filter(r => r.warnings && r.warnings.length).length;
 
-  // 고객 정보: 현재 입력 필드 값 (수정 가능하게 pre-fill)
+  // 파일명에서 고객명·작물·평수 파싱 → 폼에 즉시 반영 (pdfParser는 표지 이미지라 항상 null)
+  (function(filename) {
+    if (!filename) return;
+    const base = filename.replace(/\.pdf$/i, '');
+    const areaM = base.match(/\((\d+)평\)/);
+    const cropM = base.match(/^([가-힣]+)/);
+    const nameMs = [...base.matchAll(/([가-힣]{2,6})님/g)];
+    const parsedName = nameMs.length ? nameMs[nameMs.length - 1][1] : null;
+    const parsedCrop = cropM ? cropM[1] : null;
+    const parsedArea = areaM ? parseInt(areaM[1], 10) : null;
+    if (parsedName) { const el = document.getElementById('cName'); if (el) el.value = parsedName; }
+    if (parsedArea) { const el = document.getElementById('cArea'); if (el) el.value = parsedArea; }
+    if (parsedCrop) {
+      const el = document.getElementById('cCrop');
+      if (el) {
+        el.value = parsedCrop;
+        if (!el.value || el.value === '') {
+          for (let i = 0; i < el.options.length; i++) {
+            if (el.options[i].text.includes(parsedCrop) || parsedCrop.includes(el.options[i].text)) { el.selectedIndex = i; break; }
+          }
+        }
+      }
+    }
+  })(rx._sourceFilename);
+
+  // 고객 정보: 현재 입력 필드 값 (수정 가능하게 pre-fill — 위 파싱 결과 포함)
   const _cName  = document.getElementById('cName')?.value  || '';
   const _cPhone = document.getElementById('cPhone')?.value || '';
   const _cAddr  = document.getElementById('cAddr')?.value  || '';

@@ -54,6 +54,9 @@ async function handlePrescriptionUpload(pdfFile) {
     // parsePdfToJSON이 null 반환 시 → 이미 에러 알림을 보여줬으므로 조용히 종료
     if (!prescriptionJSON) return;
 
+    // 파일명을 JSON에 포함 → openValidationModal에서 farmName/cropName fallback에 사용
+    prescriptionJSON._sourceFilename = pdfFile.name;
+
     if (!prescriptionJSON.prescriptions || prescriptionJSON.prescriptions.length === 0) {
       alert('처방전에서 처방 항목을 찾을 수 없습니다.\nAI가 처방 그룹을 인식하지 못했을 수 있습니다.');
       return;
