@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: v1.1
 status: In Progress
-stopped_at: Phase 7 complete — advancing to Phase 8
-last_updated: "2026-03-27T00:00:00.000Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-03-27T00:15:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 1
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: 7 (in progress)
+Phase: 8 (in progress)
 Plan: 1 complete
 
 ## Performance Metrics
@@ -88,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 07-01]: select 안전 대입: .value= 직접 대입 대신 for-loop options 순회 — 옵션 미존재 시 기존 선택 유지
 - [Phase 07-01]: AUTO-02 Method B: parseRxPdfCoords가 stages 배열만 반환하므로 stages.area 빈도 분석으로 totalArea 추론
 - [Phase 07-01]: UX-01 toggleStageCard: 전체 재렌더 없이 DOM 직접 조작 → textarea 포커스 유지
+- [Phase 08-01]: 분기 범위: lastQ<0이면 lastQ=3, year-=1 — 1월 기준 전년도 4분기 경계 처리
+- [Phase 08-01]: 고객별 집계 payments.cancelled 제외: payments 배열 우선, paidAmount fallback으로 이중 데이터 구조 호환
 
 ### Pending Todos
 
@@ -101,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T00:00:00.000Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-27T00:15:00.000Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
