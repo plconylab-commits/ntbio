@@ -73,6 +73,10 @@ async function handlePrescriptionUpload(pdfFile) {
         if (!injected) {
           console.warn('[main] 평당 단가 입력창을 찾지 못함. 확인된 ID 후보:', UNIT_PRICE_IDS, '| 계산된 값:', unitPrice);
         }
+        // PRICE-01: 평당가 전역 저장 — syncPrint()가 페이지 주입에 사용
+        if (typeof window._invoiceUnitPrice !== 'undefined') {
+          window._invoiceUnitPrice = unitPrice;
+        }
       } else {
         console.warn('[main] costData 있으나 평당 단가 계산 불가:', cd);
       }
