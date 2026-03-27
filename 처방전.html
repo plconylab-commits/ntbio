@@ -4741,6 +4741,17 @@ async function onRxPdfSelected(input) {
     if (parsed.length > 0) {
       stageIdCnt = 0;
       stages = parsed.map(s => ({ ...s, id: ++stageIdCnt }));
+
+      // AUTO-02: 단계 area 빈도 분석으로 totalArea 추론 → bArea 자동 기입
+      const areaFreq = {};
+      stages.forEach(s => { if (s.area) areaFreq[s.area] = (areaFreq[s.area] || 0) + 1; });
+      const inferredArea = Object.entries(areaFreq).sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (inferredArea) {
+        const bAreaEl = document.getElementById('bArea');
+        if (bAreaEl && !bAreaEl.value) { bAreaEl.value = inferredArea; }
+        if (!rxData.area) rxData.area = String(inferredArea);
+      }
+
       // 제품 키 정규화: cart와 공백·특수문자 차이 보정
       _normalizeStageProductKeys(stages);
       // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
