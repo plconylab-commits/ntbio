@@ -470,6 +470,99 @@ function parseProductRow(text) {
  * @param {File} pdfFile
  * @returns {Promise<object|null>}
  */
+/**
+ * PDF 1페이지(표지)에서 고객명(farmName)과 작물명(cropName)을 추출한다.
+ *
+ * 표지 텍스트 블록 패턴 (실제 PDF 분석 기반):
+ *   A) "고객명님\n작물(N평)농사\n..." — 성명이 맨 위에 단독 위치
+ *   B) "사용+방법\n작물(N평)농사\n처방전:고객명님" — 처방전: 접두어
+ *   C) "지역\n작물(N평)농사\n처방전:고객명님" — 지역이 맨 위
+ *
+ * @param {object} pdfDoc  — pdfjsLib.getDocument 결과
+ * @returns {Promise<{ farmName: string|null, cropName: string|null }>}
+ */
+async function _extractFarmInfoFromPage1(pdfDoc) {
+  try {
+    const page  = await pdfDoc.getPage(1);
+    const vp    = page.getViewport({ scale: 1.0 });
+    const tc    = await page.getTextContent();
+
+    // 텍스트 아이템 수집
+    const items = [];
+    tc.items.forEach(it => {
+      if (!it.str.trim()) return;
+      const [,,,, x, y] = pdfjsLib.Util.transform(vp.transform, it.transform);
+      items.push({ text: it.str.trim(), x: Math.round(x), y: Math.round(y) });
+    });
+    items.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // 전체 텍스트 합치기 (행 구분 유지)
+    const rows   = groupByRowsLocal(items);
+    const lines  = rows.map(r => joinRowText(r.items)).filter(l => l.length > 0);
+    const fullText = lines.join('\n');
+
+    console.log('[Parser] 표지(page1) 텍스트:', JSON.stringify(fullText.slice(0, 300)));
+
+    let farmName = null;
+    let cropName = null;
+
+    // ── 작물명 추출 ────────────────────────────────────────────────
+    // PDF 텍스트가 "수박", "(1200", "평", ")", "농사" 처럼 쪼개질 수 있으므로
+    // 1) 줄 합친 텍스트에서 "작물 (N 평)" 등 공백 허용 패턴으로 시도
+    // 2) 실패 시 raw items를 순회하여 한글 아이템 바로 뒤에 "(숫자" 아이템이 오는지 확인
+    const cropMatchLoose = fullText.match(/^([가-힣]+)\s*\(\s*\d/m);
+    if (cropMatchLoose) {
+      cropName = cropMatchLoose[1];
+    } else {
+      // raw items 기반: 같은 행에서 한글 아이템 뒤에 "(숫자" 패턴 탐색
+      for (let i = 0; i < items.length - 1; i++) {
+        const cur  = items[i];
+        const next = items[i + 1];
+        if (/^[가-힣]+$/.test(cur.text) && /^\(\d/.test(next.text) &&
+            Math.abs(cur.y - next.y) <= ROW_Y_MERGE * 2) {
+          cropName = cur.text;
+          break;
+        }
+      }
+    }
+
+    // ── 고객명 추출 ────────────────────────────────────────────────
+    // 1순위: "처방전:XXX님" 또는 "처방전:XXX" 패턴
+    const rxNameMatch = fullText.match(/처방전\s*[:：]\s*([가-힣A-Za-z0-9\s]{2,15?}?)님?(\s|$)/);
+    if (rxNameMatch) {
+      farmName = rxNameMatch[1].replace(/님$/, '').trim();
+    }
+
+    // 2순위: "XXX님" 단독 행 (사용방법/처방전/지역명 등 제외, 2~8자)
+    if (!farmName) {
+      for (const line of lines) {
+        const m = line.match(/^([가-힣]{2,8})님$/);
+        if (m && !/사용|방법|처방|농사|작물|관주|엽면|기비|추비|수확/.test(m[1])) {
+          farmName = m[1];
+          break;
+        }
+      }
+    }
+
+    // 3순위: "XXX님" 포함 행 (맨 앞 혹은 ":" 뒤)
+    if (!farmName) {
+      const nimMatch = fullText.match(/(?:^|[:：\s])([가-힣]{2,8})님/m);
+      if (nimMatch) {
+        const candidate = nimMatch[1];
+        if (!/사용|방법|처방|농사|관주|엽면|기비|추비/.test(candidate)) {
+          farmName = candidate;
+        }
+      }
+    }
+
+    console.log('[Parser] 표지 추출 결과 → cropName:', cropName, '/ farmName:', farmName);
+    return { farmName, cropName };
+  } catch (e) {
+    console.warn('[Parser] 표지 파싱 오류 (무시):', e.message);
+    return { farmName: null, cropName: null };
+  }
+}
+
 async function parsePdfToJSON(pdfFile) {
   try {
     console.log('[Parser] v7 시작 — 정규화 파이프라인 + 행 분류');
@@ -481,6 +574,9 @@ async function parsePdfToJSON(pdfFile) {
     const totalPages  = Math.min(pdfDoc.numPages, MAX_PAGES);
 
     console.log('[Parser] 총 페이지 수:', totalPages);
+
+    // ── 표지(page1)에서 농가명 / 작물명 추출 ────────────────────────
+    const page1Info = await _extractFarmInfoFromPage1(pdfDoc);
 
     const allPrescriptions = [];
     const allRxRows        = [];  // v7 신규: 모든 페이지의 RxRow 누적
@@ -1065,7 +1161,7 @@ async function parsePdfToJSON(pdfFile) {
         return null;
       }
       return {
-        farmInfo:      { farmName: null, cropName: null, totalArea: null },
+        farmInfo:      { farmName: page1Info.farmName, cropName: page1Info.cropName, totalArea: null },
         prescriptions: [{
           stageType:  '기타',
           stageLabel: '(자동 인식 불가 — 직접 입력)',
@@ -1109,7 +1205,7 @@ async function parsePdfToJSON(pdfFile) {
       '/ 총 stages:', allRxGroups.reduce((s, g) => s + g.stages.length, 0));
 
     return {
-      farmInfo:      { farmName: null, cropName: null, totalArea: inferredArea },
+      farmInfo:      { farmName: page1Info.farmName, cropName: page1Info.cropName, totalArea: inferredArea },
       prescriptions: allPrescriptions,   // 하위 호환 유지
       rxRows:        allRxRows,          // v7 flat rows
       rxGroups:      allRxGroups,        // v9 하위 호환 키 유지

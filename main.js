@@ -11,7 +11,7 @@
 
 /**
  * 처방전 파일명에서 고객명·작물·평수 파싱 (farmInfo fallback)
- * pdfParser는 표지가 이미지여서 항상 null 반환 → 파일명이 신뢰할 수 있는 대안
+ * pdfParser가 표지(page1) 텍스트에서 추출 실패 시 → 파일명을 fallback으로 사용
  *
  * 예) "수박(1000평)청주(오송)김영국님(4월3일).pdf"
  *   → { farmName: "김영국", cropName: "수박", totalArea: 1000 }
@@ -63,7 +63,7 @@ async function handlePrescriptionUpload(pdfFile) {
     }
 
     // 2. 고객 정보 자동 입력 (farmInfo → index.html 폼)
-    // pdfParser는 표지가 이미지라 farmName/cropName을 항상 null로 반환 → 파일명에서 fallback 파싱
+    // pdfParser가 표지(page1)에서 farmName/cropName을 추출 → 실패 시 파일명 fallback
     const fi = prescriptionJSON.farmInfo || {};
     const fb = _parseFilenameInfo(pdfFile.name);  // fallback: 파일명 파싱
     const farmName = fi.farmName || fb.farmName;
