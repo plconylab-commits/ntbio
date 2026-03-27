@@ -2599,17 +2599,13 @@ function applyParsedPrescription(info) {
 
 // ─── PDF 불러오기 ─────────────────────────────
 function applyRxPdfEmbed(d){
-  // 고객정보 채우기
-  document.getElementById('cName').value=d.n||'';
-  document.getElementById('cRegion').value=d.rg||'';
-  document.getElementById('cArea').value=d.ar||'';
-  if (d.cr) {
-    const sel = document.getElementById('cCrop');
-    if (sel) {
-      for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === d.cr) { sel.selectedIndex = i; break; }
-      }
-    }
+  // 고객정보 채우기 — 빈 값으로 덮어쓰지 않음 (파일명 파싱 값 보존)
+  if(d.n){ document.getElementById('cName').value=d.n; }
+  if(d.rg){ document.getElementById('cRegion').value=d.rg; }
+  if(d.ar){ document.getElementById('cArea').value=d.ar; }
+  if(d.cr){
+    const sel=document.getElementById('cCrop');
+    if(sel){ sel.value=d.cr; }
   }
   const atEl=document.getElementById('cAreaType');
   if(atEl&&d.at)atEl.value=d.at;
@@ -2718,6 +2714,11 @@ function onPdfSelected(input){
         if(d){
           console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
           applyRxPdfEmbed(d);
+          // embed에 없는 필드는 파일명 fallback으로 채움
+          const _fb=_parseFilenameInfo(file.name);
+          const _nm=document.getElementById('cName'); if(_nm&&!_nm.value&&_fb.farmName) _nm.value=_fb.farmName;
+          const _cr=document.getElementById('cCrop'); if(_cr&&_cr.selectedIndex===0&&_fb.cropName){ _cr.value=_fb.cropName; }
+          const _ar=document.getElementById('cArea'); if(_ar&&!_ar.value&&_fb.totalArea) _ar.value=_fb.totalArea;
           return;
         }
       }
