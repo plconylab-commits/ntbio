@@ -44,7 +44,11 @@ Plans:
 
 **Goal:** 처방전에 평당가가 있으면 거래명세표에 평당가 페이지가 자동 추가되고, 이미지를 업로드·저장해서 거래명세표에 포함할 수 있다
 **Requirements:** PRICE-01, ATTACH-01~02
-**Plans:** 0 plans — start with `/gsd:plan-phase 9`
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — PRICE-01 평당가 전역 변수 경로 + syncPrint 평당가 페이지 주입
+- [ ] 09-02-PLAN.md — ATTACH-01/02 IndexedDB v2 + 이미지 업로드/관리/인쇄 포함
 
 ---
 
