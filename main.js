@@ -10,6 +10,37 @@
  */
 
 /**
+ * 처방전 파일명에서 고객명·작물·평수 파싱 (farmInfo fallback)
+ * pdfParser는 표지가 이미지여서 항상 null 반환 → 파일명이 신뢰할 수 있는 대안
+ *
+ * 예) "수박(1000평)청주(오송)김영국님(4월3일).pdf"
+ *   → { farmName: "김영국", cropName: "수박", totalArea: 1000 }
+ *
+ * 예) "천혜향(550평)농사 송한천장로님(3월10일).pdf"
+ *   → { farmName: "송한천장로", cropName: "천혜향", totalArea: 550 }
+ */
+function _parseFilenameInfo(filename) {
+  const base = filename.replace(/\.pdf$/i, '');
+  const result = { farmName: null, cropName: null, totalArea: null };
+
+  // 평수: 첫 번째 (숫자평) 패턴
+  const areaMatch = base.match(/\((\d+)평\)/);
+  if (areaMatch) result.totalArea = parseInt(areaMatch[1], 10);
+
+  // 작물: 맨 앞 한글 연속 (첫 '(' 앞)
+  const cropMatch = base.match(/^([가-힣]+)/);
+  if (cropMatch) result.cropName = cropMatch[1];
+
+  // 고객명: 한글 2~6자 + '님' 패턴 중 마지막 (e.g. 김영국님, 송한천장로님)
+  const nameMatches = [...base.matchAll(/([가-힣]{2,6})님/g)];
+  if (nameMatches.length > 0) {
+    result.farmName = nameMatches[nameMatches.length - 1][1];
+  }
+
+  return result;
+}
+
+/**
  * 처방전 PDF 업로드 처리 — 메인 진입점
  * index.html의 onPdfSelected()에서 처방전 PDF 감지 시 호출
  *
@@ -29,22 +60,35 @@ async function handlePrescriptionUpload(pdfFile) {
     }
 
     // 2. 고객 정보 자동 입력 (farmInfo → index.html 폼)
+    // pdfParser는 표지가 이미지라 farmName/cropName을 항상 null로 반환 → 파일명에서 fallback 파싱
     const fi = prescriptionJSON.farmInfo || {};
-    if (fi.farmName) {
+    const fb = _parseFilenameInfo(pdfFile.name);  // fallback: 파일명 파싱
+    const farmName = fi.farmName || fb.farmName;
+    const cropName = fi.cropName || fb.cropName;
+    const totalArea = fi.totalArea || fb.totalArea;
+
+    if (farmName) {
       const el = document.getElementById('cName');
-      if (el) el.value = fi.farmName;
+      if (el) el.value = farmName;
     }
-    if (fi.cropName) {
+    if (cropName) {
       const el = document.getElementById('cCrop');
       if (el) {
-        for (let i = 0; i < el.options.length; i++) {
-          if (el.options[i].value === fi.cropName) { el.selectedIndex = i; break; }
+        // select.value 직접 대입 (일치하는 옵션 없으면 자동으로 무시됨)
+        el.value = cropName;
+        // 일치 실패 시 옵션 텍스트 부분 매칭
+        if (!el.value || el.value === '') {
+          for (let i = 0; i < el.options.length; i++) {
+            if (el.options[i].text.includes(cropName) || cropName.includes(el.options[i].text)) {
+              el.selectedIndex = i; break;
+            }
+          }
         }
       }
     }
-    if (fi.totalArea) {
+    if (totalArea) {
       const el = document.getElementById('cArea');
-      if (el) el.value = fi.totalArea;
+      if (el) el.value = totalArea;
     }
 
     // 3. 비용 데이터에서 평당 단가 자동 입력
