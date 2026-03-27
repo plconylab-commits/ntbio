@@ -1148,8 +1148,17 @@ window.addEventListener('DOMContentLoaded', () => {
           }));
           recalcTypeNums();
           renderStages();
+          // 비용 페이지에서 평당가 추출
+          const costData = await extractCostFromPdfDoc(pdfDoc);
+          if (costData) {
+            rxData.extractedTotalCost = costData.totalCost;
+            rxData.extractedUnitPrice = costData.unitPricePerPyeong;
+          }
           _saveRxStages();
-          showRxToast(`처방전 불러오기 완료 ✓ — ${stages.length}단계 (거래명세표 연동)`);
+          const priceNote = costData && costData.unitPricePerPyeong
+            ? ` | 평당 ${costData.unitPricePerPyeong.toLocaleString()}원` : '';
+          showRxToast(`처방전 불러오기 완료 ✓ — ${stages.length}단계${priceNote} (거래명세표 연동)`);
+          if (costData) schedulePreview();
         } else {
           showRxToast('처방전에서 단계를 인식하지 못했습니다. 처방전 탭에서 직접 PDF를 업로드해 주세요.', 5000);
         }
@@ -4313,8 +4322,8 @@ const RX_LEFT_TABLE_HDR_RE  = /^(시기\s*[\/\/]?\s*단계|처방\s*단계|단�
 
 async function extractRxPdfCoords(pdfDoc) {
   const allItems = [];
-  // 비용표(마지막 1장) 제외한 전체 처방 페이지 처리
-  const lastPage = Math.max(1, pdfDoc.numPages - 1);
+  // 비용 페이지는 포/병/봉/통/개 단위가 없어 파서가 자동 스킵 → 전체 페이지 처리
+  const lastPage = pdfDoc.numPages;
   for (let p = 1; p <= lastPage; p++) {
     const page = await pdfDoc.getPage(p);
     const vp   = page.getViewport({ scale: 1.0 });
