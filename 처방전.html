@@ -4729,11 +4729,11 @@ async function onRxPdfSelected(input) {
   const fnInfo = _parseRxFilenameInfo(file.name);
   if (fnInfo.farmName) {
     const el = document.getElementById('bName');
-    if (el && !el.value) el.value = fnInfo.farmName;
+    if (el) el.value = fnInfo.farmName;
   }
   if (fnInfo.cropName) {
     const el = document.getElementById('bCrop');
-    if (el && (!el.value || el.selectedIndex === 0)) {
+    if (el) {
       el.value = fnInfo.cropName;
       if (!el.value || el.value === '') {
         for (let i = 0; i < el.options.length; i++) {
@@ -4746,7 +4746,7 @@ async function onRxPdfSelected(input) {
   }
   if (fnInfo.totalArea) {
     const el = document.getElementById('bArea');
-    if (el && !el.value) el.value = fnInfo.totalArea;
+    if (el) el.value = fnInfo.totalArea;
   }
 
   try {
