@@ -29,7 +29,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans:** 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md — AUTO-01 cCrop select 안전대입 + AUTO-02 bArea 주입 + UX-01 stage-card 접힘
+- [x] 07-01-PLAN.md — AUTO-01 cCrop select 안전대입 + AUTO-02 bArea 주입 + UX-01 stage-card 접힘 — completed 2026-03-27
 
 ### Phase 8: 매출 집계
 
@@ -67,6 +67,6 @@ Plans:
 | 4. 거래이력 + 미수금 + 매출 | v1.0 | 2/2 | ✅ Complete | 2026-03-25 |
 | 5. 거래명세표 인쇄/PDF 버그 수정 | v1.0 | 1/1 | ✅ Complete | 2026-03-26 |
 | 6. 처방전↔거래명세표 대조 검토 | v1.0 | 2/2 | ✅ Complete | 2026-03-27 |
-| 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 0/1 | 🔲 Planned | — |
+| 7. 처방전 자동 기입 + 단계 UI 개선 | v1.1 | 1/1 | ✅ Complete | 2026-03-27 |
 | 8. 매출 집계 | v1.1 | 0/? | 🔲 Planned | — |
 | 9. 평당가 페이지 + 이미지 첨부 | v1.1 | 0/? | 🔲 Planned | — |
