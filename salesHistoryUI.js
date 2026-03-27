@@ -89,6 +89,25 @@
     return { from: _dateStr(from), to: _dateStr(to) };
   }
 
+  function _thisQuarterRange() {
+    var now = new Date();
+    var q = Math.floor(now.getMonth() / 3);
+    var from = new Date(now.getFullYear(), q * 3, 1);
+    var to   = new Date(now.getFullYear(), q * 3 + 3, 0);
+    return { from: _dateStr(from), to: _dateStr(to) };
+  }
+
+  function _lastQuarterRange() {
+    var now = new Date();
+    var q = Math.floor(now.getMonth() / 3);
+    var lastQ = q - 1;
+    var year = now.getFullYear();
+    if (lastQ < 0) { lastQ = 3; year -= 1; }
+    var from = new Date(year, lastQ * 3, 1);
+    var to   = new Date(year, lastQ * 3 + 3, 0);
+    return { from: _dateStr(from), to: _dateStr(to) };
+  }
+
   // ── 3. 매출 집계 오버레이 ────────────────────────────────────────────────
   function _calcPeriodSales(dateFrom, dateTo) {
     var history = (typeof getInvoiceHistory === 'function') ? getInvoiceHistory() : [];
@@ -143,6 +162,8 @@
       '    <button class="sales-period-btn active" data-period="this">이번 달</button>',
       '    <button class="sales-period-btn" data-period="last">지난 달</button>',
       '    <button class="sales-period-btn" data-period="custom">직접 입력</button>',
+      '    <button class="sales-period-btn" data-period="thisQ">이번 분기</button>',
+      '    <button class="sales-period-btn" data-period="lastQ">지난 분기</button>',
       '  </div>',
       '  <div class="sales-date-range" id="salesDateRange">',
       '    <input type="date" id="salesDateFrom">',
@@ -200,8 +221,12 @@
           _dateRangeEl.classList.add('on');
         } else {
           _dateRangeEl.classList.remove('on');
-          var range = _activePeriod === 'this' ? _thisMonthRange() : _lastMonthRange();
-          _renderSalesStats(range.from, range.to);
+          var range;
+          if (_activePeriod === 'this')       range = _thisMonthRange();
+          else if (_activePeriod === 'last')  range = _lastMonthRange();
+          else if (_activePeriod === 'thisQ') range = _thisQuarterRange();
+          else if (_activePeriod === 'lastQ') range = _lastQuarterRange();
+          if (range) _renderSalesStats(range.from, range.to);
         }
       });
     });
