@@ -4489,7 +4489,7 @@ function rxClassifyLeftRow(text) {
   // stage_core: 단계 시작 키워드 (관주/엽면 등 전체 단어 포함 여부)
   if (typeof classifyLeftRow === 'function') return classifyLeftRow(t);
   // fallback: rxNormalizer.js 미로드 시 자체 판정
-  if (/관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확/.test(t)) return 'stage_core';
+  if (/관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확|성장|착과|비대|착색|수확전|초기|후기/.test(t)) return 'stage_core';
   if (/\d+\s*월|\d+\s*[-~]\s*\d+\s*월/.test(t)) return 'date';
   if (/^(및|and|or|또는|그리고|after|before)$/i.test(t)) return 'connector';
   return 'note';
@@ -4605,6 +4605,8 @@ function parseRxPdfCoords(items) {
       if (row.yAvg > RX_PAGE_Y_MAX) return;
 
       const rightText = rightRow.map(i => i.text).join(' ');
+      // 가격표 행 제외: "소매" + "공급가" 또는 "수량" 조합은 단가표이지 처방행이 아님
+      if (/소매/.test(rightText) && /공급가|수량/.test(rightText)) return;
       if (RX_COUNT_UNITS_RE.test(rightText)) {
         // ── 수량 토큰 위치 기준으로 제품열(좌)/사용법열(우) 분리 ──
         // pdfjs는 x 오름차순으로 항목을 주므로 이미 좌→우 순서
@@ -4902,7 +4904,9 @@ function parseRxPdfCoords(items) {
         .replace(/\d+(?:\.\d+)?\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*평/g, '')
         .replace(/\d+(?:\.\d+)?\s*(kg|g|L|ml|ℓ|㎖|㎏|cc)/gi, '')
-        .replace(/\s+/g, ' ').trim();
+        .replace(/\s+/g, ' ').trim()
+        // 날짜 접미사 "일" 이 앞에 붙는 경우 제거: "일 양자식물에너지" → "양자식물에너지"
+        .replace(/^일\s+/, '');
 
       // 시비 위치 주석 제거: "두덕(골당)", "(골당)", "(골마다)" 등은 제품명이 아님
       // 예: "두덕 ( 골당 )" → "" → 스킵 / "두덕(골당)견운모" → "견운모"
@@ -5325,6 +5329,9 @@ async function onRxPdfSelected(input) {
 
       // 제품 키 정규화: cart와 공백·특수문자 차이 보정
       _normalizeStageProductKeys(stages);
+      // PDF 재파싱 시 이전 cart 초기화 → 새 stage 기준으로 재생성
+      rxData.cart = [];
+      priceOverrides = {};
       // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
       _autoCartFromStages(stages);
       syncGroupOrder();
@@ -5772,6 +5779,7 @@ function applyParsedRx(parsed) {
   pageOrder = [];
   costVisible = false;
   priceOverrides = {};
+  rxData.cart = []; // PDF 재파싱 시 이전 cart 초기화 → _autoCartFromStages에서 새 stage 기준 재생성
 
   // 제품 키 정규화: cart와 공백·괄호 차이 보정
   _normalizeStageProductKeys(stages);
