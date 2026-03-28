@@ -4837,12 +4837,24 @@ function parseRxPdfCoords(items) {
                                                  .replace('ML','ml').replace('L','L')
                                   : '';
 
-      const namePart = line
+      let namePart = line
         .replace(/반\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*(포|병|봉|통|개)/g, '')
         .replace(/\d+(?:\.\d+)?\s*평/g, '')
         .replace(/\d+(?:\.\d+)?\s*(kg|g|L|ml|ℓ|㎖|㎏|cc)/gi, '')
         .replace(/\s+/g, ' ').trim();
+
+      // 시비 위치 주석 제거: "두덕(골당)", "(골당)", "(골마다)" 등은 제품명이 아님
+      // 예: "두덕 ( 골당 )" → "" → 스킵 / "두덕(골당)견운모" → "견운모"
+      namePart = namePart
+        .replace(/두덕\s*[\(（]\s*골당\s*[\)）]/g, '')
+        .replace(/[\(（]\s*골당\s*[\)）]/g, '')
+        .replace(/[\(（]\s*골마다\s*[\)）]/g, '')
+        .replace(/[\(（]\s*두둑당\s*[\)）]/g, '')
+        .replace(/[\(（]\s*포기당\s*[\)）]/g, '')
+        .replace(/\s+/g, ' ').trim();
+      // 시비 방법 단어만 남으면 제품 아님
+      if (/^(두덕|경운|살포|수확|정식)$/.test(namePart)) return;
 
       console.log(`[Capacity Check] 제품: ${namePart || line} | 추출된 용량: ${capacity || '(없음)'} | 원본: ${line}`);
 
