@@ -92,7 +92,7 @@ const PRODUCT_DB = [
   { id:'powder-005', cat:'분말비료', name:'천연팜골드',          size:'1kg',   price:25000,
     aliases:['천연팜골드1kg','천연팜 골드'] },
   { id:'powder-006', cat:'분말비료', name:'엘세로 CK-1',        size:'120g',  price:55000,
-    aliases:['엘세로CK1','CK1','CK-1','엘세로CK-1'] },
+    aliases:['엘세로CK1','CK1','CK-1','엘세로CK-1','엘세로닥터CK-1','엘세로닥터CK1','엘쎄로닥터CK-1','엘쎄로닥터CK1'] },
   { id:'powder-007', cat:'분말비료', name:'칼슘오래가지오',      size:'400g',  price:25000,
     aliases:['칼슘오래가지오400','오래가지오400','칼오400'] },
   { id:'powder-008', cat:'분말비료', name:'칼슘오래가지오',      size:'200g',  price:15000,
