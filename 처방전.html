@@ -996,6 +996,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (saved.extractedTotalCost != null) rxData.extractedTotalCost = saved.extractedTotalCost;
       if (saved.extractedUnitPrice != null) rxData.extractedUnitPrice = saved.extractedUnitPrice;
       if (saved.extractedBreakdown != null) rxData.extractedBreakdown = saved.extractedBreakdown;
+      // 평당가가 추출된 상태이면 비용 페이지 자동 활성화 (저장 시 costVisible이 누락된 경우 복구)
+      if (rxData.extractedUnitPrice && !costVisible) costVisible = true;
     } catch(e) {}
   }
 
@@ -1148,6 +1150,7 @@ window.addEventListener('DOMContentLoaded', () => {
             rxData.extractedTotalCost = costDataRx.totalCost;
             rxData.extractedUnitPrice = costDataRx.unitPricePerPyeong;
             rxData.extractedBreakdown = costDataRx.breakdown || [];
+            costVisible = true; // 평당가 추출 시 비용 페이지 자동 활성화
             _saveRxStages();
             schedulePreview();
           }
@@ -1180,6 +1183,7 @@ window.addEventListener('DOMContentLoaded', () => {
             rxData.extractedTotalCost  = costData.totalCost;
             rxData.extractedUnitPrice  = costData.unitPricePerPyeong;
             rxData.extractedBreakdown  = costData.breakdown || [];
+            costVisible = true; // 평당가 추출 시 비용 페이지 자동 활성화
           }
           _saveRxStages();
           const priceNote = costData && costData.unitPricePerPyeong
@@ -3439,7 +3443,7 @@ function openCostModal() {
     return { key, name: item.name, size: item.size, retail, sp, used };
   }).filter(Boolean);
 
-  if (!rows.length) {
+  if (!rows.length && !(rxData.extractedBreakdown?.length) && !rxData.extractedUnitPrice) {
     alert('처방 단계에 제품을 먼저 추가해주세요.');
     return;
   }
@@ -3604,9 +3608,13 @@ function generateCostPageHtml(area) {
     return { name: item.name, size: item.size, retail, sp, used, total: sp * used };
   }).filter(Boolean);
 
-  if (!rows.length) return '';
+  // PDF 추출 데이터로 폴백 허용 (재고 매칭 없어도 비용 페이지 표시)
+  const breakdown = rxData.extractedBreakdown || [];
+  if (!rows.length && !breakdown.length && !rxData.extractedUnitPrice) return '';
 
-  const grand = rows.reduce((s, r) => s + r.total, 0);
+  const grand = rows.length
+    ? rows.reduce((s, r) => s + r.total, 0)
+    : (rxData.extractedTotalCost || 0);
   // 계산값이 없으면 PDF에서 추출된 평당가를 자동으로 사용
   const calcPerPyeong = area ? Math.round(grand / area) : 0;
   const perPyeong = calcPerPyeong || rxData.extractedUnitPrice || 0;
@@ -3625,14 +3633,24 @@ function generateCostPageHtml(area) {
     <td style="padding:8px 6px;font-weight:700;color:#1565C0;">${((c.sp||0)*(c.qty||1)).toLocaleString()}원</td>
   </tr>`).join('');
 
-  let trs = rows.map(r => `<tr>
-    <td style="text-align:left;padding:8px 10px;">${r.name}</td>
-    <td style="padding:8px 6px;">${r.size}</td>
-    <td style="padding:8px 6px;">${r.retail ? r.retail.toLocaleString()+'원' : '-'}</td>
-    <td style="padding:8px 6px;font-weight:900;color:var(--teal-dark);">${r.sp ? r.sp.toLocaleString()+'원' : '-'}</td>
-    <td style="padding:8px 6px;">${r.used}</td>
-    <td style="padding:8px 6px;font-weight:700;">${r.total ? r.total.toLocaleString()+'원' : '-'}</td>
-  </tr>`).join('');
+  let trs = '';
+  if (rows.length) {
+    trs = rows.map(r => `<tr>
+      <td style="text-align:left;padding:8px 10px;">${r.name}</td>
+      <td style="padding:8px 6px;">${r.size}</td>
+      <td style="padding:8px 6px;">${r.retail ? r.retail.toLocaleString()+'원' : '-'}</td>
+      <td style="padding:8px 6px;font-weight:900;color:var(--teal-dark);">${r.sp ? r.sp.toLocaleString()+'원' : '-'}</td>
+      <td style="padding:8px 6px;">${r.used}</td>
+      <td style="padding:8px 6px;font-weight:700;">${r.total ? r.total.toLocaleString()+'원' : '-'}</td>
+    </tr>`).join('');
+  } else if (breakdown.length) {
+    // PDF 비용 페이지 추출 데이터로 행 구성 (재고 매칭 없는 경우 폴백)
+    trs = breakdown.map(b => `<tr>
+      <td style="text-align:left;padding:8px 10px;color:#1565C0;font-weight:600;">${b.label}</td>
+      <td colspan="4" style="padding:8px 6px;color:#aaa;font-size:12px;text-align:center;">📄 PDF 추출</td>
+      <td style="padding:8px 6px;font-weight:700;color:#1565C0;">${b.cost ? b.cost.toLocaleString()+'원' : '-'}</td>
+    </tr>`).join('');
+  }
 
   return `<div class="page-card" data-pagekey="cost">
     <div class="content-page">
@@ -3657,7 +3675,7 @@ function generateCostPageHtml(area) {
               <td colspan="5" style="text-align:right;padding:10px;font-weight:700;font-size:15px;border:3.5px solid var(--teal);">평당 단가 ${area?'('+area+'평)':''}</td>
               <td style="padding:10px;font-weight:900;font-size:16px;color:var(--teal-dark);border:3.5px solid var(--teal);">${perPyeong ? perPyeong.toLocaleString()+'원' : '-'}</td>
             </tr>
-            ${(rxData.extractedTotalCost || rxData.extractedUnitPrice) ? (() => {
+            ${(rows.length && (rxData.extractedTotalCost || rxData.extractedUnitPrice)) ? (() => {
               const bd = rxData.extractedBreakdown || [];
               const bdTrs = bd.length ? bd.map(r => `
               <tr style="background:#E8F4FD;">
