@@ -853,7 +853,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <script src="prescriptionModel.js?v=2"></script>
-<script src="productDB.js?v=2"></script>
+<script src="productDB.js?v=3"></script>
 <script src="productMapper.js?v=3"></script>
 <script src="rxNormalizer.js?v=14"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -990,6 +990,21 @@ function toKorean(n){
 }
 
 // ─── 초기화 ───────────────────────────────
+// 처방전.html의 초기화 신호 수신 → 거래명세표 카트·고객정보 초기화
+window.addEventListener('storage', e => {
+  if (e.key !== 'rxReset') return;
+  cart = [];
+  ['cName','cPhone','cPhone2','cAddr','cRegion','cArea'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const gd = document.getElementById('gDisc'); if (gd) gd.value = '0';
+  const cc = document.getElementById('cCrop'); if (cc) cc.selectedIndex = 0;
+  window._invoiceUnitPrice = 0;
+  _attachedImages = [];
+  render(); syncPrint();
+  localStorage.removeItem('rxReset');
+});
+
 document.addEventListener('DOMContentLoaded',()=>{
   const d=new Date();
   const ds=d.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
@@ -1095,8 +1110,15 @@ function buildGrid(){
     ti.className='cat-title'; ti.textContent=CAT_LBL[cat]||cat;
     block.appendChild(ti);
     const pg=document.createElement('div'); pg.className='prod-grid';
-    PRODS.forEach((p,i)=>{
-      if(p.cat!==cat)return;
+    // 카테고리 내 ㄱㄴㄷ순 + 동일 제품명은 작은 용량 먼저
+    const catIdxs = PRODS.map((_,i)=>i).filter(i=>PRODS[i].cat===cat);
+    catIdxs.sort((a,b)=>{
+      const nc=PRODS[a].name.localeCompare(PRODS[b].name,'ko');
+      if(nc!==0)return nc;
+      return _parseSize(PRODS[a].size)-_parseSize(PRODS[b].size);
+    });
+    catIdxs.forEach(i=>{
+      const p=PRODS[i];
       const b=document.createElement('div');
       b.className='prod-btn'; b.id=`pb${i}`;
       b.innerHTML=`<div class="badge" id="bg${i}">✓</div>
@@ -1473,9 +1495,11 @@ function clearAll(){
   });
   const gd=document.getElementById('gDisc'); if(gd) gd.value='0';
   const cc=document.getElementById('cCrop'); if(cc) cc.selectedIndex=0;
-  // ※ rxStages 는 삭제하지 않음 — 처방전.html 복원용 단계 데이터 보존
   window._invoiceUnitPrice = 0;
   _attachedImages = [];
+  // rxStages·rxData·rxPendingPdf 삭제 + 처방전.html에 초기화 신호 전달
+  ['rxStages','rxData','rxPendingPdf'].forEach(k => localStorage.removeItem(k));
+  localStorage.setItem('rxReset', Date.now().toString());
   render(); syncPrint();
 }
 
@@ -2699,14 +2723,29 @@ function onPdfSelected(input){
 
   const reader=new FileReader();
   reader.onload=async function(e){
-    const data=new Uint8Array(e.target.result);
+    const origBuf=e.target.result; // 원본 ArrayBuffer 보존
+    const data=new Uint8Array(origBuf);
+    // ★ pdfjs가 worker로 transfer하기 전에 바이너리 복사본을 저장
+    //   (transfer 후에는 data.length===0이 되어 btoa 불가)
+    let _pendingB64='';
+    try{
+      // Uint8Array → Latin-1 문자열 → base64
+      // 청크 단위로 처리해 스택 오버플로우 방지
+      const CHUNK=0x8000;
+      let str='';
+      for(let off=0;off<data.length;off+=CHUNK){
+        str+=String.fromCharCode.apply(null,data.subarray(off,off+CHUNK));
+      }
+      _pendingB64=btoa(str);
+    }catch(err){ console.warn('[rxPendingPdf] base64 변환 실패:',err); }
+
     try{
       const text=await extractPdfText(data);
       // 1순위: 처방전 PDF 감지 (##RX## 임베드) — 텍스트 레이어 OR PDF Title 메타데이터
       const compact=text.replace(/\s+/g,'');
       let rxFromTitle='';
       try{
-        const pdfDocT=await pdfjsLib.getDocument({data}).promise;
+        const pdfDocT=await pdfjsLib.getDocument({data:new Uint8Array(_pendingB64?atob(_pendingB64).split('').map(c=>c.charCodeAt(0)):origBuf)}).promise;
         const metaT=await pdfDocT.getMetadata();
         const titleField=(metaT&&metaT.info&&metaT.info.Title)||'';
         const rxmt=titleField.match(/##RX##([A-Za-z0-9+/=]+)##RX##/);
@@ -2720,6 +2759,8 @@ function onPdfSelected(input){
         if(d){
           console.log('[PDF] ##RX## 처방전 임베드 감지, 단계수='+(d.st||[]).length);
           applyRxPdfEmbed(d);
+          // ★ ##RX## PDF도 처방전.html에서 비용 페이지 추출을 위해 rxPendingPdf 저장
+          if(_pendingB64) { try{ localStorage.setItem('rxPendingPdf',_pendingB64); }catch(err){} }
           // embed에 없는 필드는 파일명 fallback으로 채움 (인라인)
           (function(fn){
             const base=fn.replace(/\.pdf$/i,'');
@@ -2735,8 +2776,8 @@ function onPdfSelected(input){
       // 메타데이터에서 ##TN## 데이터 추출 시도 (신규 PDF 포맷)
       let metaText='';
       try{
-        const pdfDoc=await pdfjsLib.getDocument({data}).promise;
-        const meta=await pdfDoc.getMetadata();
+        const pdfDoc2=await pdfjsLib.getDocument({data:new Uint8Array(_pendingB64?atob(_pendingB64).split('').map(c=>c.charCodeAt(0)):origBuf)}).promise;
+        const meta=await pdfDoc2.getMetadata();
         if(meta&&meta.info&&meta.info.Subject){
           metaText=meta.info.Subject;
         }
@@ -2744,6 +2785,7 @@ function onPdfSelected(input){
       const combined=compact+(metaText?metaText.replace(/\s+/g,''):'');
       // 2순위: 거래명세표 PDF (##TN## 마커 있을 때만 텍스트 파싱)
       if(combined.includes('##TN##')){
+        localStorage.removeItem('rxPendingPdf'); // 거래명세표: 처방전 파싱 불필요
         const parsed=parsePdfInvoice(text+'\n'+metaText);
         window._invConfirmParsed=parsed;      // 모달에서 참조
         window._invParsedItems=parsed.items; // items 보존
@@ -2752,6 +2794,7 @@ function onPdfSelected(input){
       }
       // 2.5순위: ##TN## 없지만 거래명세표 텍스트가 포함된 PDF (구버전 외부 발행)
       if(/거래명세표/.test(text)||/거래명세표/.test(compact)){
+        localStorage.removeItem('rxPendingPdf'); // 구버전 거래명세표: 처방전 파싱 불필요
         const oldParsed=parseOldInvoice(text);
         if(oldParsed.items.length>0){
           window._oldInvParsed=oldParsed;
@@ -2761,16 +2804,10 @@ function onPdfSelected(input){
         }
         return;
       }
-      // 3순위: 나머지 모든 PDF → Vision AI (스캔 처방전 포함)
-      // 처방전.html 단계 복원용: PDF 바이너리를 base64로 저장 → 좌표 기반 파싱
-      // (처방전.html will process this with the same coordinate-based parser as onRxPdfSelected)
-      try {
-        let binary = '';
-        for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
-        localStorage.setItem('rxPendingPdf', btoa(binary));
-      } catch(e) { console.warn('[rxPendingPdf] 저장 실패:', e); }
+      // 3순위: 외부 처방전 PDF → 좌표 기반 파싱 + Vision AI 검증 모달
+      // rxPendingPdf 저장 — 처방전.html에서 단계 자동 복원에 사용
+      if(_pendingB64){ try{ localStorage.setItem('rxPendingPdf',_pendingB64); }catch(err){ console.warn('[rxPendingPdf] 저장 실패:',err); } }
       localStorage.removeItem('rxStages');
-      showToast('처방전 PDF 저장됨 — 상단 [처방전 처방] 버튼을 눌러 단계를 확인하세요');
       handlePrescriptionUpload(file);
     }catch(err){
       console.error('[PDF] 오류:', err);
