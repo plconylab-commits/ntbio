@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: v1.1
+milestone_name: "### Phase 7: 처방전 자동 기입 + 단계 UI 개선"
 status: In Progress
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-27T00:15:00.000Z"
+stopped_at: "Checkpoint: 09-02 Tasks 1-2 complete, awaiting human-verify"
+last_updated: "2026-03-28T02:54:09.860Z"
 progress:
-  total_phases: 3
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 2
+  total_phases: 6
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -54,6 +54,7 @@ Plan: 1 complete
 | Phase 03-history P02 | 3 | 1 tasks | 1 files |
 | Phase 04-sales-history P01 | 8 | 2 tasks | 2 files |
 | Phase 05-pdf P01 | 2 | 4 tasks | 1 files |
+| Phase 10-prescription-pdf-parsing-sync P01 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 07-01]: UX-01 toggleStageCard: 전체 재렌더 없이 DOM 직접 조작 → textarea 포커스 유지
 - [Phase 08-01]: 분기 범위: lastQ<0이면 lastQ=3, year-=1 — 1월 기준 전년도 4분기 경계 처리
 - [Phase 08-01]: 고객별 집계 payments.cancelled 제외: payments 배열 우선, paidAmount fallback으로 이중 데이터 구조 호환
+- [Phase 10-01]: '평당' 키워드 추가: 깻잎 처방전 합계 행 매칭 2→3개로 _COST_KW_MIN=3 통과. 임계값 변경 없음
+- [Phase 10-01]: 토스트 위치: removeItem(rxStages) 직후, handlePrescriptionUpload 직전 — 저장 완료 시점 안내
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T00:15:00.000Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-28T02:54:09.857Z
+Stopped at: Checkpoint: 09-02 Tasks 1-2 complete, awaiting human-verify
 Resume file: None
