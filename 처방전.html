@@ -680,6 +680,7 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="productDB.js?v=2"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
@@ -1316,20 +1317,35 @@ function makeAreaOptions(selected) {
 // PDF에서 읽어온 키와 cart 키의 공백·괄호·특수문자 차이를 제거한 뒤 비교
 function _normProdKey(key) {
   return (key || '')
-    .replace(/\s+/g, '')                        // 공백 전체 제거
+    .replace(/\s+/g, '')                         // 공백 전체 제거
     .replace(/[（）]/g, m => m === '（' ? '(' : ')') // 전각 괄호 → 반각
-    .replace(/[ㆍ·•]/g, '·');                   // 가운뎃점 통일
+    .replace(/[ㆍ·•]/g, '·')                    // 가운뎃점 통일
+    .replace(/쎄/g, '세')                        // "엘쎄로" → "엘세로" 표기 통일
+    .toLowerCase();                              // 대소문자 통일 (CK-1 / ck-1)
 }
 
 // cart 항목들의 정규화 키 → 원본 키 매핑 (빠른 조회용)
+// PRODUCT_DB가 로드된 경우 alias도 함께 등록
 function _buildCartNormMap() {
   const map = new Map();
   (rxData.cart || []).forEach(c => {
     const orig = c.name + '||' + (c.size || '');
     map.set(_normProdKey(orig), orig);
-    // name(size)|| 형태도 등록
     if (c.size) map.set(_normProdKey(c.name + '(' + c.size + ')||'), orig);
   });
+  // PRODUCT_DB alias → cart key 매핑 보강 (쎄/세 등 표기 차이 흡수)
+  if (typeof PRODUCT_DB !== 'undefined') {
+    const cartKeySet = new Set((rxData.cart || []).map(c => c.name + '||' + (c.size || '')));
+    PRODUCT_DB.forEach(p => {
+      const cartKey = p.name + '||' + (p.size || '');
+      if (!cartKeySet.has(cartKey)) return; // cart에 없는 제품은 스킵
+      // alias도 이 cart key로 매핑
+      (p.aliases || []).forEach(alias => {
+        map.set(_normProdKey(alias + '||'), cartKey);
+        if (p.size) map.set(_normProdKey(alias + '||' + p.size), cartKey);
+      });
+    });
+  }
   return map;
 }
 
@@ -1356,8 +1372,20 @@ function _normalizeStageProductKeys(stageList) {
   });
 }
 
+// PRODUCT_DB에서 제품명(또는 alias)으로 항목 검색 (처방전.html에서 가격 조회용)
+function _lookupProductDB(nameOrAlias, size) {
+  if (typeof PRODUCT_DB === 'undefined') return null;
+  const normQ = _normProdKey(nameOrAlias);
+  return PRODUCT_DB.find(p => {
+    if (_normProdKey(p.name) === normQ) return true;
+    if (size && _normProdKey(p.name) === normQ && p.size === size) return true;
+    return (p.aliases || []).some(a => _normProdKey(a) === normQ);
+  }) || null;
+}
+
 // cart가 비어 있을 때 stage 제품 목록에서 cart 자동 생성
 // (외부 PDF 파싱처럼 cart 정보가 없는 경우 재고 현황에 즉시 표시)
+// PRODUCT_DB가 있으면 가격도 자동 설정
 // ※ localStorage.rxData 에는 저장하지 않음 — 영속은 _saveRxStages() 가 담당
 function _autoCartFromStages(stageList) {
   if ((rxData.cart || []).length > 0) return; // cart가 이미 있으면 건드리지 않음
@@ -1368,7 +1396,13 @@ function _autoCartFromStages(stageList) {
       if (!p.key || seen.has(p.key)) return;
       seen.add(p.key);
       const [nm, sz] = p.key.split('||');
-      auto.push({ name: nm || p.key, size: sz || '', qty: 1, retail: 0, sp: 0 });
+      // PRODUCT_DB에서 가격 조회 (있으면 자동 설정)
+      const dbEntry = _lookupProductDB(nm, sz);
+      const retail  = dbEntry ? dbEntry.price : 0;
+      const sp      = dbEntry ? Math.round(dbEntry.price * 0.8) : 0; // 공급가 = 소매가 80%
+      const size    = (dbEntry && dbEntry.size) ? dbEntry.size : (sz || '');
+      const name    = (dbEntry && dbEntry.name) ? dbEntry.name : (nm || p.key);
+      auto.push({ name, size, qty: 1, retail, sp });
     });
   });
   if (auto.length) rxData.cart = auto; // 메모리만 업데이트, 저장은 호출부에서 _saveRxStages()
@@ -4815,13 +4849,39 @@ function parseRxPdfCoords(items) {
       prodDescMap.get(assignedRr.yAvg).push({ y: di.y, text: di.text, xMin: di.xMin || 0 });
     });
 
-    // 제품 파싱
+    // 제품 파싱 — y 순서로 정렬하여 처리 (blockPendingQty 상속이 올바른 순서에 의존)
     const products = [];
-    assigned.forEach(rr => {
+    let blockPendingQty = null;   // 시비방법 행의 수량을 다음 제품에 상속하기 위한 대기값
+    let blockPendingUnit = null;  // 예: "두덕(골당)3포" → qty=3, 뒤의 "뉴천연팜(분상)"에 적용
+    const assignedByY = assigned.slice().sort((a, b) => a.yAvg - b.yAvg);
+    assignedByY.forEach(rr => {
       const line = rr.texts.join(' ');
       const halfM  = line.match(/반\s*(포|병|봉|통|개)/);
       const countM = line.match(/(\d+(?:\.\d+)?)\s*(포|병|봉|통|개)/);
-      if (!halfM && !countM) return;
+      if (!halfM && !countM) {
+        // 수량 없는 행: 대기 수량이 있으면 제품명 후보로 처리
+        if (blockPendingQty !== null) {
+          const cn = line.replace(/\s+/g, ' ').trim();
+          // 순수 제품명처럼 보이는 텍스트만 (설명/주석/방법은 제외)
+          const isInstruction = /^(두덕|경운|만들|점적|호수|깔지|뿌리|살포|수확|정식|고라|뿌리라)/.test(cn);
+          if (cn.length >= 2 && !isInstruction) {
+            // blockPendingQty를 이 제품의 수량으로 사용해 계속 처리
+            const inheritedQty = blockPendingQty;
+            const inheritedUnit = blockPendingUnit;
+            blockPendingQty = null; blockPendingUnit = null;
+            const sizeM2 = cn.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
+            const key2   = sizeM2 ? `${sizeM2[1].trim()}||${sizeM2[2].trim()}` : `${cn}||`;
+            const rawItems2 = (prodDescMap.get(rr.yAvg) || []).filter(it => it.text && it.text.trim());
+            products.push({ key: key2, qty: inheritedQty, unit: inheritedUnit,
+              capacity: '', productTextRaw: line, productName: cn,
+              detailCellRaw: rawItems2.map(it => it.text.trim()).join('\n'),
+              detailCellType: rawItems2.length ? 'detail' : 'empty',
+              prodArea: null, desc: rawItems2.map(it => it.text.trim()).join('\n'),
+            });
+          }
+        }
+        return;
+      }
 
       const qty  = halfM ? 0.5 : Number(countM[1]);
       const unit = halfM ? halfM[1] : countM[2];
@@ -4846,6 +4906,8 @@ function parseRxPdfCoords(items) {
 
       // 시비 위치 주석 제거: "두덕(골당)", "(골당)", "(골마다)" 등은 제품명이 아님
       // 예: "두덕 ( 골당 )" → "" → 스킵 / "두덕(골당)견운모" → "견운모"
+      // 주석 제거 전에 첫 단어 저장: "두덕 ( 골당 )3 포" → firstInstrWord="두덕"
+      const firstInstrWord = namePart.split(/[\s\(（]/)[0].trim();
       namePart = namePart
         .replace(/두덕\s*[\(（]\s*골당\s*[\)）]/g, '')
         .replace(/[\(（]\s*골당\s*[\)）]/g, '')
@@ -4853,10 +4915,42 @@ function parseRxPdfCoords(items) {
         .replace(/[\(（]\s*두둑당\s*[\)）]/g, '')
         .replace(/[\(（]\s*포기당\s*[\)）]/g, '')
         .replace(/\s+/g, ' ').trim();
+      // 주석 제거로 namePart가 비었으면 첫 단어 복원 (instruction 판별용)
+      if (!namePart && firstInstrWord) namePart = firstInstrWord;
       // 시비 방법 단어만 남으면 제품 아님
-      if (/^(두덕|경운|살포|수확|정식)$/.test(namePart)) return;
+      // 단, prodDescMap에 제품명 후보가 있으면 그것을 실제 제품으로 등록 (qty 상속)
+      if (/^(두덕|경운|살포|수확|정식)$/.test(namePart)) {
+        // 이 instruction 행의 desc 아이템에서 제품명 후보 추출
+        const rawDescForInstr = prodDescMap.get(rr.yAvg) || [];
+        const descItems = rawDescForInstr.map(it => it.text.trim()).filter(Boolean);
+        // 제품명처럼 보이는 아이템: 한글 2자 이상, 순수 재료/설명문 제외
+        const SKIP_WORDS = /^(견운모|고령토|맥반석|일라이트|게르마늄|종합광물|발효계분|미강|풀빅산|휴믹산|부식산)$/;
+        const INSTR_START = /^(점적|호수|깔지|뿌리라|고라|살포|경운|정식|두덕|만들)/;
+        let promotedCount = 0;
+        descItems.forEach(d => {
+          const dm = d.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
+          const dn = dm ? dm[1].trim() : d;
+          const ds = dm ? dm[2].trim() : '';
+          if (dn.length < 2) return;
+          if (SKIP_WORDS.test(dn)) return; // 단일 성분·재료는 스킵
+          if (INSTR_START.test(dn)) return; // 시비방법 지시문은 스킵
+          if (/^[\d/]/.test(dn)) return;  // 숫자/슬래시로 시작하는 비율 텍스트 스킵
+          // 슬래시 구분 미네랄 혼합 (예: "일라이트/게르마늄/종합광물") → 전부 SKIP_WORDS면 스킵
+          if (dn.includes('/') && dn.split('/').map(p => p.trim()).every(p => SKIP_WORDS.test(p))) return;
+          const k2 = ds ? `${dn}||${ds}` : `${dn}||`;
+          products.push({ key: k2, qty, unit, capacity: '',
+            productTextRaw: d, productName: dn,
+            detailCellRaw: '', detailCellType: 'empty', prodArea: null, desc: '' });
+          promotedCount++;
+        });
+        if (!promotedCount) {
+          // desc에 제품이 없으면 blockPendingQty로 다음 행에 수량 전달
+          blockPendingQty = qty; blockPendingUnit = unit;
+        }
+        return;
+      }
+      blockPendingQty = null; // 정상 제품 행이 오면 대기 수량 초기화
 
-      console.log(`[Capacity Check] 제품: ${namePart || line} | 추출된 용량: ${capacity || '(없음)'} | 원본: ${line}`);
 
       if (namePart.length <= 1) return;
 
