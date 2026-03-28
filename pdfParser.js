@@ -734,7 +734,12 @@ async function parsePdfToJSON(pdfFile) {
           if (ltType !== 'stage_core') {
             const combined = (lt + ' ' + rt).trim();
             const combinedKind = classifyRightRow(combined);
-            if (combinedKind === 'product') {
+            // 좌측 텍스트가 우측 텍스트의 시작과 동일하면 병합 금지 (이름 중복 방지)
+            // 예: 좌="두덕" + 우="두덕(골담)3포" → "두덕 두덕(골담)" 중복 생성 방지
+            const ltNorm = lt.replace(/\s+/g,'').toLowerCase();
+            const rtNorm = rt.replace(/\s+/g,'').toLowerCase();
+            const isDuplicatePrefix = ltNorm.length >= 2 && rtNorm.startsWith(ltNorm);
+            if (combinedKind === 'product' && !isDuplicatePrefix) {
               rightRowsAll.push({ y: row.y, text: combined, kind: 'product', splitMerged: true });
               if (COUNT_UNITS_RE.test(combined)) rightRowsLegacy.push({ y: row.y, text: combined });
               console.log(`[Parser v8] split-row 병합: "${combined}" (y=${row.y})`);
@@ -897,9 +902,12 @@ async function parsePdfToJSON(pdfFile) {
         }
       }
 
-      // 좌측 열 없이 제품만 있는 페이지 → 이름 없는 단일 블록
+      // 좌측 열 없이 제품만 있는 페이지 → 단일 블록 (pageTitle이 있으면 단계 라벨로 활용)
       if (!stageBlocks.length && rightRowsAll.length > 0) {
-        stageBlocks.push({ lines: [], rowTypes: [], yMin: 0, yMax: 0, rowspanRows: 0, trace: ['[no-left] product-only page'] });
+        // pageTitle이 있으면 단계 라벨로 사용 (날짜/목적 기반 단계명 복원)
+        const fallbackLines = pageTitle ? [pageTitle] : [];
+        const fallbackTypes = pageTitle ? ['note'] : [];
+        stageBlocks.push({ lines: fallbackLines, rowTypes: fallbackTypes, yMin: 0, yMax: 0, rowspanRows: 0, trace: [`[no-left] product-only page${pageTitle ? `, pageTitle="${pageTitle}"` : ''}`] });
       }
       if (!stageBlocks.length) continue;
 
