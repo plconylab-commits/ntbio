@@ -2890,14 +2890,29 @@ function _rxHideToolbar() {
   _tbActiveCell = null;
 }
 
+function _cssColorToHex(c) {
+  const m = String(c).match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (m) return '#' + [m[1],m[2],m[3]].map(n => (+n).toString(16).padStart(2,'0')).join('');
+  return (c && c.startsWith('#')) ? c : null;
+}
+
 function _tbSyncState() {
   if (!_tbActiveCell) return;
   try {
     document.getElementById('tbBold')?.classList.toggle('active', document.queryCommandState('bold'));
     document.getElementById('tbItalic')?.classList.toggle('active', document.queryCommandState('italic'));
     document.getElementById('tbUnder')?.classList.toggle('active', document.queryCommandState('underline'));
-    const fs = parseFloat(getComputedStyle(_tbActiveCell).fontSize);
-    if (fs) { const el = document.getElementById('tbSize'); if (el) el.value = Math.round(fs); }
+    // Font size — prefer explicit style over computed (avoids CSS cascade noise)
+    const fsPx = _tbActiveCell.style.fontSize || getComputedStyle(_tbActiveCell).fontSize;
+    const fs = parseFloat(fsPx);
+    if (fs) { const sizeEl = document.getElementById('tbSize'); if (sizeEl) sizeEl.value = Math.round(fs); }
+    // Color — sync picker to current cell color
+    const rawColor = _tbActiveCell.style.color;
+    if (rawColor) {
+      const hex = _cssColorToHex(rawColor);
+      const colorEl = document.getElementById('tbTextColor');
+      if (colorEl && hex) colorEl.value = hex;
+    }
   } catch(e) {}
 }
 
@@ -5824,10 +5839,21 @@ function openRxEdit(el, e) {
     _rxHideToolbar();
 
     if (save) {
-      const newVal = el.innerText.trim();
+      // prod-desc: innerHTML 저장(color/<b>/<font> 태그 보존) / 나머지: plain text
+      const newVal = type === 'prod-desc'
+        ? (el.querySelector('.desc-inner')?.innerHTML ?? el.innerHTML)
+        : el.innerText.trim();
+      // 셀 레벨 스타일 (no-selection color/size/font 적용) 보존
+      const savedColor = el.style.color;
+      const savedFs    = el.style.fontSize;
+      const savedFf    = el.style.fontFamily;
       _saveInlineEdit(type, si, pi, mk, newVal);
       // 즉시 셀 표시 복원
       _restoreCellHtml(el, type, si, pi, mk);
+      // _restoreCellHtml이 innerHTML을 덮어써도 style 속성은 유지됨
+      if (savedColor) el.style.color      = savedColor;
+      if (savedFs)    el.style.fontSize   = savedFs;
+      if (savedFf)    el.style.fontFamily = savedFf;
       // 셀 내용이 넘치면 아래 행들에서 높이를 빼앗아 자동으로 늘림
       requestAnimationFrame(() => _rxAutoGrowCell(el));
     } else {
@@ -5881,7 +5907,9 @@ function _saveInlineEdit(type, si, pi, mk, val) {
     if (snArea) snArea.value = val;
   } else if (type === 'prod-desc') {
     stages[si].products[pi].detailCellDisplayOverride = val;
-    stages[si].products[pi].desc = val;
+    // desc는 plain text (검색/내보내기용) — HTML 태그 제거
+    const _tmp = document.createElement('div'); _tmp.innerHTML = val;
+    stages[si].products[pi].desc = _tmp.innerText.trim();
   } else if (type === 'prod-qty') {
     const qty = parseFloat(val);
     if (!isNaN(qty)) stages[si].products[pi].qty = qty;
