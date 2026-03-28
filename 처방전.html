@@ -1139,12 +1139,24 @@ window.addEventListener('DOMContentLoaded', () => {
         const compact = pageTxts.join(' ').replace(/\s+/g, '');
         const rxm = compact.match(/##RX##([A-Za-z0-9+/=%]+)##RX##/);
         if (rxm) {
+          // ##RX## 임베드 → 단계 복원
           const d = JSON.parse(decodeURIComponent(atob(rxm[1])));
           applyRxData(d);
-          showRxToast('처방전 불러오기 완료 ✓ (거래명세표 연동)');
+          // 비용 페이지 평당가 추출 (embed에는 포함되지 않으므로 PDF에서 직접 읽음)
+          const costDataRx = await extractCostFromPdfDoc(pdfDoc);
+          if (costDataRx) {
+            rxData.extractedTotalCost = costDataRx.totalCost;
+            rxData.extractedUnitPrice = costDataRx.unitPricePerPyeong;
+            rxData.extractedBreakdown = costDataRx.breakdown || [];
+            _saveRxStages();
+            schedulePreview();
+          }
+          const priceNoteRx = costDataRx && costDataRx.unitPricePerPyeong
+            ? ` | 평당 ${costDataRx.unitPricePerPyeong.toLocaleString()}원` : '';
+          showRxToast(`처방전 불러오기 완료 ✓${priceNoteRx} (거래명세표 연동)`);
           return;
         }
-        // 2순위: 좌표 기반 파싱 (Hwp 외부 처방전)
+        // 2순위: 좌표 기반 파싱 (외부 처방전)
         const items = await extractRxPdfCoords(pdfDoc);
         const parsedArr = parseRxPdfCoords(items);  // returns array directly
         if (parsedArr && parsedArr.length > 0) {
