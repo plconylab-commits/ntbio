@@ -665,6 +665,24 @@ function decomposeProductText(rawText) {
   let remaining = rawText.trim();
   parseLog.push(`원본: "${remaining}"`);
 
+  // ── 0단계: 시비 위치·방법 주석 제거 ──────────────────────────────────
+  // "두덕(골당)견운모..." → "(골당)" 은 "고랑마다" 시비 방법 설명 → 제품명 아님
+  // "두덕(골마다)..." / "(포기당)..." 등 동일한 패턴 처리
+  // ※ "(평당)" 은 용량 기준이므로 제거하지 않음
+  {
+    const before = remaining;
+    remaining = remaining
+      .replace(/두덕\s*[\(（]\s*골당\s*[\)）]/g, '')   // "두덕(골당)"
+      .replace(/[\(（]\s*골당\s*[\)）]/g, '')            // "(골당)" 단독
+      .replace(/[\(（]\s*골마다\s*[\)）]/g, '')           // "(골마다)"
+      .replace(/[\(（]\s*두둑당\s*[\)）]/g, '')           // "(두둑당)"
+      .replace(/[\(（]\s*포기당\s*[\)）]/g, '')           // "(포기당)" — 주의: 포기 수량과 구분 필요
+      .replace(/\s+/g, ' ').trim();
+    if (remaining !== before) {
+      parseLog.push(`시비주석 제거: "${before}" → "${remaining}"`);
+    }
+  }
+
   // ── 1단계: 처방 수량 추출 (반 우선, 그 다음 숫자) ─────────────────
   // ★ dosage.qty != null인 경우만 텍스트에서 제거 (미인식 시 raw=전체텍스트 → 제품명 삭제 방지)
   const dosage = normalizeDosage(remaining);
