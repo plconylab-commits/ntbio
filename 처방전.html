@@ -4496,21 +4496,31 @@ function rxClassifyLeftRow(text) {
 }
 
 /**
- * PDF 텍스트 아이템 조인 후 공백 정리
- * - 괄호 앞뒤 공백 제거: "발효계분 (55%)" → "발효계분(55%)"
- * - 슬래시 앞뒤 공백 제거: "견운모 / 고령토" → "견운모/고령토"
- * - 마침표 앞 공백 제거: "경운합니다 ." → "경운합니다."
+ * PDF 텍스트 기본 공백 정리 (좌측·우측·상세 텍스트 공용)
+ * "4 월 :20 일 -22 일" → "4월:20일-22일"
+ * "정식 + 당일" → "정식+당일"
  */
-function cleanDetailText(text) {
+function cleanPdfText(text) {
   return text
-    .replace(/\s+\(/g, '(')              // 여는 괄호 앞 공백 제거: "발효계분 (" → "발효계분("
-    .replace(/\(\s+/g, '(')              // 여는 괄호 뒤 공백 제거: "( 55%)" → "(55%)"
-    .replace(/\s+\)/g, ')')              // 닫는 괄호 앞 공백 제거: "(55% )" → "(55%)"
-    .replace(/\s*\/\s*/g, '/')           // 슬래시 앞뒤 공백 제거: "A / B" → "A/B"
-    .replace(/\s+\./g, '.')              // 마침표 앞 공백 제거: "합니다 ." → "합니다."
-    .replace(/(\d)\s+([가-힣])/g, '$1$2') // 숫자+한글 단위 공백 제거: "30 분" → "30분", "50 말" → "50말"
+    .replace(/(\d)\s+(월|일)/g, '$1$2')    // 4 월 → 4월, 20 일 → 20일
+    .replace(/([가-힣])\s+(월|일)/g, '$1$2') // 한글+월/일: 없을 수 있지만 방어
+    .replace(/\s*:\s*/g, ':')              // : 주변 공백 제거
+    .replace(/\s*\+\s*/g, '+')            // + 주변 공백 제거: "정식 + 당일" → "정식+당일"
+    .replace(/(\d)\s*-\s*(\d)/g, '$1-$2') // 숫자-숫자 공백: "20 - 22" → "20-22"
+    .replace(/(일)\s*-\s*(\d)/g, '$1-$2') // 일-숫자 공백: "05일 -22" → "05일-22"
+    .replace(/\s*[\u201C\u201D""]\s*/g, '"') // 스마트/직선 따옴표 주변 공백 통일
+    .replace(/\s+\(/g, '(')              // 여는 괄호 앞 공백
+    .replace(/\(\s+/g, '(')              // 여는 괄호 뒤 공백
+    .replace(/\s+\)/g, ')')              // 닫는 괄호 앞 공백
+    .replace(/\)\s+([가-힣])/g, ')$1')   // 닫는 괄호+한글 공백: "(골당) 고" → "(골당)고"
+    .replace(/\s*\/\s*/g, '/')           // 슬래시 앞뒤 공백
+    .replace(/\s+\./g, '.')              // 마침표 앞 공백
+    .replace(/(\d)\s+([가-힣])/g, '$1$2') // 숫자+한글 단위: "30 분" → "30분"
     .replace(/\s{2,}/g, ' ')             // 연속 공백 → 단일 공백
     .trim();
+}
+function cleanDetailText(text) {
+  return cleanPdfText(text);
 }
 
 function parseRxPdfCoords(items) {
@@ -4540,7 +4550,7 @@ function parseRxPdfCoords(items) {
     const xMin = Math.min(...row.items.map(it => it.x));
     const xMax = Math.max(...row.items.map(it => it.x + (it.w || it.text.length * 7)));
     if (xMin < RX_LEFT_X_MAX && xMax > RX_LEFT_X_MAX + 50) {
-      const titleText = row.items.map(it => it.text).join(' ').trim();
+      const titleText = cleanPdfText(row.items.map(it => it.text).join(' '));
       // 제품 성분 설명 행 제외: 옥스팜/뉴천연팜/옥토팜 등 포함 시 pageTitle 불가
       const isProductDesc = /옥스팜|뉴천연팜|옥토팜|휴믹산|풀빅산|부식산|발효계분|견운모|고령토/.test(titleText);
       if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText) && !isProductDesc) {
@@ -4572,7 +4582,7 @@ function parseRxPdfCoords(items) {
     const { rowIdx, row } = entries[0];
     if (titleRowSet.has(rowIdx)) return;
     if (row.items.some(it => it.x >= RX_LEFT_X_MAX)) return;
-    const candidateText = row.items.map(it => it.text).join(' ').trim();
+    const candidateText = cleanPdfText(row.items.map(it => it.text).join(' '));
     if (candidateText.length > 10 && !RX_COUNT_UNITS_RE.test(candidateText) &&
         !RX_LEFT_TABLE_HDR_RE.test(candidateText)) {
       pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + candidateText : candidateText;
@@ -4597,7 +4607,7 @@ function parseRxPdfCoords(items) {
         .map(it => it.text)
         .join(' ')
         .trim();
-      if (rowText) leftItems.push({ y: row.yAvg, page: row.page, text: rowText });
+      if (rowText) leftItems.push({ y: row.yAvg, page: row.page, text: cleanPdfText(rowText) });
     }
 
     if (rightRow.length > 0) {
@@ -4857,7 +4867,7 @@ function parseRxPdfCoords(items) {
     let blockPendingUnit = null;  // 예: "두덕(골당)3포" → qty=3, 뒤의 "뉴천연팜(분상)"에 적용
     const assignedByY = assigned.slice().sort((a, b) => a.yAvg - b.yAvg);
     assignedByY.forEach(rr => {
-      const line = rr.texts.join(' ');
+      const line = cleanPdfText(rr.texts.join(' '));
       const halfM  = line.match(/반\s*(포|병|봉|통|개)/);
       const countM = line.match(/(\d+(?:\.\d+)?)\s*(포|병|봉|통|개)/);
       if (!halfM && !countM) {
@@ -5329,9 +5339,11 @@ async function onRxPdfSelected(input) {
 
       // 제품 키 정규화: cart와 공백·특수문자 차이 보정
       _normalizeStageProductKeys(stages);
-      // PDF 재파싱 시 이전 cart 초기화 → 새 stage 기준으로 재생성
+      // PDF 재파싱 시 이전 세션 데이터 초기화 → 새 stage 기준으로 재생성
       rxData.cart = [];
       priceOverrides = {};
+      groupLabels = {};
+      stageGroupOrder = [];
       // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
       _autoCartFromStages(stages);
       syncGroupOrder();
