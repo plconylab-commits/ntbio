@@ -25,22 +25,23 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .back-btn:hover{background:rgba(255,255,255,.3);}
 
 /* ── 레이아웃 ── */
-.layout{display:grid;grid-template-columns:400px 1fr 170px;height:calc(100vh - 48px);}
+.layout{display:grid;grid-template-columns:400px 1fr 200px;height:calc(100vh - 48px);}
 .builder{overflow-y:auto;border-right:2px solid var(--border);background:#fff;
   display:flex;flex-direction:column;}
 .preview-area{overflow-y:auto;padding:20px;background:#e8e8e8;display:flex;
   flex-direction:column;gap:20px;align-items:center;}
-.toc-panel{overflow-y:auto;border-left:2px solid var(--border);background:#fafafa;
-  display:flex;flex-direction:column;position:relative;min-width:100px;max-width:400px;}
+.toc-panel{border-left:2px solid var(--border);background:#fafafa;
+  display:flex;flex-direction:column;position:relative;min-width:0;max-width:400px;width:100%;overflow:hidden;}
 .toc-resize-handle{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:col-resize;
   background:transparent;z-index:10;}
 .toc-resize-handle:hover{background:rgba(26,138,136,.25);}
 .toc-head{padding:10px 12px 6px;font-size:11px;font-weight:700;color:var(--teal-dark);
   letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #eee;}
-.toc-list{display:flex;flex-direction:column;padding:6px 8px;gap:6px;flex:1;}
+.toc-list{display:flex;flex-direction:column;padding:6px 8px;gap:6px;flex:1;overflow-y:auto;}
 .toc-item{display:flex;flex-direction:column;gap:4px;padding:7px 8px;border-radius:6px;
   background:#fff;border:1.5px solid #e0e0e0;cursor:grab;align-items:center;
-  color:#333;user-select:none;transition:border-color .15s;}
+  color:#333;user-select:none;transition:border-color .15s;overflow:hidden;}
+.toc-item div[style*="overflow:hidden"]{max-width:100% !important;}
 .toc-item:hover{border-color:var(--teal);}
 .toc-item.toc-drag-over{border-color:var(--teal);background:#E0F5F5;}
 .toc-item-head{display:flex;align-items:center;gap:5px;width:100%;}
@@ -54,6 +55,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .toc-preview-cnt{color:var(--teal-dark);font-weight:700;flex-shrink:0;}
 .toc-cover{background:#F3F8FF;border-color:#90CAF9;}
 .toc-cost{background:#FFFDE7;border-color:#FFE082;}
+.toc-img{background:#FFF3E0;border-color:#FFB74D;}
+/* 이미지 페이지 */
+.img-page{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  background:#fff;position:relative;overflow:hidden;}
+.img-page img{max-width:100%;max-height:100%;object-fit:contain;}
+.img-page-del{position:absolute;top:8px;right:8px;background:rgba(198,40,40,.85);color:#fff;
+  border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;z-index:5;opacity:0;transition:opacity .2s;}
+.img-page:hover .img-page-del{opacity:1;}
+@media print{.img-page-del{display:none !important;}}
 /* 비용 모달 */
 .cost-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;
   display:none;align-items:center;justify-content:center;}
@@ -76,12 +87,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .sc-pp{font-size:15px;font-weight:700;text-align:center;color:var(--teal-dark);}
 .sc-stage{font-size:13px;font-weight:700;text-align:center;background:#f5fbfb;white-space:nowrap;vertical-align:middle;width:110px;}
 .sc-prod-detail{font-size:13px;padding:7px 14px;}
+[data-pagekey="cost"] td[contenteditable="false"]{cursor:text;}
+[data-pagekey="cost"] td[contenteditable="true"]{outline:2px solid var(--teal);background:#fffff0;cursor:text;}
+.sc-addon-name{font-size:14px;font-weight:700;text-align:left;background:#f5fbfb;padding:6px 10px;}
+.sc-addon-detail{font-size:13px;text-align:left;padding:6px 10px;}
 .sc-cust-row td{background:#fff;text-align:center;font-weight:700;font-size:18px;padding:8px;}
 .sc-footer-row td{background:#fff;color:var(--text);font-weight:700;font-size:18px;text-align:center;padding:12px;}
 
 /* ── 빌더 섹션 ── */
 .b-section{border-bottom:1px solid #f0f0f0;padding:14px 16px;}
-.b-title{font-size:11px;font-weight:700;color:var(--teal-dark);letter-spacing:1px;
+.b-title{font-size:13px;font-weight:700;color:var(--teal-dark);letter-spacing:1px;
   text-transform:uppercase;margin-bottom:10px;}
 
 /* ── 입력 공통 ── */
@@ -101,12 +116,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 /* ── 재고 현황 ── */
 .inv-list{display:flex;flex-direction:column;gap:5px;}
 .inv-item{display:flex;justify-content:space-between;align-items:center;
-  background:#f8f8f8;border-radius:6px;padding:6px 10px;font-size:12px;}
+  background:#f8f8f8;border-radius:6px;padding:7px 10px;font-size:14px;}
 .inv-name{font-weight:700;color:var(--text);}
-.inv-size{color:var(--muted);font-size:11px;}
+.inv-size{color:var(--muted);font-size:12px;}
 .inv-stock{display:flex;gap:6px;align-items:center;}
-.inv-total{color:var(--muted);font-size:11px;}
-.inv-remain{font-weight:700;font-size:12px;padding:2px 7px;border-radius:9px;}
+.inv-total{color:var(--muted);font-size:12px;}
+.inv-remain{font-weight:700;font-size:14px;padding:2px 7px;border-radius:9px;}
 .inv-remain.ok{background:#E8F5E9;color:#2E7D32;}
 .inv-remain.warn{background:#FFF3E0;color:#E65100;}
 .inv-remain.over{background:#FFEBEE;color:#C62828;}
@@ -422,9 +437,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   overflow:visible!important;
   white-space:pre-wrap;
   word-break:break-word;}
-.rx-table .product-td{font-size:var(--rx-fs,17px);font-weight:700;color:#111;text-align:center;}
-.rx-table .size-td{text-align:center;color:#111;font-size:var(--rx-fs,17px);font-weight:700;}
-.rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;word-break:break-all;overflow-wrap:break-word;}
+.rx-table .product-td{font-size:var(--rx-fs,17px);font-weight:700;color:#111;text-align:center;word-break:keep-all;}
+.rx-table .size-td{text-align:center;color:#111;font-size:var(--rx-fs,17px);font-weight:700;word-break:keep-all;}
+.rx-table .qty-td{text-align:center;font-size:calc(var(--rx-fs,17px) + 1px);font-weight:900;color:#111;word-break:keep-all;overflow-wrap:break-word;}
 .rx-table .desc-td{
   font-size:var(--rx-fs,17px);color:#111;font-weight:600;
   vertical-align:middle;padding:6px 8px;overflow:hidden;
@@ -434,7 +449,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   align-items:center;justify-content:center;
   text-align:center;line-height:1.6;
   font-size:var(--rx-fs,17px);
-  word-break:break-all;
+  word-break:keep-all;
   white-space:normal;
   overflow-wrap:break-word;
 }
@@ -444,7 +459,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   line-height:1.9;
   font-weight:700;
   gap:6px;
-  word-break:break-all;
+  word-break:keep-all;
   white-space:normal;
   overflow-wrap:break-word;
 }
@@ -535,7 +550,7 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   font-size:13px;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;}
 #rxFloatToolbar.show{display:flex;}
 #rxFloatToolbar select{border:1px solid #ccc;border-radius:4px;
-  padding:2px 4px;font-size:12px;background:#fff;max-width:120px;}
+  padding:2px 4px;font-size:12px;background:#fff;max-width:200px;}
 #rxFloatToolbar .tb-num{border:1px solid #ccc;border-radius:4px;
   padding:2px 4px;font-size:12px;width:48px;background:#fff;}
 #rxFloatToolbar .tb-btn{border:1px solid #ddd;border-radius:4px;
@@ -566,7 +581,7 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   border-radius:8px 8px 0 0;display:flex;align-items:center;
   justify-content:space-between;cursor:grab;}
 .inv-float-hdr:active{cursor:grabbing;}
-.inv-float-title{font-size:12px;font-weight:700;letter-spacing:.5px;}
+.inv-float-title{font-size:14px;font-weight:700;letter-spacing:.5px;}
 .inv-float-close{background:none;border:none;color:rgba(255,255,255,.8);
   font-size:15px;cursor:pointer;padding:0 2px;line-height:1;}
 .inv-float-close:hover{color:#fff;}
@@ -592,6 +607,9 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
   /* 요약카드 인쇄 시 전체 페이지 높이 채움 */
   [data-pagekey="cost"] .content-inner{height:calc(210mm - 28px) !important;}
   [data-pagekey="cost"] .sc-table{height:100% !important;}
+  /* 이미지 페이지 인쇄 시 전체 페이지 채움 */
+  .img-page{min-height:210mm;}
+  .img-page img{max-width:297mm;max-height:210mm;}
   /* ##RX## 데이터 embed: 화면에서는 숨기고, PDF 인쇄 시에만 표시 — Chrome이 텍스트 레이어에 포함 */
   .rx-embed-data{display:block !important;font-size:6pt;color:#ccc;word-break:break-all;
     white-space:pre-wrap;line-height:1;pointer-events:none;user-select:none;}
@@ -693,6 +711,7 @@ tr.rx-bottom-note-tr td{background:#f0fbfb;text-align:left;
     <button id="redoBtn" onclick="redoStages()" title="다시하기 (Ctrl+Y)" class="back-btn">↪</button>
     <button onclick="confirmResetPrescription()" class="back-btn" style="color:#c0392b;">🗑️ 초기화</button>
     <label class="back-btn" style="cursor:pointer;">📂 불러오기<input type="file" accept=".pdf" onchange="onRxPdfSelected(this)" style="display:none;"></label>
+    <label class="back-btn" style="cursor:pointer;background:rgba(255,180,0,.3);">🖼️ 이미지<input type="file" accept="image/*" multiple onchange="onImagePagesSelected(this)" style="display:none;"></label>
   </div>
 </div>
 
@@ -933,7 +952,7 @@ window.addEventListener('storage', e => {
   if (e.key !== 'rxReset') return;
   stages = []; groupLabels = {}; stageGroupOrder = [];
   rxData.cart = []; rxData.name = ''; rxData.region = ''; rxData.area = ''; rxData.crop = ''; rxData.areaType = '';
-  rxData.extractedTotalCost = null; rxData.extractedUnitPrice = null; rxData.extractedBreakdown = null;
+  rxData.extractedTotalCost = null; rxData.extractedUnitPrice = null; rxData.extractedBreakdown = null; rxData.extractedAddOns = null; rxData.extractedAddOnInterval = null; rxData.extractedCostProducts = null;
   ['bName','bRegion','bArea'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const bc = document.getElementById('bCrop'); if (bc) bc.selectedIndex = 0;
   recalcTypeNums(); renderStages(); renderInventory(); schedulePreview();
@@ -977,6 +996,8 @@ window.addEventListener('DOMContentLoaded', () => {
         groupLabels     = saved.groupLabels     || {};
         stageGroupOrder = saved.stageGroupOrder || [];
         priceOverrides  = saved.priceOverrides  || {};
+        if (saved.imagePages)   imagePages   = saved.imagePages;
+        if (saved.imgPageIdCnt) imgPageIdCnt = saved.imgPageIdCnt;
         if (saved.coverCustomFs)   rxData.coverCustomFs   = saved.coverCustomFs;
         if (saved.coverCustomText) {
           const ct = { ...saved.coverCustomText };
@@ -997,6 +1018,9 @@ window.addEventListener('DOMContentLoaded', () => {
       if (saved.extractedTotalCost != null) rxData.extractedTotalCost = saved.extractedTotalCost;
       if (saved.extractedUnitPrice != null) rxData.extractedUnitPrice = saved.extractedUnitPrice;
       if (saved.extractedBreakdown != null) rxData.extractedBreakdown = saved.extractedBreakdown;
+      if (saved.extractedAddOns != null) rxData.extractedAddOns = saved.extractedAddOns;
+      if (saved.extractedCostProducts != null) rxData.extractedCostProducts = saved.extractedCostProducts;
+      if (saved.extractedAddOnInterval != null) rxData.extractedAddOnInterval = saved.extractedAddOnInterval;
       // 평당가가 추출된 상태이면 비용 페이지 자동 활성화 (저장 시 costVisible이 누락된 경우 복구)
       if (rxData.extractedUnitPrice && !costVisible) costVisible = true;
     } catch(e) {}
@@ -1151,6 +1175,12 @@ window.addEventListener('DOMContentLoaded', () => {
             rxData.extractedTotalCost = costDataRx.totalCost;
             rxData.extractedUnitPrice = costDataRx.unitPricePerPyeong;
             rxData.extractedBreakdown = costDataRx.breakdown || [];
+            rxData.extractedAddOns = costDataRx.addOns || [];
+            rxData.extractedCostProducts = costDataRx.costProducts || [];
+            rxData.extractedAddOnInterval = costDataRx.addOnInterval || '';
+            if (costDataRx.phone && !rxData.phone) rxData.phone = costDataRx.phone;
+            if (costDataRx.addr && !rxData.addr) rxData.addr = costDataRx.addr;
+            if (costDataRx.region) { const el = document.getElementById('bRegion'); if (el && !el.value.trim()) el.value = costDataRx.region; }
             costVisible = true; // 평당가 추출 시 비용 페이지 자동 활성화
             _saveRxStages();
             schedulePreview();
@@ -1184,6 +1214,12 @@ window.addEventListener('DOMContentLoaded', () => {
             rxData.extractedTotalCost  = costData.totalCost;
             rxData.extractedUnitPrice  = costData.unitPricePerPyeong;
             rxData.extractedBreakdown  = costData.breakdown || [];
+            rxData.extractedAddOns = costData.addOns || [];
+            rxData.extractedCostProducts = costData.costProducts || [];
+            rxData.extractedAddOnInterval = costData.addOnInterval || '';
+            if (costData.phone && !rxData.phone) rxData.phone = costData.phone;
+            if (costData.addr && !rxData.addr) rxData.addr = costData.addr;
+            if (costData.region) { const el = document.getElementById('bRegion'); if (el && !el.value.trim()) el.value = costData.region; }
             costVisible = true; // 평당가 추출 시 비용 페이지 자동 활성화
           }
           _saveRxStages();
@@ -1331,6 +1367,8 @@ function _buildCartNormMap() {
   (rxData.cart || []).forEach(c => {
     const orig = c.name + '||' + (c.size || '');
     map.set(_normProdKey(orig), orig);
+    // name-only key: "옥토팜(펠렛)||" → cart key (PDF key "옥토팜||펠렛" → alt "옥토팜(펠렛)||" 매칭)
+    map.set(_normProdKey(c.name + '||'), orig);
     if (c.size) map.set(_normProdKey(c.name + '(' + c.size + ')||'), orig);
   });
   // PRODUCT_DB alias → cart key 매핑 보강 (쎄/세 등 표기 차이 흡수)
@@ -1393,13 +1431,13 @@ function _autoCartFromStages(stageList) {
   const auto = [];
   stageList.forEach(st => {
     (st.products || []).forEach(p => {
-      if (!p.key || seen.has(p.key)) return;
+      if (!p.key || seen.has(p.key) || p.isInstruction) return;
       seen.add(p.key);
       const [nm, sz] = p.key.split('||');
       // PRODUCT_DB에서 가격 조회 (있으면 자동 설정)
       const dbEntry = _lookupProductDB(nm, sz);
       const retail  = dbEntry ? dbEntry.price : 0;
-      const sp      = dbEntry ? Math.round(dbEntry.price * 0.8) : 0; // 공급가 = 소매가 80%
+      const sp      = dbEntry ? dbEntry.price : 0; // 공급가 = 소매가 (할인은 거래명세표에서 고객별 적용)
       const size    = (dbEntry && dbEntry.size) ? dbEntry.size : (sz || '');
       const name    = (dbEntry && dbEntry.name) ? dbEntry.name : (nm || p.key);
       auto.push({ name, size, qty: 1, retail, sp });
@@ -1414,9 +1452,29 @@ function getInventory() {
     const key = item.name + '||' + item.size;
     inv[key] = { name: item.name, size: item.size, total: item.qty, used: 0 };
   });
+  // 정규화 키 → inv 키 매핑 (빠른 조회)
+  const normToInv = {};
+  Object.keys(inv).forEach(k => { normToInv[_normProdKey(k)] = k; });
+  // name-only 매핑 추가
+  (rxData.cart || []).forEach(c => { normToInv[_normProdKey(c.name + '||')] = c.name + '||' + c.size; });
+
   stages.forEach(st => {
     (st.products || []).forEach(p => {
-      if (inv[p.key]) inv[p.key].used += (p.qty || 0);
+      if (p.isInstruction || !p.key) return;
+      let invKey = p.key;
+      if (!inv[invKey]) {
+        // 정규화 폴백
+        const nk = _normProdKey(invKey);
+        if (normToInv[nk]) invKey = normToInv[nk];
+        else {
+          const [nm, sz] = invKey.split('||');
+          if (sz) {
+            const altNk = _normProdKey(nm + '(' + sz + ')||');
+            if (normToInv[altNk]) invKey = normToInv[altNk];
+          }
+        }
+      }
+      if (inv[invKey]) inv[invKey].used += (p.qty || 0);
     });
   });
   return inv;
@@ -1534,9 +1592,10 @@ function confirmResetPrescription() {
   if (!confirm('전체 초기화합니다.\n처방전 단계/카테고리와 거래명세표 제품목록·고객정보가 모두 삭제됩니다. 계속하시겠습니까?')) return;
   _pushHistory();
   stages = []; groupLabels = {}; stageGroupOrder = [];
+  imagePages = {}; imgPageIdCnt = 0;
   // 거래명세표 cart·고객정보도 초기화
   rxData.cart = []; rxData.name = ''; rxData.region = ''; rxData.area = ''; rxData.crop = ''; rxData.areaType = '';
-  rxData.extractedTotalCost = null; rxData.extractedUnitPrice = null; rxData.extractedBreakdown = null;
+  rxData.extractedTotalCost = null; rxData.extractedUnitPrice = null; rxData.extractedBreakdown = null; rxData.extractedAddOns = null; rxData.extractedAddOnInterval = null; rxData.extractedCostProducts = null;
   ['bName','bRegion','bArea'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const bc=document.getElementById('bCrop'); if(bc) bc.selectedIndex=0;
   // rxStages·rxData·rxPendingPdf 삭제
@@ -2519,6 +2578,72 @@ function _rxRestoreResize() {
   });
 }
 
+// ── 행 높이 균등 분배 — 데이터 행을 페이지에 맞게 균일하게 ──────────
+function _rxEqualizeRowHeights() {
+  document.querySelectorAll('.rx-table').forEach(table => {
+    const k = _rxTableKey(table);
+    const trs = [...table.querySelectorAll('tr')];
+    // 사용자가 직접 조절한 행이 있으면 그 테이블은 건드리지 않음
+    const hasManualHeight = trs.some((tr, i) => _rxResizeStore.rows[k + '_r' + i]);
+    if (hasManualHeight) return;
+
+    // 특수 행 분류
+    const specialClasses = ['rx-title-tr', 'rx-header-row', 'rx-footer-tr', 'rx-spacer-tr', 'rx-bottom-note-tr'];
+    const dataRows = trs.filter(tr => !specialClasses.some(c => tr.classList.contains(c)));
+    const specialRows = trs.filter(tr => specialClasses.some(c => tr.classList.contains(c)));
+    if (dataRows.length === 0) return;
+
+    // 페이지 내부 사용 가능 높이 계산
+    const ci = table.closest('.content-inner');
+    if (!ci) return;
+    const totalH = ci.clientHeight;
+    const specialH = specialRows.reduce((sum, tr) => sum + tr.getBoundingClientRect().height, 0);
+    const availH = totalH - specialH;
+    if (availH <= 0) return;
+
+    // 각 데이터 행의 최소 필요 높이 — rowspan 셀 제외하고 측정
+    const minHeights = dataRows.map(tr => {
+      const cells = [...tr.querySelectorAll('td')];
+      // rowspan > 1 인 셀은 여러 행에 걸치므로 이 행의 높이 계산에서 제외
+      const singleCells = cells.filter(td => !td.hasAttribute('rowspan') || td.getAttribute('rowspan') === '1');
+      if (singleCells.length === 0) return 40; // rowspan 셀만 있는 행
+      return Math.max(...singleCells.map(td => td.scrollHeight), 35);
+    });
+
+    // 균등 분배: 최소 높이가 큰 행을 먼저 확보하고 나머지를 균등 분배
+    // → 합계가 availH를 초과하지 않도록 보장
+    const heights = new Array(dataRows.length).fill(0);
+    let remaining = availH;
+    let flexCount = dataRows.length;
+
+    // 반복: 균등 높이보다 큰 minHeight를 가진 행을 고정하고 나머지 재분배
+    const fixed = new Array(dataRows.length).fill(false);
+    for (let iter = 0; iter < dataRows.length; iter++) {
+      const eqH = Math.floor(remaining / Math.max(flexCount, 1));
+      let changed = false;
+      for (let i = 0; i < dataRows.length; i++) {
+        if (fixed[i]) continue;
+        if (minHeights[i] > eqH) {
+          heights[i] = minHeights[i];
+          remaining -= minHeights[i];
+          flexCount--;
+          fixed[i] = true;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    // 남은 행에 균등 높이 배분
+    const finalEqH = Math.max(Math.floor(remaining / Math.max(flexCount, 1)), 35);
+    for (let i = 0; i < dataRows.length; i++) {
+      if (!fixed[i]) heights[i] = finalEqH;
+    }
+    dataRows.forEach((tr, i) => {
+      tr.style.height = heights[i] + 'px';
+    });
+  });
+}
+
 // ── 초기화 — 컬럼 너비만 잠금, 행 높이는 브라우저 auto 유지 ─────────
 function _rxInitTableSizes() {
   document.querySelectorAll('.rx-table').forEach(table => {
@@ -2882,6 +3007,52 @@ function _rxInjectRowHandles() { /* no-op */ }
 // ══════════════════════════════════════════════════════════════════════
 let _tbActiveCell = null;
 
+// ── 셀별 스타일 저장소 (generatePreview 재생성 후에도 유지) ──
+// 키: "si_pi_editType" (예: "0_0_prod-name", "2_1_prod-desc")
+// 값: { fontSize:'30px', fontFamily:'...', color:'#f00', ... }
+const _rxCellStyles = {};
+
+function _rxCellStyleKey(el) {
+  if (!el?.dataset) return null;
+  const si = el.dataset.si, pi = el.dataset.pi, edit = el.dataset.edit;
+  if (si == null || edit == null) return null;
+  return `${si}_${pi || 0}_${edit}`;
+}
+
+function _rxSaveCellStyle(el, prop, val) {
+  const key = _rxCellStyleKey(el);
+  if (!key) return;
+  if (!_rxCellStyles[key]) _rxCellStyles[key] = {};
+  if (val) _rxCellStyles[key][prop] = val;
+  else delete _rxCellStyles[key][prop];
+  // sessionStorage에도 저장
+  try { sessionStorage.setItem('_rxCellStyles', JSON.stringify(_rxCellStyles)); } catch(e) {}
+}
+
+function _rxGetCellStyleCss(si, pi, editType) {
+  // CSS 속성 문자열만 반환 (style="" 래퍼 없음)
+  const key = `${si}_${pi || 0}_${editType}`;
+  const s = _rxCellStyles[key];
+  if (!s) return '';
+  const parts = [];
+  if (s.fontSize)   parts.push(`font-size:${s.fontSize} !important`);
+  if (s.fontFamily) parts.push(`font-family:${s.fontFamily}`);
+  if (s.color)      parts.push(`color:${s.color}`);
+  if (s.backgroundColor) parts.push(`background-color:${s.backgroundColor}`);
+  return parts.join(';');
+}
+
+function _rxGetCellStyleStr(si, pi, editType) {
+  const css = _rxGetCellStyleCss(si, pi, editType);
+  return css ? ` style="${css}"` : '';
+}
+
+// 초기화: sessionStorage에서 복원
+try {
+  const saved = sessionStorage.getItem('_rxCellStyles');
+  if (saved) Object.assign(_rxCellStyles, JSON.parse(saved));
+} catch(e) {}
+
 function _rxCreateToolbar() {
   if (document.getElementById('rxFloatToolbar')) return;
   const tb = document.createElement('div');
@@ -2895,6 +3066,7 @@ function _rxCreateToolbar() {
       <option value="Arial,sans-serif">Arial</option>
       <option value="'Times New Roman',serif">Times New Roman</option>
     </select>
+    <button class="tb-btn" id="tbFontLocal" onmousedown="event.preventDefault();event.stopPropagation();" onclick="_rxLoadLocalFonts()" title="로컬 폰트 불러오기" style="font-size:10px;padding:2px 5px;">📂폰트</button>
     <input type="number" class="tb-num" id="tbSize" min="8" max="72" placeholder="크기" title="글자 크기(px)">
     <span class="tb-sep"></span>
     <button class="tb-btn" id="tbBold" onmousedown="event.preventDefault();event.stopPropagation();" onclick="rxTbExec('bold')" title="굵게 (Ctrl+B)"><b>B</b></button>
@@ -2922,10 +3094,34 @@ function _rxCreateToolbar() {
   document.body.appendChild(tb);
   // stopPropagation: 툴바 클릭이 document의 포커스-블러 이벤트로 전파되지 않도록
   // preventDefault: 브라우저가 편집 셀의 포커스를 뺏지 않도록
-  tb.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); });
-  document.getElementById('tbFont').addEventListener('change', rxTbFontFamily);
-  document.getElementById('tbSize').addEventListener('change', rxTbFontSize);
-  document.getElementById('tbSize').addEventListener('keydown', e => { if (e.key === 'Enter') rxTbFontSize(); });
+  // ★ 단, input/select는 포커스가 필요하므로 제외
+  tb.addEventListener('mousedown', e => {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT') {
+      e.stopPropagation(); // 바깥 전파만 차단, 포커스는 허용
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
+  });
+  // input/select에서 포커스 잡을 때 편집 셀의 blur 방지
+  const tbFont = document.getElementById('tbFont');
+  const tbSize = document.getElementById('tbSize');
+  [tbFont, tbSize].forEach(el => {
+    if (!el) return;
+    el.addEventListener('focus', () => {
+      // 편집 셀의 blur 이벤트가 finishEdit를 트리거하지 않도록 플래그 설정
+      window._rxToolbarFocused = true;
+    });
+    el.addEventListener('blur', () => {
+      window._rxToolbarFocused = false;
+      // 편집 셀로 포커스 복원
+      if (_tbActiveCell) _tbActiveCell.focus();
+    });
+  });
+  tbFont.addEventListener('change', rxTbFontFamily);
+  tbSize.addEventListener('change', rxTbFontSize);
+  tbSize.addEventListener('input', rxTbFontSize);
+  tbSize.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rxTbFontSize(); if (_tbActiveCell) _tbActiveCell.focus(); } });
 }
 
 function _rxShowToolbar(cell) {
@@ -2986,8 +3182,14 @@ function rxTbFontSize() {
       f.removeAttribute('size'); f.style.fontSize = size + 'px';
     });
   } else {
-    _tbActiveCell.style.fontSize = size + 'px';
+    // 셀 자체 + 내부 .desc-inner 등 자식 요소에도 적용
+    _tbActiveCell.style.setProperty('font-size', size + 'px', 'important');
+    _tbActiveCell.querySelectorAll('.desc-inner').forEach(el => {
+      el.style.setProperty('font-size', size + 'px', 'important');
+    });
   }
+  // ★ 스타일 저장소에 기록 → generatePreview 후에도 유지
+  _rxSaveCellStyle(_tbActiveCell, 'fontSize', size + 'px');
 }
 
 function rxTbFontFamily() {
@@ -3000,6 +3202,89 @@ function rxTbFontFamily() {
     document.execCommand('fontName', false, font);
   } else {
     _tbActiveCell.style.fontFamily = font;
+    _tbActiveCell.querySelectorAll('.desc-inner').forEach(el => {
+      el.style.fontFamily = font;
+    });
+  }
+  // ★ 스타일 저장소에 기록
+  _rxSaveCellStyle(_tbActiveCell, 'fontFamily', font);
+}
+
+let _localFontsLoaded = false;
+async function _rxLoadLocalFonts() {
+  if (_localFontsLoaded) return;
+  const sel = document.getElementById('tbFont');
+  const btn = document.getElementById('tbFontLocal');
+  if (!sel) return;
+  if (btn) { btn.textContent = '로딩...'; btn.disabled = true; }
+
+  // ① 먼저 시스템 폰트 목록으로 즉시 로드 (멈춤 없음)
+  const systemFonts = [
+    // 한글 폰트
+    'Apple SD Gothic Neo', 'AppleMyungjo',
+    'Malgun Gothic', '맑은 고딕',
+    'NanumGothic', '나눔고딕', 'NanumBarunGothic', '나눔바른고딕',
+    'NanumMyeongjo', '나눔명조', 'NanumSquareRound',
+    'Noto Sans KR', 'Noto Serif KR',
+    'Batang', '바탕', 'BatangChe', '바탕체',
+    'Dotum', '돋움', 'DotumChe', '돋움체',
+    'Gulim', '굴림', 'GulimChe', '굴림체',
+    'Gungsuh', '궁서', 'GungsuhChe', '궁서체',
+    'HY견고딕', 'HY견명조', 'HY중고딕', 'HY헤드라인M',
+    '함초롬돋움', '함초롬바탕',
+    // 영문 기본 폰트
+    'Arial', 'Arial Black', 'Calibri', 'Cambria',
+    'Comic Sans MS', 'Consolas', 'Courier New',
+    'Georgia', 'Helvetica', 'Helvetica Neue',
+    'Impact', 'Lucida Console', 'Palatino',
+    'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana',
+    // macOS 추가
+    'Avenir', 'Avenir Next', 'Futura', 'Gill Sans',
+    'Menlo', 'Monaco', 'Optima', 'SF Pro', 'SF Mono'
+  ];
+
+  // 실제 사용 가능한 폰트만 필터링
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const testStr = '가나다ABC123';
+  ctx.font = '72px monospace';
+  const baseWidth = ctx.measureText(testStr).width;
+
+  const available = systemFonts.filter(fam => {
+    ctx.font = `72px "${fam}", monospace`;
+    return ctx.measureText(testStr).width !== baseWidth;
+  });
+
+  const _populateSelect = (families) => {
+    const frag = document.createDocumentFragment();
+    const defOpt = document.createElement('option');
+    defOpt.value = ''; defOpt.textContent = `폰트 선택 (${families.length}개)`;
+    frag.appendChild(defOpt);
+    families.forEach(fam => {
+      const opt = document.createElement('option');
+      opt.value = `'${fam}'`;
+      opt.textContent = fam;
+      frag.appendChild(opt);
+    });
+    sel.innerHTML = '';
+    sel.appendChild(frag);
+  };
+
+  _populateSelect(available);
+  _localFontsLoaded = true;
+  if (btn) { btn.textContent = '✓완료'; }
+
+  // ② queryLocalFonts 지원시 백그라운드로 추가 폰트 로드 시도
+  if ('queryLocalFonts' in window) {
+    try {
+      const fonts = await window.queryLocalFonts();
+      const allFamilies = [...new Set(fonts.map(f => f.family))].sort((a, b) => a.localeCompare(b, 'ko'));
+      _populateSelect(allFamilies);
+      if (btn) btn.textContent = `✓${allFamilies.length}개`;
+    } catch(e) {
+      // 권한 거부/미지원 — 이미 시스템 폰트 목록으로 로드됨, 무시
+      console.log('queryLocalFonts 미사용 (시스템 목록 사용중):', e.message || e);
+    }
   }
 }
 
@@ -3014,6 +3299,8 @@ function rxTbColor(cmd, color) {
     if (cmd === 'foreColor') _tbActiveCell.style.color = color;
     else _tbActiveCell.style.backgroundColor = color;
   }
+  // ★ 스타일 저장소에 기록
+  _rxSaveCellStyle(_tbActiveCell, cmd === 'foreColor' ? 'color' : 'backgroundColor', color);
 }
 
 // ── 드래그 하이라이트 — data-row/data-col 바운딩 박스 ──────────────
@@ -3278,10 +3565,16 @@ function confirmStage() {
 let pageOrder = [];
 let tocDragKey = null;
 let pageThumbnails = {};
+let imagePages = {};  // { img_1: { dataUrl, name }, img_2: ... }
+let imgPageIdCnt = 0;
 
 function getPageLabel(key) {
   if (key === 'cover') return '📄 표지';
   if (key === 'cost')  return '💰 비용 요약';
+  if (key.startsWith('img_')) {
+    const ip = imagePages[key];
+    return '🖼️ ' + (ip ? ip.name.replace(/\.[^.]+$/, '').slice(0, 10) : '이미지');
+  }
   if (key.startsWith('group_')) {
     const month = parseInt(key.replace('group_', ''));
     const fallback = month >= 1001 ? `${month - 1000}페이지 처방` : (month ? `${month}월 처방` : '기본 처방');
@@ -3298,10 +3591,16 @@ function syncPageOrder() {
     const k = 'group_' + getStageGroupKey(st);
     if (!seen[k]) { seen[k] = true; current.push(k); }
   });
-  if (costVisible) current.push('cost');
-  // 기존 순서 유지하되 신규 추가/삭제 반영
-  const kept = pageOrder.filter(k => current.includes(k));
+  // 이미지 페이지 키 목록
+  const imgKeys = Object.keys(imagePages);
+  // 기존 순서 유지하되 신규 추가/삭제 반영 (cost 제외 — 항상 마지막에 배치)
+  const validKeys = new Set([...current, ...imgKeys]);
+  const kept = pageOrder.filter(k => k !== 'cost' && validKeys.has(k));
+  // 신규 group 키 추가
   current.forEach(k => { if (!kept.includes(k)) kept.push(k); });
+  // 신규 이미지 키 추가 (cost 앞에)
+  imgKeys.forEach(k => { if (!kept.includes(k)) kept.push(k); });
+  if (costVisible) kept.push('cost');
   pageOrder = kept;
 }
 
@@ -3351,12 +3650,20 @@ function getTocPreview(key) {
       ${per ? `<div>평당: ${per.toLocaleString()}원</div>` : ''}
     </div>`;
   }
+  if (key.startsWith('img_')) {
+    const ip = imagePages[key];
+    if (!ip) return '';
+    return `<div class="toc-preview"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ip.name}</div></div>`;
+  }
   return '';
 }
 
 function createPageThumbnail(pageEl) {
-  const SCALE = 0.17;
+  // 패널 너비에 맞춰 동적 스케일 계산
+  const tocPanel = document.getElementById('tocPanel');
+  const availW = tocPanel ? (tocPanel.clientWidth - 40) : 180; // padding/border 고려
   const W = 840;
+  const SCALE = Math.min(0.24, availW / W);
   const H = pageEl.scrollHeight || 595;
   const thumbW = Math.round(W * SCALE);
   const thumbH = Math.round(H * SCALE);
@@ -3384,10 +3691,11 @@ function renderToc() {
     return;
   }
   list.innerHTML = pageOrder.map(k => {
-    const extraClass = k === 'cost' ? 'toc-cost' : k === 'cover' ? 'toc-cover' : '';
+    const extraClass = k === 'cost' ? 'toc-cost' : k === 'cover' ? 'toc-cover' : k.startsWith('img_') ? 'toc-img' : '';
     return `
     <div class="toc-item ${extraClass}" draggable="true"
       id="tocItem_${k}"
+      onclick="tocScrollTo('${k}')"
       ondragstart="tocDragStart(event,'${k}')"
       ondragover="tocDragOver(event,'${k}')"
       ondrop="tocDrop(event,'${k}')"
@@ -3421,6 +3729,19 @@ function tocDrop(e, targetKey) {
   pageOrder.splice(ti, 0, tocDragKey);
   renderToc();
   schedulePreview();
+}
+function tocScrollTo(key) {
+  // 목차 항목 클릭 → 해당 페이지로 스크롤 이동
+  const page = document.querySelector(`#printPages [data-pagekey="${key}"]`);
+  if (!page) return;
+  page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 선택 하이라이트
+  document.querySelectorAll('.toc-item').forEach(el => el.style.outline = '');
+  const tocEl = document.getElementById('tocItem_' + key);
+  if (tocEl) {
+    tocEl.style.outline = '2.5px solid var(--teal)';
+    setTimeout(() => tocEl.style.outline = '', 1500);
+  }
 }
 function tocDragEnd() {
   document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('toc-drag-over'));
@@ -3625,6 +3946,47 @@ function closeCostModal() {
   document.getElementById('costOverlay').classList.remove('on');
 }
 
+// ── 이미지 페이지 ────────────────────────────
+function generateImagePageHtml(key, ip) {
+  return `<div class="page-card" data-pagekey="${key}">
+    <div class="img-page">
+      <img src="${ip.dataUrl}" alt="${ip.name}">
+      <button class="img-page-del" onclick="deleteImagePage('${key}')" title="이미지 삭제">✕</button>
+    </div>
+  </div>`;
+}
+
+function onImagePagesSelected(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  let loaded = 0;
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const id = 'img_' + (++imgPageIdCnt);
+      imagePages[id] = { dataUrl: reader.result, name: f.name };
+      loaded++;
+      if (loaded === files.length) {
+        renderToc();
+        schedulePreview();
+        _saveRxStages();
+        showRxToast(`이미지 ${files.length}장 추가 완료`);
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+
+function deleteImagePage(key) {
+  if (!confirm('이미지 페이지를 삭제하시겠습니까?')) return;
+  delete imagePages[key];
+  pageOrder = pageOrder.filter(k => k !== key);
+  renderToc();
+  schedulePreview();
+  _saveRxStages();
+}
+
 function generateCostPageHtml(area) {
   const inv = getInventory();
   const cart = rxData.cart || [];
@@ -3741,10 +4103,21 @@ function generateCostPageHtml(area) {
 
 // ── 처방전 요약 카드 생성 ───────────────────────────────────────────
 function generateSummaryCardHtml(areaNum) {
+  // 인라인 편집 데이터가 있으면 그것을 사용 (편집 내용 유지)
+  if (rxData.costPageHtml) {
+    const saved = rxData.costPageHtml;
+    return `<div class="page-card" data-pagekey="cost">
+      <div class="content-page">
+        <div class="content-inner" style="overflow:hidden;box-sizing:border-box;">
+          ${saved}
+        </div>
+      </div>
+    </div>`;
+  }
   const region = document.getElementById('bRegion').value.trim();
   const area   = document.getElementById('bArea').value.trim();
-  const crop   = document.getElementById('bCrop').value.trim();
-  const name   = document.getElementById('bName').value.trim();
+  const crop   = document.getElementById('bCrop').value.trim() || rxData.crop || '';
+  const name   = document.getElementById('bName').value.trim() || rxData.name || '';
   const phone  = rxData.phone || '';
   const addr   = rxData.addr  || '';
   areaNum = areaNum || parseInt(area) || 0;
@@ -3752,7 +4125,19 @@ function generateSummaryCardHtml(areaNum) {
   function getSpAmt(key) {
     if (priceOverrides[key]?.sp !== undefined) return priceOverrides[key].sp;
     const c = (rxData.cart||[]).find(c => c.name+'||'+c.size === key);
-    return c ? (c.sp || 0) : 0;
+    if (c) return c.sp || 0;
+    // 정규화 키로 폴백 (PDF key "옥토팜||펠렛" ↔ cart "옥토팜(펠렛)||20kg")
+    const nk = _normProdKey(key);
+    const c2 = (rxData.cart||[]).find(c => _normProdKey(c.name+'||'+c.size) === nk || _normProdKey(c.name+'||') === nk);
+    if (c2) return c2.sp || 0;
+    // alt key: name(size)|| 형태
+    const [nm, sz] = (key || '').split('||');
+    if (sz) {
+      const altNk = _normProdKey(nm + '(' + sz + ')||');
+      const c3 = (rxData.cart||[]).find(c => _normProdKey(c.name+'||') === altNk);
+      if (c3) return c3.sp || 0;
+    }
+    return 0;
   }
 
   const groups = {};
@@ -3830,11 +4215,14 @@ function generateSummaryCardHtml(areaNum) {
   }
 
   const calcGrand = orderedMks.reduce((s, mk) => s + groupTotal(mk), 0);
-  // 계산값이 없으면 PDF 추출값 폴백
-  const grand     = calcGrand || rxData.extractedTotalCost || 0;
-  const calcPP    = areaNum ? Math.round(calcGrand / areaNum) : 0;
-  const perPyeong = calcPP  || rxData.extractedUnitPrice   || 0;
-  const hasPrices = calcGrand > 0;
+  // PDF에서 추출한 breakdown이 있으면 PDF 값 우선 (PRODUCT_DB 소매가 ≠ 실제 공급가)
+  const pdfHasBreakdown = (rxData.extractedBreakdown || []).length > 0;
+  // 사용자가 거래명세표에서 직접 가격을 입력한 경우에만 계산값 사용
+  const userEnteredPrices = calcGrand > 0 && !pdfHasBreakdown;
+  const grand     = userEnteredPrices ? calcGrand : (rxData.extractedTotalCost || calcGrand || 0);
+  const calcPP    = areaNum ? Math.round(grand / areaNum) : 0;
+  const perPyeong = userEnteredPrices ? calcPP : (rxData.extractedUnitPrice || calcPP || 0);
+  const hasPrices = userEnteredPrices;
 
   // 같은 월 레이블의 그룹을 병합 (5월 2페이지 → 5월 1행으로 합산)
   // pageOrder 순서를 유지하면서 중복 레이블을 병합
@@ -3850,6 +4238,18 @@ function generateSummaryCardHtml(areaNum) {
       mergedRows.push({ lbl, tot });
     }
   });
+  // 원본 PDF 순서: 월(4→5→6...) → 기비용. 기비용은 항상 마지막
+  mergedRows.sort((a, b) => {
+    const mA = a.lbl.match(/^(\d+)월$/), mB = b.lbl.match(/^(\d+)월$/);
+    const isBaseA = a.lbl === '기비용', isBaseB = b.lbl === '기비용';
+    if (isBaseA && !isBaseB) return 1;  // 기비용 → 뒤로
+    if (!isBaseA && isBaseB) return -1;
+    if (mA && mB) return parseInt(mA[1]) - parseInt(mB[1]); // 월 오름차순
+    return 0;
+  });
+
+  // 인라인 편집 속성 — 이벤트 위임으로 처리 (data-cost-edit 마커)
+  const _ce = 'data-cost-edit="1"';
 
   // 행 높이 균등 분배: 월행수 + 고객행 + 푸터행 + 헤더행 = 총 행수
   // height:1px 로 설정하면 브라우저가 테이블 전체 높이를 균등 분배
@@ -3861,16 +4261,120 @@ function generateSummaryCardHtml(areaNum) {
       ? pdfBreakdown.find(r => r.label === lbl) : null;
     const dispTot = hasPrices ? tot : (pdfRow ? pdfRow.cost : 0);
     const dispPp  = hasPrices ? pp : (pdfRow ? (pdfRow.unitPrice || (areaNum ? Math.round(pdfRow.cost / areaNum) : 0)) : 0);
+    // PDF에서 추출한 행이 있으면 0이어도 "000원" 표시 (원본 PDF 그대로 재현)
+    const hasPdfRow = !hasPrices && pdfRow;
+    const totStr = dispTot ? dispTot.toLocaleString() + '원' : (hasPdfRow ? '000원' : '-');
+    const ppStr  = dispPp ? '평당(' + dispPp.toLocaleString() + '원)' : (hasPdfRow ? '평당(000원)' : '-');
     return `<tr style="height:1px;">
-      <td class="sc-month">${lbl}</td>
-      <td class="sc-amt">${dispTot ? dispTot.toLocaleString() + '원' : '-'}</td>
-      <td class="sc-pp">${dispPp ? '평당(' + dispPp.toLocaleString() + '원)' : '-'}</td>
+      <td class="sc-month" ${_ce}>${lbl}</td>
+      <td class="sc-amt" ${_ce}>${totStr}</td>
+      <td class="sc-pp" ${_ce}>${ppStr}</td>
     </tr>`;
   }).join('');
 
+  // 엘세로 추가 항목 행 — 처방전 전체에서 사용량 합산 + 거래명세표 가격 반영
+  const pdfAddOns = rxData.extractedAddOns || [];
+  const pdfAddOnInterval = rxData.extractedAddOnInterval || '';
+  let addOnRows = '';
+  if (pdfAddOns.length) {
+    // 처방전 stage에서 총 사용량 계산
+    function _countProductQty(namePattern) {
+      let total = 0;
+      stages.forEach(st => {
+        (st.products || []).forEach(p => {
+          if (p.key && namePattern.test(p.key)) total += (parseFloat(p.qty) || 0);
+        });
+      });
+      return total;
+    }
+    const aoLines = pdfAddOns.map(ao => {
+      // 제품명 매칭 패턴
+      const nameRe = ao.name.includes('CK') || ao.name.includes('ck')
+        ? /CK-?1|ck-?1|씨케이/i : /액상/;
+      const totalQty = _countProductQty(nameRe) || ao.qty;
+      // 거래명세표 가격 (할인 반영)
+      const cartMatch = (rxData.cart||[]).find(c =>
+        nameRe.test(c.name) || nameRe.test(c.key || ''));
+      const retail = cartMatch ? (cartMatch.retail || ao.retail) : ao.retail;
+      const sp = cartMatch ? (cartMatch.sp || retail) : retail;
+      const totalCost = sp * totalQty;
+      const ppCost = areaNum ? Math.round(totalCost / areaNum) : 0;
+      const retailStr = retail ? '소매(' + retail.toLocaleString() + ')' : '';
+      const spStr = sp ? '공급가(' + sp.toLocaleString() + ')' : '공급가';
+      const totalStr = totalCost ? '계=' + totalCost.toLocaleString() + '원' : '계=000원';
+      return `${ao.name} ${retailStr} ${spStr} 수량(${totalQty}병) ${totalStr}`;
+    });
+    // 전체 추가 항목 합계
+    const aoTotalCost = pdfAddOns.reduce((s, ao) => {
+      const nameRe = ao.name.includes('CK') || ao.name.includes('ck')
+        ? /CK-?1|ck-?1|씨케이/i : /액상/;
+      const qty = _countProductQty(nameRe) || ao.qty;
+      const cartMatch = (rxData.cart||[]).find(c => nameRe.test(c.name));
+      const sp = cartMatch ? (cartMatch.sp || ao.retail) : ao.retail;
+      return s + sp * qty;
+    }, 0);
+    const aoPp = areaNum ? Math.round(aoTotalCost / areaNum) : 0;
+    const aoDetailHtml = aoLines.map(l => `<div style="font-size:18px;font-weight:700;text-align:center;line-height:1.6;">${l}</div>`).join('');
+    addOnRows = `<tr style="height:1px;">
+      <td class="sc-month" ${_ce}>${pdfAddOnInterval || '추가'}</td>
+      <td class="sc-amt" ${_ce}>${aoDetailHtml}</td>
+      <td class="sc-pp" ${_ce}>${aoPp ? '평당(' + aoPp.toLocaleString() + '원)' : '평당(000원)'}</td>
+    </tr>`;
+  }
+
   const title = `${region||''}지역 ${crop||''}${area ? '(' + area + '평)' : ''}농사 ${name||''}님 처방전`;
-  const grandDisp = grand ? grand.toLocaleString() + '원' : '-';
-  const ppDisp    = perPyeong ? perPyeong.toLocaleString() + '원' : '-';
+  const hasPdfBreakdown = !hasPrices && pdfBreakdown.length > 0;
+  const grandDisp = grand ? grand.toLocaleString() + '원' : (hasPdfBreakdown ? '000원' : '-');
+  const ppDisp    = perPyeong ? perPyeong.toLocaleString() + '원' : (hasPdfBreakdown ? '000원' : '-');
+
+  // ── PDF costProducts가 있으면 제품별 비용 테이블 렌더링 (원본 형식) ──
+  const pdfCostProducts = rxData.extractedCostProducts || [];
+  if (pdfCostProducts.length > 0) {
+    const cpNormal = pdfCostProducts.filter(p => !p.promo);
+    const cpPromo  = pdfCostProducts.filter(p => p.promo);
+    const headerTitle = `${crop||''}농사 ${region||''} ${name||''}님 하우스:${area||''}평`;
+    const _cfs = 'font-size:18px;font-weight:700;text-align:center;border:2px solid var(--teal);padding:6px 8px;';
+    const prodRows = cpNormal.map(p =>
+      `<tr style="height:1px;">
+        <td style="${_cfs}" ${_ce}>${p.name}</td>
+        <td style="${_cfs}" ${_ce}>소매가(${p.retail.toLocaleString()})&nbsp;&nbsp;공급가(${p.supply.toLocaleString()})&nbsp;&nbsp;수량(${p.qty}${p.unit})&nbsp;&nbsp;계=${p.total.toLocaleString()}</td>
+      </tr>`).join('');
+    const promoRows = cpPromo.map(p =>
+      `<tr style="height:1px;">
+        <td style="${_cfs}" ${_ce}>${p.name}</td>
+        <td style="${_cfs}" ${_ce}>${p.retail ? '소매가(' + p.retail.toLocaleString() + ')&nbsp;&nbsp;' : ''}공급가(${p.supply.toLocaleString()})&nbsp;&nbsp;수량(${p.qty}${p.unit})&nbsp;&nbsp;계=홍보용</td>
+      </tr>`).join('');
+    const promoSection = cpPromo.length ? `
+      <tr style="height:1px;">
+        <td style="${_cfs}background:#f5fbfb;" ${_ce}>첫물+줄때<br>가스제거+바이러스</td>
+        <td style="${_cfs}" ${_ce}>
+          ${cpPromo.map(p => `${p.name}&nbsp;&nbsp;공급가(${p.supply.toLocaleString()})&nbsp;&nbsp;수량(${p.qty}${p.unit})&nbsp;&nbsp;계=홍보용`).join('<br>')}
+        </td>
+      </tr>` : '';
+    return `<div class="page-card" data-pagekey="cost">
+      <div class="content-page">
+        <div class="content-inner" style="overflow:hidden;box-sizing:border-box;">
+          <table class="sc-table" style="height:561px;">
+            <thead>
+              <tr class="sc-title-row" style="height:1px;"><td colspan="2" ${_ce}>${headerTitle}</td></tr>
+            </thead>
+            <tbody style="height:100%;">
+              ${prodRows}
+              ${promoSection}
+              <tr class="sc-cust-row" style="height:1px;">
+                <td colspan="2" ${_ce}>${name||''}님${phone ? '&nbsp;&nbsp;전화:' + phone : ''}${addr ? '&nbsp;&nbsp;' + addr : ''}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="sc-footer-row" style="height:1px;">
+                <td colspan="2" ${_ce}>${crop||''}농사:${area||''}평&nbsp;&nbsp;합계=${grandDisp}&nbsp;&nbsp;평당(${ppDisp})</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }
 
   // content-page 안쪽: 595px - padding(14px*2) = 567px, border(3px*2) 제외 → 561px
   return `<div class="page-card" data-pagekey="cost">
@@ -3878,24 +4382,78 @@ function generateSummaryCardHtml(areaNum) {
       <div class="content-inner" style="overflow:hidden;box-sizing:border-box;">
         <table class="sc-table" style="height:561px;">
           <thead>
-            <tr class="sc-title-row" style="height:1px;"><td colspan="3">${title}</td></tr>
+            <tr class="sc-title-row" style="height:1px;"><td colspan="3" ${_ce}>${title}</td></tr>
           </thead>
           <tbody style="height:100%;">
             ${monthRows}
+            ${addOnRows}
             <tr class="sc-cust-row" style="height:1px;">
-              <td colspan="3">${name||''}님${phone ? '&nbsp;&nbsp;전화:' + phone : ''}${addr ? '&nbsp;&nbsp;' + addr : ''}</td>
+              <td colspan="3" ${_ce}>${name||''}님${phone ? '&nbsp;&nbsp;전화:' + phone : ''}${addr ? '&nbsp;&nbsp;' + addr : ''}</td>
             </tr>
           </tbody>
           <tfoot>
             <tr class="sc-footer-row" style="height:1px;">
-              <td colspan="2"><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grandDisp}</td>
-              <td>평당(${ppDisp})</td>
+              <td colspan="2" ${_ce}><img src="logo.png" style="height:20px;vertical-align:middle;"> 담당자:${managerPhone}&nbsp;&nbsp;합계=${grandDisp}</td>
+              <td ${_ce}>평당(${ppDisp})</td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
   </div>`;
+}
+
+// ── 비용 페이지 인라인 편집 저장 ──────────────────────────
+// 편집된 셀 내용을 rxData.costPageEdits에 저장하여 re-render 후에도 유지
+function _openCostCellEdit(el) {
+  el.contentEditable = 'true';
+  el.focus();
+  _rxCreateToolbar();
+  _tbActiveCell = el;
+  document.getElementById('rxFloatToolbar')?.classList.add('show');
+  _tbSyncState();
+}
+function _closeCostCellEdit(el) {
+  if (window._rxToolbarFocused) return; // 툴바 입력 중이면 blur 무시
+  el.contentEditable = 'false';
+  _rxHideToolbar();
+  _saveCostEdit();
+}
+
+// ── 비용 페이지 셀 이벤트 위임 (클릭 → 편집 + 툴바, blur → 저장) ──
+document.addEventListener('click', e => {
+  const td = e.target.closest('td[data-cost-edit]');
+  if (!td) return;
+  if (td.contentEditable === 'true') return; // 이미 편집 중
+  // 다른 비용 셀 편집 중이면 먼저 닫기
+  document.querySelectorAll('td[data-cost-edit][contenteditable="true"]').forEach(old => {
+    if (old !== td) { old.contentEditable = 'false'; }
+  });
+  _openCostCellEdit(td);
+});
+document.addEventListener('focusout', e => {
+  const td = e.target.closest('td[data-cost-edit]');
+  if (!td || td.contentEditable !== 'true') return;
+  // 포커스 이동 대상 확인 후 처리
+  setTimeout(() => {
+    if (window._rxToolbarFocused) return;
+    if (document.activeElement?.closest('#rxFloatToolbar')) return;
+    // 다른 비용 셀로 이동 시 → 이전 셀만 닫고 툴바 유지
+    if (document.activeElement?.closest('td[data-cost-edit]')) {
+      td.contentEditable = 'false';
+      _saveCostEdit();
+      return;
+    }
+    _closeCostCellEdit(td);
+  }, 150);
+});
+
+function _saveCostEdit() {
+  const costEl = document.querySelector('[data-pagekey="cost"]');
+  if (!costEl) return;
+  // 현재 테이블 전체 HTML을 저장 (re-render 시 복원)
+  rxData.costPageHtml = costEl.querySelector('.sc-table')?.outerHTML || '';
+  _saveRxStages();
 }
 
 // ── 처방전 생성 ───────────────────────────
@@ -3979,7 +4537,19 @@ function generatePreview() {
     }
 
     // Step 3: 행 렌더 — stage-td는 isLabelStart&&rowIdx===0 일 때만, 그 외 완전 생략
-    const _wd  = html => `<div class="desc-inner">${html}</div>`;
+    const _wd  = (html, si, pi) => {
+      // desc-inner에 저장된 스타일 적용 (font-size 등)
+      const key = `${si}_${pi || 0}_prod-desc`;
+      const s = _rxCellStyles[key];
+      let innerStyle = '';
+      if (s) {
+        const parts = [];
+        if (s.fontSize) parts.push(`font-size:${s.fontSize} !important`);
+        if (s.fontFamily) parts.push(`font-family:${s.fontFamily}`);
+        if (parts.length) innerStyle = ` style="${parts.join(';')}"`;
+      }
+      return `<div class="desc-inner"${innerStyle}>${html}</div>`;
+    };
     const _emp = '<span style="color:#ccc;font-size:11px;">+</span>';
     let _descSkipUntil = -1; // desc 병합 중인 경우, 이 인덱스까지 descTd 생략
 
@@ -3993,9 +4563,9 @@ function generatePreview() {
             `rowspan="${row.labelSpan}" data-row="${row.rowNum}" data-col="0" ` +
             `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
             `<strong>${row.labelHtml}</strong></td>`;
-          rows += `<tr>${sTd}<td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+          rows += `<tr>${sTd}<td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;" onclick="openRxFreeEdit(this,event)">제품 없음</td></tr>`;
         } else {
-          rows += `<tr><td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;">제품 없음</td></tr>`;
+          rows += `<tr><td colspan="4" data-row="${row.rowNum}" data-col="1"${hd} style="color:#bbb;text-align:center;font-size:12px;" onclick="openRxFreeEdit(this,event)">제품 없음</td></tr>`;
         }
         rowOffset++;
         return;
@@ -4005,14 +4575,32 @@ function generatePreview() {
       const lSpan = row.isLabelStart ? row.labelSpan : null;
 
       const cartItem = (rxData.cart||[]).find(c => c.name+'||'+c.size === p.key);
-      const prodName = cartItem ? cartItem.name : p.key.split('||')[0];
-      const prodSize = p.capacity || (cartItem ? cartItem.size : p.key.split('||')[1] || '');
+      const keyName = p.key.split('||')[0];
+      const keySize = p.key.split('||')[1] || '';
+      // 제품명에 DB 용량 포함 표시: 이미 괄호 포함된 이름은 그대로
+      const prodName = cartItem ? cartItem.name : keyName;
+      const dbSize   = cartItem ? cartItem.size : keySize;
+      const prodNameFull = prodName.includes('(') ? prodName
+                         : dbSize ? `${prodName}(${dbSize})` : prodName;
+      const prodSize = p.capacity || (p.prodArea ? p.prodArea + '평' : (cartItem ? cartItem.size : ''));
       const qtyCell  = p.qty ? formatQty(p.qty, p.unit) : '';
-      const areaLine = p.prodArea ? ` <span style="font-size:0.85em;color:#555;font-weight:normal;">(${p.prodArea}평)</span>` : '';
+      // prodArea는 용량 열에서만 표시 — 제품명 옆 중복 표시 제거
+      const areaLine = '';
 
-      const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)">${prodName}${areaLine}</td>`;
-      const sizeTd = `<td class="size-td rx-editable" data-edit="prod-size" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="2" onclick="openRxEdit(this,event)">${prodSize}</td>`;
-      const qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)">${qtyCell||'—'}</td>`;
+      // ★ 셀별 저장된 스타일 조회
+      const _cs = (editType) => _rxGetCellStyleStr(si, pi, editType);
+
+      const nameTd = `<td class="product-td rx-editable" data-edit="prod-name" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="1" onclick="openRxEdit(this,event)"${_cs('prod-name')}>${prodNameFull}${areaLine}</td>`;
+      // 지시 행: 용량+사용량 셀 통합 (예: "두덕(골당)3포 점적,호수,깔지전")
+      let sizeTd, qtyTd;
+      if (p.isInstruction) {
+        const instrHtml = (p.instructionText || '').replace(/\n/g, '<br>');
+        sizeTd = `<td class="size-td rx-editable" colspan="2" style="text-align:center;font-size:0.9em;" onclick="openRxFreeEdit(this,event)">${instrHtml}</td>`;
+        qtyTd = '';
+      } else {
+        sizeTd = `<td class="size-td rx-editable" data-edit="prod-size" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="2" onclick="openRxEdit(this,event)"${_cs('prod-size')}>${prodSize}</td>`;
+        qtyTd  = `<td class="qty-td rx-editable" data-edit="prod-qty" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="3" onclick="openRxEdit(this,event)"${_cs('prod-qty')}>${qtyCell||'—'}</td>`;
+      }
 
       // ── desc 열 병합 ─────────────────────────────────────────────
       let descTd = '';
@@ -4025,24 +4613,25 @@ function generatePreview() {
           const allD = [...new Set(prods.map(({p:pp}) =>
             pp.detailCellDisplayOverride || pp.detailCellRaw || pp.usageDisplayText || pp.desc || '').filter(Boolean))];
           const mInner = allD.length ? allD.map(d => d.replace(/\n/g,'<br>')).join('<br>') : _emp;
-          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${prods.length}">${_wd(mInner)}</td>`;
+          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)"${_cs('prod-desc')} rowspan="${prods.length}">${_wd(mInner, si, pi)}</td>`;
           _descSkipUntil = _i + prods.length - 1;
         } else if (!isMD && isFirst && row.descAllSame && row.labelSpan > 1) {
           // 같은 라벨 그룹이고 desc가 모두 동일: 그룹 전체 병합
-          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)" rowspan="${row.labelSpan}">${_wd(inner)}</td>`;
+          descTd = `<td class="desc-td desc-td-merged rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)"${_cs('prod-desc')} rowspan="${row.labelSpan}">${_wd(inner, si, pi)}</td>`;
           _descSkipUntil = _i + row.labelSpan - 1;
         } else if (!isMD) {
           // 개별 desc
-          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)">${_wd(inner)}</td>`;
+          descTd = `<td class="desc-td rx-editable" data-edit="prod-desc" data-si="${si}" data-pi="${pi}" data-row="${rowNum}" data-col="4" onclick="openRxEdit(this,event)"${_cs('prod-desc')}>${_wd(inner, si, pi)}</td>`;
         }
         // isMD && rowIdx > 0: 이미 _descSkipUntil 처리됨 → descTd = ''
       }
 
       // ── stage-td: 라벨 그룹의 첫 행에만 렌더, 나머지는 완전 생략 ──
       if (isFirst) {
+        const _stageCs = _rxGetCellStyleCss(si, 0, 'stage-date');
         const sTd = `<td class="stage-td rx-editable" data-edit="stage-date" data-si="${si}" data-monthkey="${monthKey}" ` +
           `rowspan="${lSpan}" data-row="${rowNum}" data-col="0" ` +
-          `style="vertical-align:middle;text-align:center;" onclick="openRxEdit(this,event)">` +
+          `style="vertical-align:middle;text-align:center;${_stageCs ? _stageCs : ''}" onclick="openRxEdit(this,event)">` +
           `<strong>${labelHtml}</strong></td>`;
         rows += `<tr>${sTd}${nameTd}${sizeTd}${qtyTd}${descTd}</tr>`;
       } else {
@@ -4063,11 +4652,11 @@ function generatePreview() {
       <div class="content-page"><div class="content-inner">
         <table class="rx-table">
           <colgroup>
-            <col style="width:15%;">
-            <col style="width:35%;">
+            <col style="width:14%;">
+            <col style="width:33%;">
+            <col style="width:11%;">
             <col style="width:10%;">
-            <col style="width:10%;">
-            <col style="width:30%;">
+            <col style="width:32%;">
           </colgroup>
           <tbody>
             <tr class="rx-title-tr">
@@ -4075,20 +4664,20 @@ function generatePreview() {
             </tr>
             ${funcHeadHtml}
             <tr class="rx-header-row">
-              <th>시기/단계</th>
-              <th>제품명</th>
-              <th>용량</th>
-              <th>사용량</th>
-              <th>물량/평수 (사용법)</th>
+              <th class="rx-editable" onclick="openRxFreeEdit(this,event)">시기/단계</th>
+              <th class="rx-editable" onclick="openRxFreeEdit(this,event)">제품명</th>
+              <th class="rx-editable" onclick="openRxFreeEdit(this,event)">용량</th>
+              <th class="rx-editable" onclick="openRxFreeEdit(this,event)">사용량</th>
+              <th class="rx-editable" onclick="openRxFreeEdit(this,event)">물량/평수 (사용법)</th>
             </tr>
             ${rows}
             ${showBottomNote && monthKey === lastGroupKey ? `<tr class="rx-bottom-note-tr">
-              <td colspan="5">※ 세균성+바이러스 예방을 위하여 첫 물줄 때 <strong>엘쎄로닥터 CK-1</strong>을
+              <td colspan="5" class="rx-editable" onclick="openRxFreeEdit(this,event)">※ 세균성+바이러스 예방을 위하여 첫 물줄 때 <strong>엘쎄로닥터 CK-1</strong>을
               50~80℃ 뜨거운 물에 녹여서 큰 통에 혼합 관주합니다.<br>
               관주 시 물25말 : 1000평 &nbsp;—&nbsp; 뿌리발근 · 뿌리활착 · 뿌리활력 · 작물활성</td>
             </tr>` : ''}
             <tr class="rx-footer-tr">
-              <td colspan="5" class="page-footer-bar"><div class="footer-inner"><img src="logo.png" style="height:34px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div></td>
+              <td colspan="5" class="page-footer-bar rx-editable" onclick="openRxFreeEdit(this,event)"><div class="footer-inner"><img src="logo.png" style="height:34px;vertical-align:middle;"> 천연바이오:1577-5963 &nbsp;&nbsp; 담당자:${managerPhone}</div></td>
             </tr>
           </tbody>
         </table>
@@ -4147,6 +4736,11 @@ function generatePreview() {
   pageOrder.forEach(key => {
     if (key === 'cover') { html += coverHtml; return; }
     if (key === 'cost')  { html += generateSummaryCardHtml(parseInt(area)||0); return; }
+    if (key.startsWith('img_')) {
+      const ip = imagePages[key];
+      if (ip) html += generateImagePageHtml(key, ip);
+      return;
+    }
     if (key.startsWith('group_')) {
       const monthKey = parseInt(key.replace('group_',''));
       if (groups[monthKey]) html += buildGroupPage(monthKey);
@@ -4213,8 +4807,10 @@ function generatePreview() {
   setTimeout(applyPreviewAutoFit, 150);
   // autofit 완료 후 모든 col/tr에 px 고정값 삽입 (리사이즈 기준점 확립)
   setTimeout(_rxInitTableSizes, 230);
+  // 행 높이 균등 분배 — 사용자가 수동 조절한 행은 제외
+  setTimeout(_rxEqualizeRowHeights, 260);
   // 헤더 텍스트 1줄 맞춤 (autofit 후 실제 width 확정된 시점)
-  setTimeout(fitPagePurposeText, 280);
+  setTimeout(fitPagePurposeText, 310);
 }
 
 // ── 헤더(page-purpose) 텍스트 자동 축소 — 1줄 고정 ──────────────────────
@@ -4430,10 +5026,10 @@ function extractRxPdfText(data) {
 }
 
 // ── 좌표 기반 텍스트 추출 (처방 단계 자동 인식) ──────────────────
-const RX_LEFT_X_MAX         = 160;  // 좌측 열 X 임계값 (scale=1.0)
+const RX_LEFT_X_MAX         = 168;  // 좌측 열 X 임계값 (scale=1.0) — "일" x=166 포함
 const RX_ROW_Y_MERGE        = 10;   // 같은 행 Y 허용 오차 (px)
 const RX_STAGE_Y_GAP        = 50;   // 좌측 그룹 사이 간격 (px)
-const RX_COUNT_UNITS_RE     = /포|병|봉|통|개/;
+const RX_COUNT_UNITS_RE     = /(?:\d|반)\s*(?:포|병|봉|통|개)/;  // "시들음병" 오인 방지: 숫자/반 선행 필수
 const RX_PAGE_TITLE_Y_GAP   = 60;   // v16: 첫 좌측 아이템 ↔ 다음 좌측 아이템 gap > 이 값 → pageTitle 후보
 const RX_PAGE_Y_MAX         = 800;  // 이 Y 이상은 푸터 영역으로 간주 → 수집 제외
 // ── 사용법 셀 파싱 전용 푸터 필터 ────────────────────────────────
@@ -4489,7 +5085,7 @@ function rxClassifyLeftRow(text) {
   // stage_core: 단계 시작 키워드 (관주/엽면 등 전체 단어 포함 여부)
   if (typeof classifyLeftRow === 'function') return classifyLeftRow(t);
   // fallback: rxNormalizer.js 미로드 시 자체 판정
-  if (/관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확|성장|착과|비대|착색|수확전|초기|후기/.test(t)) return 'stage_core';
+  if (/관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확|성장|착과|비대|착색|수확전|초기|후기|경운|두덕/.test(t)) return 'stage_core';
   if (/\d+\s*월|\d+\s*[-~]\s*\d+\s*월/.test(t)) return 'date';
   if (/^(및|and|or|또는|그리고|after|before)$/i.test(t)) return 'connector';
   return 'note';
@@ -4516,11 +5112,19 @@ function cleanPdfText(text) {
     .replace(/\s*\/\s*/g, '/')           // 슬래시 앞뒤 공백
     .replace(/\s+\./g, '.')              // 마침표 앞 공백
     .replace(/(\d)\s+([가-힣])/g, '$1$2') // 숫자+한글 단위: "30 분" → "30분"
+    .replace(/([가-힣])\s+(-?\d)/g, '$1$2') // 한글+숫자: "물 15" → "물15", "말 -20" → "말-20"
     .replace(/\s{2,}/g, ' ')             // 연속 공백 → 단일 공백
     .trim();
 }
 function cleanDetailText(text) {
-  return cleanPdfText(text);
+  let t = cleanPdfText(text);
+  // 순수 면적 텍스트만 제거 (standalone area text)
+  // "관주:물:25말:500평" 같은 사용법 텍스트에서는 제거하지 않음
+  if (/^:?\d+\s*평$/.test(t.trim())) return '';
+  if (/^:?\d{2,4}$/.test(t.trim())) return '';
+  // 공백 정리
+  t = t.replace(/\s{2,}/g, ' ').trim();
+  return t;
 }
 
 function parseRxPdfCoords(items) {
@@ -4537,6 +5141,21 @@ function parseRxPdfCoords(items) {
     }
   }
 
+  // ── 1b. 비용 페이지 감지 → 해당 페이지 행 전부 제외 ──────────────
+  const costPages = new Set();
+  const pageTexts = {};
+  rows.forEach(r => {
+    const pg = r.page;
+    if (!pageTexts[pg]) pageTexts[pg] = [];
+    pageTexts[pg].push(r.items.map(it => it.text).join(' '));
+  });
+  Object.entries(pageTexts).forEach(([pg, txts]) => {
+    if (_isCostPage(txts)) {
+      costPages.add(parseInt(pg));
+      console.log(`[Parser] page ${pg} → 비용 페이지 제외`);
+    }
+  });
+
   // ── 2. pageTitle 감지 ─────────────────────────────────────────────
   const pageTitles  = {};
   const titleRowSet = new Set();
@@ -4545,21 +5164,22 @@ function parseRxPdfCoords(items) {
   const pageTopY = {};
   rows.forEach((row, ri) => {
     const pg = row.page;
+    if (costPages.has(pg)) return;
     if (pageTopY[pg] === undefined) pageTopY[pg] = row.yAvg;
     if (row.yAvg - pageTopY[pg] > 80) return;
     const xMin = Math.min(...row.items.map(it => it.x));
     const xMax = Math.max(...row.items.map(it => it.x + (it.w || it.text.length * 7)));
     if (xMin < RX_LEFT_X_MAX && xMax > RX_LEFT_X_MAX + 50) {
       const titleText = cleanPdfText(row.items.map(it => it.text).join(' '));
+      // 좌측 토큰에 stage_core 키워드(관주/엽면 등)가 있으면 데이터 행 — pageTitle 아님
+      const leftTokens = row.items.filter(it => it.x < RX_LEFT_X_MAX);
+      const leftText = leftTokens.map(it => it.text).join(' ');
+      const hasStageCore = /관주|엽면|기비|밑거름|토양처리|정식|추비|감사|수확/.test(leftText);
       // 제품 성분 설명 행 제외: 옥스팜/뉴천연팜/옥토팜 등 포함 시 pageTitle 불가
-      const isProductDesc = /옥스팜|뉴천연팜|옥토팜|휴믹산|풀빅산|부식산|발효계분|견운모|고령토/.test(titleText);
-      if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText) && !isProductDesc) {
+      if (titleText.length > 3 && !RX_LEFT_TABLE_HDR_RE.test(titleText) && !hasStageCore) {
         pageTitles[pg] = pageTitles[pg] ? pageTitles[pg] + ' ' + titleText : titleText;
         titleRowSet.add(ri);
         console.log(`[Parser v16] page ${pg} pageTitle (A): "${titleText}"`);
-      } else if (isProductDesc) {
-        // 성분 설명 행은 pageTitle에서 제외하지만 titleRowSet에는 추가해 좌측 아이템 오염 방지
-        titleRowSet.add(ri);
       }
     }
   });
@@ -4567,6 +5187,7 @@ function parseRxPdfCoords(items) {
   // 방법 B: Y-gap 기반 fallback (단일 아이템 제목행 감지)
   const pageLeftRows = {};
   rows.forEach((row, ri) => {
+    if (costPages.has(row.page)) return;
     if (titleRowSet.has(ri)) return;
     const pg = row.page;
     const hasLeft = row.items.some(it => it.x < RX_LEFT_X_MAX);
@@ -4596,6 +5217,7 @@ function parseRxPdfCoords(items) {
   // rightDetailItems: 단위 없는 우측 행 → usage/composition/instruction 후보
   const leftItems = [], rightProductItems = [], rightDetailItems = [];
   rows.forEach((row, ri) => {
+    if (costPages.has(row.page)) return;
     if (titleRowSet.has(ri)) return;
     const leftRow  = row.items.filter(it => it.x < RX_LEFT_X_MAX);
     const rightRow = row.items.filter(it => it.x >= RX_LEFT_X_MAX);
@@ -4629,19 +5251,25 @@ function parseRxPdfCoords(items) {
             break;
           }
         }
+        // 제품명·규격·수량 → rightProductItems
         sortedRight.forEach((it, ri) => {
           if (qtyIdx < 0 || ri <= qtyIdx) {
-            // 제품명·규격·수량 → rightProductItems
             rightProductItems.push({ y: row.yAvg, page: row.page, text: it.text });
-          } else {
-            // 수량 뒤 = 사용법/설명 컬럼 → rightDetailItems (제품명 오염 방지)
-            const detailText = cleanDetailText(it.text);
-            if (!RX_FOOTER_RE.test(detailText) && detailText.length > 2 &&
-                !/^\d+(\.\d+)?(kg|g|L|ml)?$/.test(detailText)) {
-              rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText, xMin: it.x });
-            }
           }
         });
+        // 수량 뒤 전부 = 사용법/설명 컬럼 → JOIN 후 rightDetailItems
+        // PDF.js는 텍스트를 작은 토큰(글자 단위)으로 분리하므로 개별 필터링 불가
+        if (qtyIdx >= 0 && qtyIdx < sortedRight.length - 1) {
+          const detailTokens = sortedRight.slice(qtyIdx + 1);
+          const joinedText = detailTokens.map(it => it.text).join(' ');
+          const detailText = cleanDetailText(joinedText);
+          if (!RX_FOOTER_RE.test(detailText) && detailText.length > 2 &&
+              !/^\d+(\.\d+)?(kg|g|L|ml|㎖|㎏)?$/.test(detailText) &&
+              !/^-?\d+$/.test(detailText)) {
+            const xMin = Math.min(...detailTokens.map(it => it.x));
+            rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText, xMin });
+          }
+        }
       } else {
         // 단위 없는 우측 행: detail 후보 (usage/composition/instruction)
         const detailText = cleanDetailText(rightText);
@@ -4649,7 +5277,8 @@ function parseRxPdfCoords(items) {
         if (RX_FOOTER_RE.test(detailText)) return;
         // 단순 숫자·단위·좌표 제외, 의미있는 텍스트만 수집
         // ② 행마다 별도 push → prodDescMap에서 \n 으로 조인되어 줄바꿈 보존
-        if (detailText.length > 2 && !/^\d+(\.\d+)?(kg|g|L|ml|㎖|㎏)?$/.test(detailText)) {
+        if (detailText.length > 2 && !/^\d+(\.\d+)?(kg|g|L|ml|㎖|㎏)?$/.test(detailText) &&
+            !/^-?\d+$/.test(detailText)) {
           const xMin = rightRow.length > 0 ? Math.min(...rightRow.map(it => it.x)) : 0;
           rightDetailItems.push({ y: row.yAvg, page: row.page, text: detailText, xMin });
         }
@@ -4658,10 +5287,28 @@ function parseRxPdfCoords(items) {
   });
 
   // ── 4. 좌측 덩어리(stage 그룹) 묶기 ─────────────────────────────
+  // Y 간격 + stage_core 키워드 감지로 새 블록 시작
   const stageBlocks = [];
   let cur = null;
   for (const li of leftItems) {
-    if (!cur || li.page !== cur.page || (li.y - cur.yMax) > RX_STAGE_Y_GAP) {
+    const isNewPage = !cur || li.page !== cur.page;
+    const isLargeGap = cur && (li.y - cur.yMax) > RX_STAGE_Y_GAP;
+    // stage_core 키워드(관주/엽면 등)가 나오면 새 블록 시작
+    // 단, 단계 번호가 변경된 경우만 (관주2안→관주3안). 같은 라벨의 부속행은 분리 안함 (정식후→정식후10일)
+    let isNewStageCore = false;
+    if (cur && cur.texts.length > 0 && rxClassifyLeftRow(li.text) === 'stage_core' &&
+        cur.texts.some(t => rxClassifyLeftRow(t) === 'stage_core')) {
+      // 단계 번호 패턴: (N안), (N번), N안, N번
+      const numRe = /[\(（]?\s*(\d+)\s*(?:안|번)\s*[\)）]?/;
+      const newNum = li.text.match(numRe);
+      const curNums = cur.texts.map(t => t.match(numRe)).filter(Boolean);
+      if (newNum && curNums.length > 0) {
+        // 번호가 달라지면 새 단계
+        isNewStageCore = curNums.every(m => m[1] !== newNum[1]);
+      }
+      // 번호 패턴이 없으면 Y 간격으로 판단 (기존 로직 유지)
+    }
+    if (isNewPage || isLargeGap || isNewStageCore) {
       cur = { texts: [], yMin: li.y, yMax: li.y, page: li.page };
       stageBlocks.push(cur);
     }
@@ -4737,8 +5384,9 @@ function parseRxPdfCoords(items) {
   // 단계 사이 Y 중간값을 경계로 삼아 제품 행을 올바른 단계에 배정
   // 예) 엽면(1번) yMax=207, 관주(2번) yMin=290 → 경계=248.5
   //    y=277 제품 → 경계(248.5) 초과 → 관주(2번) ✓
-  function assignToBlock(y, page) {
-    // 페이지 내 유효 블록을 yMin 오름차순으로 정렬
+  // ratio: 0.5 = 중간값(제품 배정), 0.7 = 현재 단계 넓게(설명 배정)
+  function assignToBlock(y, page, ratio) {
+    const r = ratio || 0.5;
     const pageBlocks = [];
     stageBlocks.forEach((sb, idx) => {
       if (orphanPromoted.has(idx)) return;
@@ -4747,11 +5395,10 @@ function parseRxPdfCoords(items) {
     });
     if (pageBlocks.length === 0) return -1;
     pageBlocks.sort((a, b) => a.yMin - b.yMin);
-    // 각 블록의 상한 = 현재 블록 yMax와 다음 블록 yMin의 중간값
     for (let i = 0; i < pageBlocks.length; i++) {
       const cur  = pageBlocks[i];
       const next = pageBlocks[i + 1];
-      const upperBound = next ? (cur.yMax + next.yMin) / 2 : Infinity;
+      const upperBound = next ? cur.yMax + (next.yMin - cur.yMax) * r : Infinity;
       if (y <= upperBound) return cur.idx;
     }
     return pageBlocks[pageBlocks.length - 1].idx;
@@ -4805,7 +5452,7 @@ function parseRxPdfCoords(items) {
   // ── 8. detail 행 → stageBlock 배정 (Y 포함 객체 보존) ──────────────
   const blockDetailItems = stageBlocks.map(() => []);
   rightDetailItems.forEach(di => {
-    const idx = assignToBlock(di.y, di.page);
+    const idx = assignToBlock(di.y, di.page, 0.7); // 설명은 현재 단계에 더 넓게 배정
     if (idx >= 0) blockDetailItems[idx].push({ y: di.y, text: di.text, xMin: di.xMin || 0 });
   });
 
@@ -4865,6 +5512,7 @@ function parseRxPdfCoords(items) {
     const products = [];
     let blockPendingQty = null;   // 시비방법 행의 수량을 다음 제품에 상속하기 위한 대기값
     let blockPendingUnit = null;  // 예: "두덕(골당)3포" → qty=3, 뒤의 "뉴천연팜(분상)"에 적용
+    let _pendingInstruction = null; // "두덕 만들(골당)고" 등 지시 행 → 다음 제품에 전파
     const assignedByY = assigned.slice().sort((a, b) => a.yAvg - b.yAvg);
     assignedByY.forEach(rr => {
       const line = cleanPdfText(rr.texts.join(' '));
@@ -4884,9 +5532,14 @@ function parseRxPdfCoords(items) {
             const sizeM2 = cn.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
             const key2   = sizeM2 ? `${sizeM2[1].trim()}||${sizeM2[2].trim()}` : `${cn}||`;
             const rawItems2 = (prodDescMap.get(rr.yAvg) || []).filter(it => it.text && it.text.trim());
+            const instrInfo2 = _pendingInstruction;
+            _pendingInstruction = null;
             products.push({ key: key2, qty: inheritedQty, unit: inheritedUnit,
               capacity: '', productTextRaw: line, productName: cn,
-              detailCellRaw: rawItems2.map(it => it.text.trim()).join('\n'),
+              isInstruction: !!instrInfo2,
+              instructionText: instrInfo2 ? instrInfo2.text : '',
+              instructionDesc: instrInfo2 ? instrInfo2.desc : '',
+              detailCellRaw: instrInfo2 ? instrInfo2.desc || rawItems2.map(it => it.text.trim()).join('\n') : rawItems2.map(it => it.text.trim()).join('\n'),
               detailCellType: rawItems2.length ? 'detail' : 'empty',
               prodArea: null, desc: rawItems2.map(it => it.text.trim()).join('\n'),
             });
@@ -4934,32 +5587,60 @@ function parseRxPdfCoords(items) {
       // 시비 방법 단어만 남으면 제품 아님
       // 단, prodDescMap에 제품명 후보가 있으면 그것을 실제 제품으로 등록 (qty 상속)
       if (/^(두덕|경운|살포|수확|정식)$/.test(namePart)) {
-        // 이 instruction 행의 desc 아이템에서 제품명 후보 추출
+        // 시비 지시 행: 거래명세표·평당가에서 제외, 표시만 함
+        // desc 아이템에서 제품명 후보를 찾아 instruction product로 등록
         const rawDescForInstr = prodDescMap.get(rr.yAvg) || [];
-        const descItems = rawDescForInstr.map(it => it.text.trim()).filter(Boolean);
-        // 제품명처럼 보이는 아이템: 한글 2자 이상, 순수 재료/설명문 제외
+        const descTexts = rawDescForInstr.map(it => it.text.trim()).filter(Boolean);
+        const instrText = cleanPdfText(rr.texts ? rr.texts.join(' ') : line);
+        // desc 아이템 분류: 지시문(점적,호수...) / 성분(견운모/고령토...) / 제품명
         const SKIP_WORDS = /^(견운모|고령토|맥반석|일라이트|게르마늄|종합광물|발효계분|미강|풀빅산|휴믹산|부식산)$/;
         const INSTR_START = /^(점적|호수|깔지|뿌리라|고라|살포|경운|정식|두덕|만들)/;
-        let promotedCount = 0;
-        descItems.forEach(d => {
+        const instrParts = [];   // 지시문 텍스트 (merged cell에 표시)
+        const compParts = [];    // 성분/광물 텍스트 (desc cell에 표시)
+        let foundProduct = null; // 제품명
+        for (const d of descTexts) {
           const dm = d.match(/^(.+?)\s*[\(（](.+?)[\)）]$/);
           const dn = dm ? dm[1].trim() : d;
           const ds = dm ? dm[2].trim() : '';
-          if (dn.length < 2) return;
-          if (SKIP_WORDS.test(dn)) return; // 단일 성분·재료는 스킵
-          if (INSTR_START.test(dn)) return; // 시비방법 지시문은 스킵
-          if (/^[\d/]/.test(dn)) return;  // 숫자/슬래시로 시작하는 비율 텍스트 스킵
-          // 슬래시 구분 미네랄 혼합 (예: "일라이트/게르마늄/종합광물") → 전부 SKIP_WORDS면 스킵
-          if (dn.includes('/') && dn.split('/').map(p => p.trim()).every(p => SKIP_WORDS.test(p))) return;
+          if (INSTR_START.test(dn)) {
+            // 지시문 뒤에 성분명이 붙어있을 수 있음: "점적,호수,깔지전일라이트/게르마늄/종합광물"
+            // → 알려진 성분명이 텍스트 내에 있으면 분리
+            const COMP_NAMES = ['견운모','고령토','맥반석','일라이트','게르마늄','종합광물','발효계분','미강','풀빅산','휴믹산','부식산'];
+            let instrD = d, compD = '';
+            for (const cn of COMP_NAMES) {
+              const ci = instrD.indexOf(cn);
+              if (ci >= 0) {
+                compD = (compD ? compD + ' ' : '') + instrD.slice(ci);
+                instrD = instrD.slice(0, ci).trim();
+                break; // 첫 성분명 발견 시점부터 나머지 모두 성분
+              }
+            }
+            if (instrD) instrParts.push(instrD);
+            if (compD) compParts.push(compD);
+            continue;
+          }
+          if (SKIP_WORDS.test(dn)) { compParts.push(d); continue; }
+          if (dn.includes('/') && dn.split('/').map(p => p.trim()).every(p => SKIP_WORDS.test(p))) { compParts.push(d); continue; }
+          if (/^[\d/]/.test(dn)) continue;
+          if (dn.length < 2) continue;
+          if (!foundProduct) { foundProduct = { d, dn, ds, dm }; continue; }
+          compParts.push(d); // 제품명 이후 항목은 성분으로
+        }
+        if (foundProduct) {
+          const { d, dn, ds, dm } = foundProduct;
           const k2 = ds ? `${dn}||${ds}` : `${dn}||`;
+          // instrText에 지시문(점적,호수,깔지전 등) 추가
+          const mergedInstr = instrParts.length
+            ? instrText + '\n' + instrParts.join(' ')
+            : instrText;
+          const compDesc = [...new Set(compParts)].join('\n');
           products.push({ key: k2, qty, unit, capacity: '',
-            productTextRaw: d, productName: dn,
-            detailCellRaw: '', detailCellType: 'empty', prodArea: null, desc: '' });
-          promotedCount++;
-        });
-        if (!promotedCount) {
-          // desc에 제품이 없으면 blockPendingQty로 다음 행에 수량 전달
-          blockPendingQty = qty; blockPendingUnit = unit;
+            isInstruction: true,
+            instructionText: mergedInstr,
+            instructionDesc: compDesc,
+            productTextRaw: d, productName: dm ? `${dn}(${ds})` : dn,
+            detailCellRaw: compDesc, detailCellType: compDesc ? 'detail' : 'empty',
+            prodArea: null, desc: compDesc });
         }
         return;
       }
@@ -4981,10 +5662,11 @@ function parseRxPdfCoords(items) {
         let cur = rawItems[0].text.trim();
         for (let k = 1; k < rawItems.length; k++) {
           const prev = rawItems[k - 1], curr = rawItems[k];
-          const xDiff = Math.abs((curr.xMin || 0) - (prev.xMin || 0));
-          const yGap  = curr.y - prev.y;
-          if (xDiff <= 12 && yGap <= 35) {
-            cur += ' ' + curr.text.trim();   // word-wrap → 공백으로 연결
+          const yGap  = Math.abs(curr.y - prev.y);
+          // 같은 Y 좌표(yGap ≤ 5) → 같은 줄 (공백으로 연결)
+          // 비슷한 Y(yGap ≤ 35) + 비슷한 X → word-wrap (공백으로 연결)
+          if (yGap <= 5) {
+            cur += ' ' + curr.text.trim();   // 같은 줄
           } else {
             lines.push(cur); cur = curr.text.trim();
           }
@@ -4993,13 +5675,21 @@ function parseRxPdfCoords(items) {
         return lines.filter(l => l).join('\n');
       })();
 
+      // _pendingInstruction 적용: 지시 행 다음 제품은 표시전용 (거래명세표·평당가 제외)
+      const instrInfo = _pendingInstruction;
+      _pendingInstruction = null;
+
       products.push({
         key, qty, unit,
         capacity,              // 용량: "1kg", "500g", "10L" 등
+        // 지시 행 플래그
+        isInstruction: !!instrInfo,
+        instructionText: instrInfo ? instrInfo.text : '',
+        instructionDesc: instrInfo ? instrInfo.desc : '',
         // 새 필드
         productTextRaw: line,
         productName: namePart,
-        detailCellRaw: prodDesc,
+        detailCellRaw: instrInfo ? instrInfo.desc || prodDesc : prodDesc,
         detailCellType: prodDesc ? detailCellType : 'empty',
         prodArea,
         // 하위 호환
@@ -5095,9 +5785,22 @@ function _extractCostFromTexts(texts) {
   const LABEL_RE  = /^(기비용|합\s*계|총\s*계|총\s*액|(\d{1,2})\s*월)/;
   let totalCost = null, unitPrice = null, totalRowUnitPrice = null;
   const breakdown = [];
+  const addOns = [];       // 엘세로 추가 항목 (소매/공급가/수량/계)
+  const costProducts = []; // 개별 제품행 (소매가/공급가/수량/계)
+  let addOnInterval = '';  // "15일-20일간격" 같은 간격 텍스트
+
+  // 제품행 정규식: "옥토팜(펠렛) 소매가(25,000) 공급가(12,000) 수량(60포) 계=720,000"
+  // PDF 공백: "옥 토 팜 ( 펠렛 ) 소매가 (25,000) 공급가 (12,000) 수량 (60 포 ) 계 =720,000"
+  const COST_PROD_RE = /소매\s*가?\s*\(?\s*([\d,]+)\s*\)?\s*공급\s*가?\s*\(?\s*([\d,]+)\s*\)?\s*수량\s*\(?\s*(\d+)\s*(포|병|봉|통|개)?\s*\)?\s*계\s*[=＝]\s*([\d,]+|홍\s*보\s*용)/;
+  // 공급가만 있는 행 (소매가 없음): "엘쎄로닥터CK-1 공급가(55,000) 수량(2병) 계=홍보용"
+  const COST_SUPPLY_ONLY_RE = /공급\s*가?\s*\(?\s*([\d,]+)\s*\)?\s*수량\s*\(?\s*(\d+)\s*(포|병|봉|통|개)?\s*\)?\s*계\s*[=＝]\s*([\d,]+|홍\s*보\s*용)/;
 
   for (const text of texts) {
-    const nums = () => (text.match(/[\d,]+/g) || [])
+    // 전화번호(010-XXXX-XXXX, 1577-5963 등) 제거 후 숫자 추출
+    const cleaned = text
+      .replace(/\d{2,4}\s*[-–]\s*\d{3,4}\s*[-–]\s*\d{4}/g, '')  // 3자리-4자리-4자리
+      .replace(/\b\d{4}\s*[-–]\s*\d{4}\b/g, '');                  // 4자리-4자리 (1577-5963)
+    const nums = () => (cleaned.match(/[\d,]+/g) || [])
       .map(n => parseInt(n.replace(/,/g, ''), 10))
       .filter(n => !isNaN(n));
 
@@ -5105,10 +5808,9 @@ function _extractCostFromTexts(texts) {
     const hasPyeong = PYEONG_RE.test(text);
 
     if (hasPyeong) {
-      const ns = nums().filter(n => n > 100 && n < 10_000_000);
+      const ns = nums().filter(n => n > 0 && n < 10_000_000);
       if (ns.length) {
         unitPrice = ns[ns.length - 1];
-        // 합계 행의 평당가 → 최우선 확정값으로 보존 (기비용 행이 나중에 덮어쓰지 못하도록)
         if (isTotal) totalRowUnitPrice = unitPrice;
       }
     }
@@ -5117,37 +5819,71 @@ function _extractCostFromTexts(texts) {
       if (ns.length) { const mx = Math.max(...ns); if (!totalCost || mx > totalCost) totalCost = mx; }
     }
 
+    // ── 개별 제품행 파싱 (소매가+공급가+수량+계) ──
+    const prodMatch = text.match(COST_PROD_RE);
+    if (prodMatch && !isTotal) {
+      const nameRaw = text.slice(0, text.search(/소매\s*가?/)).trim();
+      const prodName = nameRaw.replace(/\s+/g, '').replace(/쎄/g, '세');
+      const retail  = parseInt(prodMatch[1].replace(/,/g, ''), 10) || 0;
+      const supply  = parseInt(prodMatch[2].replace(/,/g, ''), 10) || 0;
+      const qty     = parseInt(prodMatch[3], 10) || 0;
+      const unit    = prodMatch[4] || '개';
+      const totalRaw = prodMatch[5].replace(/\s+/g, '');
+      const promo   = /홍보용/.test(totalRaw);
+      const total   = promo ? 0 : (parseInt(totalRaw.replace(/,/g, ''), 10) || 0);
+      if (prodName) costProducts.push({ name: prodName, retail, supply, qty, unit, total, promo });
+      continue; // 제품행은 breakdown 파싱 스킵
+    }
+
+    // ── 공급가만 있는 행 (엘세로 등) ──
+    const supplyMatch = text.match(COST_SUPPLY_ONLY_RE);
+    if (supplyMatch && !isTotal && !/소매/.test(text)) {
+      const nameRaw = text.slice(0, text.search(/공급\s*가?/)).trim();
+      const prodName = nameRaw.replace(/\s+/g, '').replace(/쎄/g, '세');
+      const supply  = parseInt(supplyMatch[1].replace(/,/g, ''), 10) || 0;
+      const qty     = parseInt(supplyMatch[2], 10) || 0;
+      const unit    = supplyMatch[3] || '병';
+      const totalRaw = supplyMatch[4].replace(/\s+/g, '');
+      const promo   = /홍보용/.test(totalRaw);
+      const total   = promo ? 0 : (parseInt(totalRaw.replace(/,/g, ''), 10) || 0);
+      if (prodName) costProducts.push({ name: prodName, retail: 0, supply, qty, unit, total, promo });
+      continue;
+    }
+
+    // 간격 텍스트: "15일-20일간격" (PDF 공백: "15 일 -20 일간격")
+    const intervalMatch = text.match(/(\d+\s*일\s*[-~]\s*\d+\s*일\s*간격)/);
+    if (intervalMatch) addOnInterval = intervalMatch[1].replace(/\s+/g, '');
+
     // 행별 breakdown 추출 (기비용 / N월 / 합계 행)
     const labelMatch = text.match(LABEL_RE);
     if (labelMatch) {
-      // 공백 제거 정규화: "3 월" → "3월", "합 계" → "합계"
       const lbl      = labelMatch[1].replace(/\s+/g, '');
-      const bigNums  = nums().filter(n => n >= 10_000);
-      const smallNums = nums().filter(n => n > 100 && n < 10_000);
-      if (bigNums.length) {
-        const rowCost  = Math.max(...bigNums);
-        const rowUnit  = hasPyeong && smallNums.length ? smallNums[smallNums.length - 1] : null;
-        // 중복 레이블 방지
-        if (!breakdown.find(r => r.label === lbl)) {
-          breakdown.push({ label: lbl, cost: rowCost, unitPrice: rowUnit });
-        }
+      const allNums  = nums();
+      const bigNums  = allNums.filter(n => n >= 10_000);
+      const smallNums = allNums.filter(n => n > 0 && n < 10_000);
+      const rowCost  = bigNums.length ? Math.max(...bigNums) : 0;
+      const rowUnit  = hasPyeong && smallNums.length ? smallNums[smallNums.length - 1] : null;
+      if (!breakdown.find(r => r.label === lbl)) {
+        breakdown.push({ label: lbl, cost: rowCost, unitPrice: rowUnit });
       }
     }
   }
 
-  // 합계 행에서 평당가 추출 성공 시 우선 사용 (rowMap 정렬로 인해 기비용 행이 마지막으로 처리되어
-  // unitPrice가 1,454로 덮어쓰이는 버그를 방지)
   if (totalRowUnitPrice !== null) unitPrice = totalRowUnitPrice;
 
-  // 합계 행 없으면 큰 숫자 중 최대값을 totalCost 후보로
-  if (!totalCost) {
-    const candidates = texts.flatMap(t =>
-      (t.match(/[\d,]+/g) || []).map(n => parseInt(n.replace(/,/g,''),10)).filter(n => n >= 50_000 && n < 100_000_000)
-    );
-    if (candidates.length) totalCost = Math.max(...candidates);
+  if (!totalCost && totalCost !== 0) {
+    // "합계=0" 인 경우: 합계 행이 있고 값이 0이면 totalCost=0 으로 설정
+    const hasTotalRow = texts.some(t => TOTAL_RE.test(t));
+    if (hasTotalRow && breakdown.length) {
+      totalCost = 0; // 가격 미입력 상태 (000원)
+    } else {
+      const candidates = texts.filter(t => !/소매/.test(t)).flatMap(t =>
+        (t.match(/[\d,]+/g) || []).map(n => parseInt(n.replace(/,/g,''),10)).filter(n => n >= 50_000 && n < 100_000_000)
+      );
+      if (candidates.length) totalCost = Math.max(...candidates);
+    }
   }
 
-  // breakdown 정렬: 기비용 → N월 오름차순 → 합계
   breakdown.sort((a, b) => {
     const rank = l => {
       if (l === '기비용') return 0;
@@ -5158,7 +5894,25 @@ function _extractCostFromTexts(texts) {
     return rank(a.label) - rank(b.label);
   });
 
-  return { totalCost, unitPricePerPyeong: unitPrice, breakdown };
+  // 고객 전화·주소 추출
+  let phone = null, addr = null;
+  for (const text of texts) {
+    const phoneMatch = text.match(/전화\s*:\s*([\d\s-]+)/);
+    if (phoneMatch && !phone) phone = phoneMatch[1].replace(/\s+/g, '');
+    const addrMatch = text.match(/\d{3,4}\s*[-–]\s*\d{4}\s+(.+?)\s*$/);
+    if (addrMatch && /[도시군구면읍리]/.test(addrMatch[1]) && !addr) {
+      addr = addrMatch[1].replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  let region = null;
+  for (const text of texts) {
+    const regionMatch = text.match(/([가-힣]+도?\s*[가-힣]+)\s*지역/);
+    if (regionMatch && !region) region = regionMatch[1].replace(/\s+/g, ' ').trim();
+  }
+
+  return { totalCost, unitPricePerPyeong: unitPrice, breakdown, addOns, addOnInterval,
+           costProducts, phone, addr, region };
 }
 
 /**
@@ -5167,7 +5921,7 @@ function _extractCostFromTexts(texts) {
  * @returns {Promise<{ totalCost:number|null, unitPricePerPyeong:number|null, isCalculated:boolean }|null>}
  */
 async function extractCostFromPdfDoc(pdfDoc) {
-  const totalPages = Math.min(pdfDoc.numPages, 10);
+  const totalPages = pdfDoc.numPages;
   for (let p = 1; p <= totalPages; p++) {
     const page  = await pdfDoc.getPage(p);
     const tc    = await page.getTextContent();
@@ -5196,7 +5950,7 @@ async function extractCostFromPdfDoc(pdfDoc) {
     }
 
     console.log('[CostExtract] 결과:', raw);
-    return { ...raw, isCalculated, breakdown: raw.breakdown || [] };
+    return { ...raw, isCalculated, breakdown: raw.breakdown || [], addOns: raw.addOns || [], addOnInterval: raw.addOnInterval || '', costProducts: raw.costProducts || [] };
   }
   return null;
 }
@@ -5232,15 +5986,23 @@ async function _parseCoverPageInfo(pdfDoc) {
     // 고객명: "처방전 : XXX님" 또는 "처방전: XXX님"
     const nameMatch = joined.match(/처방전\s*:\s*([가-힣]{2,8})님?/);
     if (nameMatch) result.farmName = nameMatch[1].replace(/님$/, '');
-    // 작물: 평수 앞에 오는 한글
-    const cropMatch = joined.match(/([가-힣]{2,8})\s*\(\s*(\d+)\s*평\s*\)/);
+    // fallback: "XXX님" 단독 (처방전: 없는 표지)
+    if (!result.farmName) {
+      const nameMatches = [...joined.matchAll(/([가-힣]{2,6})님/g)];
+      if (nameMatches.length > 0) {
+        // 마지막 "X님" 매칭 사용 (보통 고객명이 하단에 위치)
+        result.farmName = nameMatches[nameMatches.length - 1][1];
+      }
+    }
+    // 작물: 평수 앞에 오는 한글 — 괄호 형식 "메론(500평)" 또는 콜론 형식 "메론 :500 평"
+    const cropMatch = joined.match(/([가-힣]{2,8})\s*[\(（:]\s*(\d+)\s*평/);
     if (cropMatch) {
       result.cropName = cropMatch[1];
       result.totalArea = parseInt(cropMatch[2], 10);
     }
     // 평수만 있는 경우 fallback
     if (!result.totalArea) {
-      const areaMatch = joined.match(/\(\s*(\d+)\s*평\s*\)/);
+      const areaMatch = joined.match(/[\(（:]\s*(\d+)\s*평/);
       if (areaMatch) result.totalArea = parseInt(areaMatch[1], 10);
     }
   } catch (e) { /* 표지 파싱 실패는 무시 */ }
@@ -5266,9 +6028,12 @@ async function onRxPdfSelected(input) {
       const el = document.getElementById(domId);
       if (!el) return;
       if (domId === 'bCrop') {
+        // 작물명 별칭 처리
+        const cropAlias = { '메론':'멜론', '한라봉':'레드향', '셀러리':'청경채' };
+        const cropVal = cropAlias[value] || value;
         // select 요소: option 텍스트 매칭
         for (let i = 0; i < el.options.length; i++) {
-          if (el.options[i].text.includes(value) || value.includes(el.options[i].text)) {
+          if (el.options[i].text.includes(cropVal) || cropVal.includes(el.options[i].text)) {
             el.selectedIndex = i; break;
           }
         }
@@ -5277,10 +6042,17 @@ async function onRxPdfSelected(input) {
       }
       rxData[rxKey] = domId === 'bCrop' ? (el.value || value) : value;
     }
-    _applyCoverField('bName',   coverInfo.farmName,  'name');
-    _applyCoverField('bCrop',   coverInfo.cropName,  'crop');
-    if (coverInfo.totalArea) {
-      _applyCoverField('bArea', String(coverInfo.totalArea), 'area');
+    // 파일명에서 추출한 정보를 표지 정보의 폴백으로 병합
+    const filenameInfo = _parseRxFilenameInfo(file.name);
+    const mergedCover = {
+      farmName:  coverInfo.farmName  || filenameInfo.farmName,
+      cropName:  coverInfo.cropName  || filenameInfo.cropName,
+      totalArea: coverInfo.totalArea || filenameInfo.totalArea
+    };
+    _applyCoverField('bName',   mergedCover.farmName,  'name');
+    _applyCoverField('bCrop',   mergedCover.cropName,  'crop');
+    if (mergedCover.totalArea) {
+      _applyCoverField('bArea', String(mergedCover.totalArea), 'area');
     }
 
     // 1순위: ##RX## 인코딩 데이터 (자체 처방전 PDF) — 이미 로드된 pdfDoc 재사용
@@ -5309,6 +6081,13 @@ async function onRxPdfSelected(input) {
       rxData.extractedTotalCost  = costExtracted.totalCost;
       rxData.extractedUnitPrice  = costExtracted.unitPricePerPyeong;
       rxData.extractedBreakdown  = costExtracted.breakdown || [];
+      rxData.extractedAddOns = costExtracted.addOns || [];
+      rxData.extractedCostProducts = costExtracted.costProducts || [];
+      rxData.extractedAddOnInterval = costExtracted.addOnInterval || '';
+      if (costExtracted.phone && !rxData.phone) rxData.phone = costExtracted.phone;
+      if (costExtracted.addr && !rxData.addr) rxData.addr = costExtracted.addr;
+      if (costExtracted.region) { const el = document.getElementById('bRegion'); if (el && !el.value.trim()) el.value = costExtracted.region; }
+      costVisible = true;
       _saveRxStages();
       const priceStr = costExtracted.unitPricePerPyeong
         ? costExtracted.unitPricePerPyeong.toLocaleString() + '원/평'
@@ -5337,14 +6116,17 @@ async function onRxPdfSelected(input) {
         if (!rxData.area) rxData.area = String(inferredArea);
       }
 
-      // 제품 키 정규화: cart와 공백·특수문자 차이 보정
-      _normalizeStageProductKeys(stages);
       // PDF 재파싱 시 이전 세션 데이터 초기화 → 새 stage 기준으로 재생성
       rxData.cart = [];
       priceOverrides = {};
       groupLabels = {};
       stageGroupOrder = [];
       // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
+      _autoCartFromStages(stages);
+      // 제품 키 정규화: cart 생성 후에 실행해야 cart 매칭 가능
+      _normalizeStageProductKeys(stages);
+      // normalization으로 key가 변경되었으면 cart도 재생성
+      rxData.cart = [];
       _autoCartFromStages(stages);
       syncGroupOrder();
       renderStages();
@@ -5793,9 +6575,12 @@ function applyParsedRx(parsed) {
   priceOverrides = {};
   rxData.cart = []; // PDF 재파싱 시 이전 cart 초기화 → _autoCartFromStages에서 새 stage 기준 재생성
 
+  // cart를 먼저 생성 → normalization에서 cart 기준 매칭 가능
+  _autoCartFromStages(stages);
   // 제품 키 정규화: cart와 공백·괄호 차이 보정
   _normalizeStageProductKeys(stages);
-  // cart가 비어 있으면 stage 제품에서 자동 생성 → 재고 현황 즉시 표시
+  // normalization으로 key 변경 후 cart 재생성
+  rxData.cart = [];
   _autoCartFromStages(stages);
 
   // PDF 로드 직후 즉시 저장 — 거래명세표 이동해도 유실 없음
@@ -5960,9 +6745,11 @@ function openRxEdit(el, e) {
   _inlineEditing = true;
   el.setAttribute('contenteditable', 'true');
   el.classList.add('rx-editing');
-  // stage-date: <strong> 래퍼 없이 순수 텍스트만 표시 (편집 편의 + 표시 일치)
-  // 다른 셀: 기존 방식 그대로
-  el.innerHTML = rawVal.replace(/\n/g, '<br>');
+  // Word/Excel처럼 현재 보이는 내용 그대로 편집 — innerHTML 교체하지 않음
+  // 셀 내용이 비어있을 때만 rawVal로 채움
+  if (!el.innerText.trim() && rawVal) {
+    el.innerHTML = rawVal.replace(/\n/g, '<br>');
+  }
   // 편집 모드: 스크롤 허용으로 텍스트 잘림 방지
   el._origHeight = el.style.height;    // 원본 높이 저장
   el.style.height = 'auto';            // 편집 중 높이 제한 해제
@@ -5984,7 +6771,7 @@ function openRxEdit(el, e) {
 
   // blur → 저장
   const finishEdit = (save) => {
-    el.removeEventListener('blur', onBlur);
+    document.removeEventListener('mousedown', onDocClick, true);
     el.removeEventListener('keydown', onKey);
     el.removeAttribute('contenteditable');
     el.classList.remove('rx-editing');
@@ -6022,11 +6809,21 @@ function openRxEdit(el, e) {
     }
   };
 
-  const onBlur = () => finishEdit(true);
+  // ★ blur 대신 document 클릭 감지 — 셀+툴바 바깥 클릭 시에만 종료
+  //   워드프로세서처럼 툴바 조작 중에도 편집 상태 유지
+  const onDocClick = (ev) => {
+    // 클릭이 편집 셀 내부 → 유지
+    if (el.contains(ev.target)) return;
+    // 클릭이 툴바 내부 → 유지
+    const tb = document.getElementById('rxFloatToolbar');
+    if (tb && tb.contains(ev.target)) return;
+    // 다른 rx-editable 셀 클릭 → 현재 저장 후 그 셀 열기
+    finishEdit(true);
+  };
   const onKey  = (ev) => {
     if (ev.key === 'Enter' && !ev.shiftKey) {
       ev.preventDefault();
-      el.blur(); // → onBlur → finishEdit(true)
+      finishEdit(true);
     }
     if (ev.key === 'Escape') {
       ev.preventDefault();
@@ -6035,15 +6832,69 @@ function openRxEdit(el, e) {
     // Tab → 다음/이전 셀로 이동
     if (ev.key === 'Tab') {
       ev.preventDefault();
-      el.blur();
-      const allCells = [...document.querySelectorAll('.rx-table td.rx-editable, .rx-table th.rx-editable')];
+      finishEdit(true);
+      const allCells = [...document.querySelectorAll('.rx-table td.rx-editable, .rx-table th.rx-editable, .rx-table td, .rx-table th')];
       const idx = allCells.indexOf(el);
       const next = allCells[ev.shiftKey ? idx - 1 : idx + 1];
       if (next) setTimeout(() => next.click(), 50);
     }
   };
 
-  el.addEventListener('blur', onBlur);
+  // 약간 지연: 현재 클릭이 자기 자신 openRxEdit 호출이므로 즉시 등록하면 바로 닫힘
+  setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 50);
+  el.addEventListener('keydown', onKey);
+}
+
+// ── 자유 편집 (데이터 모델 바인딩 없는 셀) ──
+// header th, instruction 셀 등 data-edit 속성이 없어도 자유롭게 편집 가능
+function openRxFreeEdit(el, e) {
+  if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+    _rxCellSelect(el, e);
+    return;
+  }
+  if (el.getAttribute('contenteditable') === 'true') return;
+  _rxClearSel();
+
+  _rxHistoryCapture();
+  el._origHtml = el.innerHTML;
+  _inlineEditing = true;
+  el.setAttribute('contenteditable', 'true');
+  el.classList.add('rx-editing');
+  el.focus();
+  _rxShowToolbar(el);
+  _tbActiveCell = el;
+
+  try {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(_){}
+
+  const finishFreeEdit = (save) => {
+    document.removeEventListener('mousedown', onDocClick, true);
+    el.removeEventListener('keydown', onKey);
+    el.removeAttribute('contenteditable');
+    el.classList.remove('rx-editing');
+    _inlineEditing = false;
+    _rxHideToolbar();
+    if (!save) el.innerHTML = el._origHtml;
+  };
+
+  const onDocClick = (ev) => {
+    if (el.contains(ev.target)) return;
+    const tb = document.getElementById('rxFloatToolbar');
+    if (tb && tb.contains(ev.target)) return;
+    finishFreeEdit(true);
+  };
+  const onKey = (ev) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finishFreeEdit(true); }
+    if (ev.key === 'Escape') { ev.preventDefault(); finishFreeEdit(false); }
+  };
+
+  setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 50);
   el.addEventListener('keydown', onKey);
 }
 
@@ -6227,7 +7078,7 @@ function _saveRxStages() {
         pageTitle: s.pageTitle||''
       })),
       pageOrder, costVisible, priceOverrides,
-      groupLabels, stageGroupOrder,
+      groupLabels, stageGroupOrder, imagePages, imgPageIdCnt,
       coverCustomFs: rxData.coverCustomFs || {},
       coverCustomText: rxData.coverCustomText || {},
       // ★ rxData 핵심 필드 함께 저장 → 새로고침 후에도 복원 가능
@@ -6243,7 +7094,10 @@ function _saveRxStages() {
       // PDF 비용 페이지 추출 데이터
       extractedTotalCost: rxData.extractedTotalCost ?? null,
       extractedUnitPrice: rxData.extractedUnitPrice ?? null,
-      extractedBreakdown: rxData.extractedBreakdown ?? null
+      extractedBreakdown: rxData.extractedBreakdown ?? null,
+      extractedAddOns: rxData.extractedAddOns ?? null,
+      extractedCostProducts: rxData.extractedCostProducts ?? null,
+      extractedAddOnInterval: rxData.extractedAddOnInterval ?? null
     }));
   } catch(e) {}
 }
